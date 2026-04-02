@@ -14,6 +14,7 @@ import { CustomersModule } from './modules/customers/customers.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { DebtsModule } from './modules/debts/debts.module';
+import { AiAnalystModule } from './modules/ai-analyst/ai-analyst.module';
 import { GlobalJwtAuthGuard } from './common/guards/global-jwt-auth.guard';
 import { PermissionGuard } from './common/guards/permission.guard';
 import { PrismaModule } from './common/prisma';
@@ -33,6 +34,7 @@ import { PrismaModule } from './common/prisma';
     OrdersModule,
     ReportsModule,
     DebtsModule,
+    AiAnalystModule,
   ],
   controllers: [AppController],
   providers: [

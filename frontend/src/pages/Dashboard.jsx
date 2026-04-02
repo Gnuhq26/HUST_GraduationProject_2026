@@ -3,6 +3,7 @@ import { FiShoppingBag, FiShoppingCart, FiUsers, FiDollarSign } from 'react-icon
 import { productsService } from '../services/productsService';
 import { customersService } from '../services/customersService';
 import ordersService from '../services/ordersService';
+import AiInsightsWidget from '../components/ai-analyst/AiInsightsWidget';
 
 function formatCurrency(amount) {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
@@ -167,6 +168,11 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* AI Business Analyst */}
+      <div className="mt-6">
+        <AiInsightsWidget />
       </div>
     </div>
   );
