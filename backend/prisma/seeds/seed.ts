@@ -102,6 +102,13 @@ async function main() {
     create: { Action: 'manage', Subject: 'Debt' }, // Quản lý thanh toán công nợ
   });
 
+  // AI Analyst Permission
+  await prisma.permission.upsert({
+    where: { Action_Subject: { Action: 'read', Subject: 'AiAnalyst' } },
+    update: {},
+    create: { Action: 'read', Subject: 'AiAnalyst' }, // Xem phân tích AI
+  });
+
   // Supplier Permissions (Giai đoạn 8)
   await prisma.permission.upsert({
     where: { Action_Subject: { Action: 'read', Subject: 'Supplier' } },
