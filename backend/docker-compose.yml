@@ -1,11 +1,11 @@
 services:
   db:
-      image: mariadb:11
+      image: mysql:8
       container_name: gr2_db
       restart: always
       environment:
-        MARIADB_ROOT_PASSWORD: hung1234
-        MARIADB_DATABASE: gr2_hust
+        MYSQL_ROOT_PASSWORD: hung1234
+        MYSQL_DATABASE: gr2_hust
       ports:
         - "3307:3306"
       volumes:
