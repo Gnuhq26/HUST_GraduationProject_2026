@@ -3,26 +3,8 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import * as bcrypt from 'bcrypt';
 
-// Tạo PrismaClient với adapter giống như PrismaService
-const dbConfig = {
-  host: process.env.DATABASE_HOST || 'localhost',
-  user: process.env.DATABASE_USER,
-  password: process.env.DATABASE_PASSWORD,
-  database: process.env.DATABASE_NAME,
-  connectionLimit: 10,
-};
-
-console.log('Host:', dbConfig.host);
-console.log('User:', dbConfig.user || 'NOT SET');
-console.log('Password:', dbConfig.password ? 'SET (hidden)' : 'NOT SET');
-console.log('Database:', dbConfig.database || 'NOT SET');
-
-if (!dbConfig.user || !dbConfig.password || !dbConfig.database) {
-  throw new Error('Missing required database configuration. Please check your .env file.');
-}
-
-const adapter = new PrismaMariaDb(dbConfig);
-const prisma = new PrismaClient({ adapter });
+const adapter = new PrismaMariaDb(process.env.DATABASE_URL!);
+const prisma = new PrismaClient({ adapter } as any);
 
 // Hàm hash mật khẩu
 async function hashPassword(password: string) {
