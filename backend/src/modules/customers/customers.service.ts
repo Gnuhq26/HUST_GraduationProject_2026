@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma';
 import { CreateCustomerDto, UpdateCustomerDto } from './dto';
+import { PaginatedResult, PaginationParams, paginateResult } from '../../common/pagination';
 
 @Injectable()
 export class CustomersService {
@@ -29,13 +30,25 @@ export class CustomersService {
   }
 
   /**
-   * Lấy danh sách khách hàng của cửa hàng
+   * Lấy danh sách khách hàng của cửa hàng có phân trang
    */
-  async findAll(storeId: number) {
-    return this.prisma.customer.findMany({
-      where: { StoreID: storeId },
-      orderBy: { CreatedAt: 'desc' },
-    });
+  async findAll(storeId: number, pagination: PaginationParams): Promise<PaginatedResult<any>> {
+    const { page, limit } = pagination;
+    const skip = (page - 1) * limit;
+
+    const where = { StoreID: storeId };
+
+    const [data, total] = await Promise.all([
+      this.prisma.customer.findMany({
+        where,
+        orderBy: { CreatedAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.customer.count({ where }),
+    ]);
+
+    return paginateResult(data, total, pagination);
   }
 
   /**

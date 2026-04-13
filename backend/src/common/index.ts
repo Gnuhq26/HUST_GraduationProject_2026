@@ -1,3 +1,6 @@
 // Common exports
 export * from './decorators';
 export * from './guards';
+export * from './pagination';
+export * from './filters/http-exception.filter';
+export * from './interceptors/logging.interceptor';

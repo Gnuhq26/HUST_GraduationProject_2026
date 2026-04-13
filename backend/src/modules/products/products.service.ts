@@ -287,9 +287,12 @@ export class ProductsService {
     // Kiểm tra sản phẩm có tồn tại không
     await this.findOne(storeId, productId);
 
-    // Kiểm tra sản phẩm có trong đơn hàng nào không
+    // Kiểm tra sản phẩm có trong đơn hàng nào không (chỉ trong store hiện tại)
     const orderCount = await this.prisma.orderDetail.count({
-      where: { ProductID: productId },
+      where: {
+        ProductID: productId,
+        order: { StoreID: storeId },
+      },
     });
     if (orderCount > 0) {
       throw new BadRequestException(
@@ -297,9 +300,12 @@ export class ProductsService {
       );
     }
 
-    // Kiểm tra sản phẩm có trong phiếu nhập nào không
+    // Kiểm tra sản phẩm có trong phiếu nhập nào không (chỉ trong store hiện tại)
     const receiptCount = await this.prisma.stockReceiptDetail.count({
-      where: { ProductID: productId },
+      where: {
+        ProductID: productId,
+        receipt: { StoreID: storeId },
+      },
     });
     if (receiptCount > 0) {
       throw new BadRequestException(

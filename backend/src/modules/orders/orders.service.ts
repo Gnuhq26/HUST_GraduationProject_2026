@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../common/prisma';
 import { CreateOrderDto } from './dto';
 import { Prisma } from '@prisma/client';
+import { PaginatedResult, PaginationParams, paginateResult } from '../../common/pagination';
 
 @Injectable()
 export class OrdersService {
@@ -41,7 +42,23 @@ export class OrdersService {
 
       const deliveryMethod = createOrderDto.DeliveryMethod ?? 'Immediate';
 
-      // 2. Xử lý từng item trong đơn hàng
+      // 2. Batch load products + units + prices để tránh N+1
+      const itemProductIds = createOrderDto.items.map((i) => i.ProductID);
+      const productsMap = new Map(
+        (await tx.product.findMany({
+          where: {
+            ProductID: { in: itemProductIds },
+            StoreID: storeId,
+            IsActive: true,
+          },
+          include: {
+            units: true,
+            prices: { orderBy: { MinQuantity: 'desc' } },
+          },
+        })).map((p) => [p.ProductID, p]),
+      );
+
+      // Xử lý từng item trong đơn hàng
       const orderDetails: Array<{
         ProductID: number;
         UnitName: string;
@@ -62,20 +79,8 @@ export class OrdersService {
       let totalAmount = new Prisma.Decimal(0);
 
       for (const item of createOrderDto.items) {
-        // 2.1. Lấy thông tin sản phẩm
-        const product = await tx.product.findFirst({
-          where: {
-            ProductID: item.ProductID,
-            StoreID: storeId,
-            IsActive: true,
-          },
-          include: {
-            units: true,
-            prices: {
-              orderBy: { MinQuantity: 'desc' },
-            },
-          },
-        });
+        // 2.1. Lấy thông tin sản phẩm từ batch
+        const product = productsMap.get(item.ProductID);
 
         if (!product) {
           throw new NotFoundException(
@@ -305,32 +310,44 @@ export class OrdersService {
   }
 
   /**
-   * Lấy danh sách đơn hàng
+   * Lấy danh sách đơn hàng có phân trang
    */
-  async findAll(storeId: number) {
-    return this.prisma.order.findMany({
-      where: { StoreID: storeId },
-      include: {
-        customer: {
-          select: {
-            CustomerName: true,
-            Phone: true,
+  async findAll(storeId: number, pagination: PaginationParams): Promise<PaginatedResult<any>> {
+    const { page, limit } = pagination;
+    const skip = (page - 1) * limit;
+
+    const where = { StoreID: storeId };
+
+    const [data, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        include: {
+          customer: {
+            select: {
+              CustomerName: true,
+              Phone: true,
+            },
+          },
+          user: {
+            select: {
+              FullName: true,
+              Email: true,
+            },
+          },
+          _count: {
+            select: {
+              details: true,
+            },
           },
         },
-        user: {
-          select: {
-            FullName: true,
-            Email: true,
-          },
-        },
-        _count: {
-          select: {
-            details: true,
-          },
-        },
-      },
-      orderBy: { OrderDate: 'desc' },
-    });
+        orderBy: { OrderDate: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+
+    return paginateResult(data, total, pagination);
   }
 
   /**

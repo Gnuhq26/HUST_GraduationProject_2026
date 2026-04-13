@@ -4,8 +4,10 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma';
+import { Prisma } from '../../../generated/prisma/client';
 import { CreateStockReceiptDto } from './dto';
 import { DirectShipDto } from './dto/direct-ship.dto';
+import { PaginatedResult, PaginationParams, paginateResult } from '../../common/pagination';
 
 // Type definitions for transaction processing
 interface ValidatedItem {
@@ -58,50 +60,47 @@ export class InventoryService {
         throw new NotFoundException('Supplier not found in this store');
       }
 
-      // 2. Tính tổng tiền và validate tất cả items trước
+      // 2. Batch load products + units để tránh N+1
+      const productIds = dto.items.map((i) => i.productId);
+      const [products, productUnits] = await Promise.all([
+        tx.product.findMany({
+          where: { ProductID: { in: productIds }, StoreID: storeId },
+        }),
+        tx.productUnit.findMany({
+          where: { ProductID: { in: productIds } },
+        }),
+      ]);
+
+      const productMap = new Map(products.map((p) => [p.ProductID, p]));
+      const unitMap = new Map(
+        productUnits.map((u) => [`${u.ProductID}_${u.UnitName}`, u]),
+      );
+
+      // 3. Validate tất cả items
       let totalAmount = 0;
       const validatedItems: ValidatedItem[] = [];
 
       for (const item of dto.items) {
-        // Kiểm tra Product có tồn tại và thuộc store này không
-        const product = await tx.product.findFirst({
-          where: {
-            ProductID: item.productId,
-            StoreID: storeId,
-          },
-        });
-
+        const product = productMap.get(item.productId);
         if (!product) {
           throw new NotFoundException(
             `Product ID ${item.productId} not found in this store`,
           );
         }
 
-        // Tìm tỷ lệ quy đổi của UnitName
-        let exchangeValue = 1; // Mặc định là 1 nếu nhập theo BaseUnit
+        let exchangeValue = 1;
 
         if (item.unitName !== product.BaseUnit) {
-          // Nhập theo đơn vị khác BaseUnit, cần tìm tỷ lệ quy đổi
-          const productUnit = await tx.productUnit.findFirst({
-            where: {
-              ProductID: item.productId,
-              UnitName: item.unitName,
-            },
-          });
-
+          const productUnit = unitMap.get(`${item.productId}_${item.unitName}`);
           if (!productUnit) {
             throw new BadRequestException(
               `Unit "${item.unitName}" not found for product "${product.ProductName}". Available units: ${product.BaseUnit}`,
             );
           }
-
           exchangeValue = Number(productUnit.ExchangeValue);
         }
 
-        // Tính số lượng theo đơn vị gốc (BaseUnit)
         const quantityInBaseUnit = item.quantity * exchangeValue;
-
-        // Tính tiền của item này
         const itemTotal = item.quantity * item.unitPrice;
         totalAmount += itemTotal;
 
@@ -228,52 +227,63 @@ export class InventoryService {
         details,
         message: `Stock receipt created successfully. ${details.length} product(s) added to inventory.`,
       };
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 
   /**
-   * Task 23: Lấy danh sách tồn kho với filtering
+   * Task 23: Lấy danh sách tồn kho với filtering có phân trang
    */
   async getInventory(
     storeId: number,
     search?: string,
     lowStockThreshold?: number,
-  ) {
-    const inventories = await this.prisma.inventory.findMany({
-      where: {
-        StoreID: storeId,
-        ...(search && {
-          product: {
-            OR: [
-              { ProductName: { contains: search } },
-              { SKU: { contains: search } },
-            ],
-          },
-        }),
-      },
-      include: {
+    pagination?: PaginationParams,
+  ): Promise<PaginatedResult<any>> {
+    const { page, limit } = pagination ?? { page: 1, limit: 20 };
+    const skip = (page - 1) * limit;
+
+    const where = {
+      StoreID: storeId,
+      ...(search && {
         product: {
-          select: {
-            ProductID: true,
-            ProductName: true,
-            SKU: true,
-            BaseUnit: true,
-            IsActive: true,
-            category: {
-              select: {
-                CategoryID: true,
-                CategoryName: true,
+          OR: [
+            { ProductName: { contains: search } },
+            { SKU: { contains: search } },
+          ],
+        },
+      }),
+    };
+
+    const [inventories, total] = await Promise.all([
+      this.prisma.inventory.findMany({
+        where,
+        include: {
+          product: {
+            select: {
+              ProductID: true,
+              ProductName: true,
+              SKU: true,
+              BaseUnit: true,
+              IsActive: true,
+              category: {
+                select: {
+                  CategoryID: true,
+                  CategoryName: true,
+                },
               },
             },
           },
         },
-      },
-      orderBy: {
-        LastUpdated: 'desc',
-      },
-    });
+        orderBy: {
+          LastUpdated: 'desc',
+        },
+        skip,
+        take: limit,
+      }),
+      this.prisma.inventory.count({ where }),
+    ]);
 
-    const mappedInventories = inventories.map((inv) => {
+    const data = inventories.map((inv) => {
       const physical   = Number(inv.Quantity);
       const reserved   = Number(inv.ReservedQty);
       const inTransit  = Number(inv.InTransitQty);
@@ -296,13 +306,7 @@ export class InventoryService {
       };
     });
 
-    if (lowStockThreshold === undefined) {
-      return mappedInventories;
-    }
-
-    return mappedInventories.filter(
-      (item) => item.AvailableQty <= lowStockThreshold,
-    );
+    return paginateResult(data, total, { page, limit });
   }
 
   /**
@@ -373,31 +377,43 @@ export class InventoryService {
   }
 
   /**
-   * Task 23: Lấy danh sách phiếu nhập kho
+   * Task 23: Lấy danh sách phiếu nhập kho có phân trang
    */
-  async getStockReceipts(storeId: number, supplierId?: number) {
-    return await this.prisma.stockReceipt.findMany({
-      where: {
-        StoreID: storeId,
-        ...(supplierId && { SupplierID: supplierId }),
-      },
-      include: {
-        supplier: {
-          select: {
-            SupplierID: true,
-            SupplierName: true,
+  async getStockReceipts(storeId: number, supplierId?: number, pagination?: PaginationParams): Promise<PaginatedResult<any>> {
+    const { page, limit } = pagination ?? { page: 1, limit: 20 };
+    const skip = (page - 1) * limit;
+
+    const where = {
+      StoreID: storeId,
+      ...(supplierId && { SupplierID: supplierId }),
+    };
+
+    const [data, total] = await Promise.all([
+      this.prisma.stockReceipt.findMany({
+        where,
+        include: {
+          supplier: {
+            select: {
+              SupplierID: true,
+              SupplierName: true,
+            },
+          },
+          _count: {
+            select: {
+              details: true,
+            },
           },
         },
-        _count: {
-          select: {
-            details: true,
-          },
+        orderBy: {
+          ImportDate: 'desc',
         },
-      },
-      orderBy: {
-        ImportDate: 'desc',
-      },
-    });
+        skip,
+        take: limit,
+      }),
+      this.prisma.stockReceipt.count({ where }),
+    ]);
+
+    return paginateResult(data, total, { page, limit });
   }
 
   /**
@@ -564,15 +580,21 @@ export class InventoryService {
         );
       }
 
-      // 2. Xử lý từng item: chuyển InTransit → Physical
+      // 2. Batch load products để tránh N+1
+      const detailProductIds = receipt.details.map((d) => d.ProductID);
+      const products = await tx.product.findMany({
+        where: { ProductID: { in: detailProductIds } },
+        select: {
+          ProductID: true,
+          BaseUnit: true,
+          units: { select: { UnitName: true, ExchangeValue: true } },
+        },
+      });
+      const productMap = new Map(products.map((p) => [p.ProductID, p]));
+
+      // 3. Xử lý từng item: chuyển InTransit → Physical
       for (const detail of receipt.details) {
-        const product = await tx.product.findUnique({
-          where: { ProductID: detail.ProductID },
-          select: {
-            BaseUnit: true,
-            units: { select: { UnitName: true, ExchangeValue: true } },
-          },
-        });
+        const product = productMap.get(detail.ProductID);
 
         let exchangeValue = 1;
         if (product && detail.UnitName !== product.BaseUnit) {
@@ -616,6 +638,12 @@ export class InventoryService {
 
         const oldInTransit = Number(inventory.InTransitQty);
         const oldPhysical = Number(inventory.Quantity);
+
+        if (oldInTransit < quantityInBase) {
+          throw new BadRequestException(
+            `Sản phẩm ${detail.ProductID}: InTransitQty (${oldInTransit}) không đủ để xác nhận nhập ${quantityInBase}`,
+          );
+        }
 
         await tx.inventory.update({
           where: { StoreID_ProductID: { StoreID: storeId, ProductID: detail.ProductID } },
@@ -665,6 +693,6 @@ export class InventoryService {
           details: true,
         },
       });
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 }
