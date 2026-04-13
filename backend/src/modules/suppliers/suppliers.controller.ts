@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { SuppliersService } from './suppliers.service';
 import { CreateSupplierDto, UpdateSupplierDto } from './dto';
 import { CheckPermission, CurrentStore } from '../../common/decorators';
+import { parsePagination } from '../../common/pagination';
 
 @ApiTags('Suppliers')
 @ApiBearerAuth('JWT-auth')
@@ -33,8 +34,10 @@ export class SuppliersController {
   async findAll(
     @CurrentStore() storeId: number,
     @Query('search') search?: string,
+    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
   ) {
-    return await this.suppliersService.findAll(storeId, search);
+    return await this.suppliersService.findAll(storeId, search, parsePagination(page, limit));
   }
 
   @Get(':id')

@@ -13,6 +13,10 @@ import {
 const LOW_STOCK_THRESHOLD = 20;
 /** Thời gian sống của cache phân tích AI (30 phút) – tránh gọi API liên tục */
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 phút
+/** Số lượng tối đa entry trong cache (tránh rò rỉ bộ nhớ) */
+const MAX_CACHE_SIZE = 500;
+/** Timeout cho mỗi lần gọi Gemini API (ms) */
+const GEMINI_TIMEOUT_MS = 15_000;
 
 /** Cấu trúc một entry trong bộ nhớ cache in-memory */
 interface CacheEntry {
@@ -146,7 +150,7 @@ export class AiAnalystService {
    * Gộp nợ theo từng khách (một khách có thể có nhiều đơn nợ) và trả về top 5.
    */
   async getCustomerDebtSummary(storeId: number): Promise<CustomerDebtSummary> {
-    // Lấy các đơn chưa thanh toán đủ: PaidAmount < TotalAmount
+    // Lấy các đơn chưa thanh toán đủ: PaidAmount < TotalAmount (giới hạn 100 đơn gần nhất)
     const orders = await this.prisma.order.findMany({
       where: {
         StoreID: storeId,
@@ -159,6 +163,8 @@ export class AiAnalystService {
         PaidAmount: true,
         customer: { select: { CustomerID: true, CustomerName: true } },
       },
+      orderBy: { OrderDate: 'desc' },
+      take: 100,
     });
 
     // Gộp nợ theo CustomerID để tính tổng nợ của mỗi khách
@@ -332,10 +338,26 @@ Yêu cầu:
     const prompt = this.buildAnalysisPrompt(analyticsData);
 
     try {
-      const result = await this.model.generateContent(prompt);
+      const result = await Promise.race([
+        this.model.generateContent(prompt),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Gemini API timeout')), GEMINI_TIMEOUT_MS),
+        ),
+      ]);
       const response = result.response;
       const insights = response.text();
+
+      if (!insights || insights.trim().length === 0) {
+        throw new Error('Gemini returned empty response');
+      }
+
       const generatedAt = new Date();
+
+      // Evict oldest entries if cache is full
+      if (this.cache.size >= MAX_CACHE_SIZE) {
+        const oldestKey = this.cache.keys().next().value;
+        if (oldestKey !== undefined) this.cache.delete(oldestKey);
+      }
 
       // Lưu vào cache để tái sử dụng trong CACHE_TTL_MS tiếp theo
       this.cache.set(storeId, {
@@ -359,10 +381,11 @@ Yêu cầu:
       }
 
       // Phân biệt lỗi rate limit vs lỗi khác
-      const isRateLimit = error?.status === 429;
+      const isRateLimit =
+        error instanceof Error && 'status' in error && (error as Record<string, unknown>).status === 429;
       const fallbackMessage = isRateLimit
-        ? '⚠️ **Đã vượt giới hạn API miễn phí**\n\nBạn đã sử dụng hết quota Gemini API trong ngày. Vui lòng đợi vài phút rồi thử lại.\n\n> 💡 Mỗi lần phân tích sẽ được lưu cache 30 phút — hạn chế nhấn "Phân tích lại" liên tục để tiết kiệm quota.'
-        : '⚠️ **Hệ thống AI đang bận**\n\nHiện tại không thể kết nối tới dịch vụ phân tích AI. Vui lòng thử lại sau ít phút.\n\nNếu lỗi tiếp tục xảy ra, hãy liên hệ quản trị viên hệ thống.';
+        ? '**Đã vượt giới hạn API miễn phí**\n\nBạn đã sử dụng hết quota Gemini API trong ngày. Vui lòng đợi vài phút rồi thử lại.\n\n> Mỗi lần phân tích sẽ được lưu cache 30 phút — hạn chế nhấn "Phân tích lại" liên tục để tiết kiệm quota.'
+        : '**Hệ thống AI đang bận**\n\nHiện tại không thể kết nối tới dịch vụ phân tích AI. Vui lòng thử lại sau ít phút.\n\nNếu lỗi tiếp tục xảy ra, hãy liên hệ quản trị viên hệ thống.';
 
       return {
         insights: fallbackMessage,

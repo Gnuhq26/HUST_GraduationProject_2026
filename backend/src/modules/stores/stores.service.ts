@@ -145,90 +145,92 @@ export class StoresService {
   async addMember(storeId: number, addMemberDto: AddMemberDto) {
     const { email, roleId, note } = addMemberDto;
 
-    // Find or create user by email
-    let user = await this.prisma.user.findUnique({
-      where: { Email: email },
-    });
+    return await this.prisma.$transaction(async (tx) => {
+      // Find or create user by email
+      let user = await tx.user.findUnique({
+        where: { Email: email },
+      });
 
-    // If user doesn't exist, create new user with default password
-    if (!user) {
-      const defaultPassword = '123456';
-      const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+      // If user doesn't exist, create new user with default password
+      if (!user) {
+        const defaultPassword = '123456';
+        const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
-      user = await this.prisma.user.create({
-        data: {
-          Email: email,
-          PasswordHash: hashedPassword,
-          FullName: email.split('@')[0], // Use email prefix as default name
+        user = await tx.user.create({
+          data: {
+            Email: email,
+            PasswordHash: hashedPassword,
+            FullName: email.split('@')[0], // Use email prefix as default name
+          },
+        });
+      }
+
+      // Check if user is already a member of this store
+      const existingMember = await tx.storeUser.findUnique({
+        where: {
+          StoreID_UserID: {
+            StoreID: storeId,
+            UserID: user.UserID,
+          },
         },
       });
-    }
 
-    // Check if user is already a member of this store
-    const existingMember = await this.prisma.storeUser.findUnique({
-      where: {
-        StoreID_UserID: {
+      if (existingMember) {
+        throw new ConflictException(
+          `User "${email}" is already a member of this store`,
+        );
+      }
+
+      // Verify role exists and belongs to this store
+      const role = await tx.role.findFirst({
+        where: {
+          RoleID: roleId,
+          StoreID: storeId,
+        },
+      });
+
+      if (!role) {
+        throw new NotFoundException(
+          `Role with ID ${roleId} not found in this store`,
+        );
+      }
+
+      // Add user to store
+      const storeUser = await tx.storeUser.create({
+        data: {
           StoreID: storeId,
           UserID: user.UserID,
+          RoleID: roleId,
         },
-      },
-    });
-
-    if (existingMember) {
-      throw new ConflictException(
-        `User "${email}" is already a member of this store`,
-      );
-    }
-
-    // Verify role exists and belongs to this store
-    const role = await this.prisma.role.findFirst({
-      where: {
-        RoleID: roleId,
-        StoreID: storeId,
-      },
-    });
-
-    if (!role) {
-      throw new NotFoundException(
-        `Role with ID ${roleId} not found in this store`,
-      );
-    }
-
-    // Add user to store
-    const storeUser = await this.prisma.storeUser.create({
-      data: {
-        StoreID: storeId,
-        UserID: user.UserID,
-        RoleID: roleId,
-      },
-      include: {
-        user: {
-          select: {
-            UserID: true,
-            Email: true,
-            FullName: true,
-            Phone: true,
+        include: {
+          user: {
+            select: {
+              UserID: true,
+              Email: true,
+              FullName: true,
+              Phone: true,
+            },
+          },
+          role: {
+            select: {
+              RoleID: true,
+              RoleName: true,
+              Description: true,
+            },
           },
         },
-        role: {
-          select: {
-            RoleID: true,
-            RoleName: true,
-            Description: true,
-          },
-        },
-      },
-    });
+      });
 
-    return {
-      message: `User "${user.Email}" added to store successfully`,
-      member: {
-        userId: storeUser.UserID,
-        user: storeUser.user,
-        role: storeUser.role,
-        joinedAt: storeUser.CreatedAt,
-      },
-    };
+      return {
+        message: `User "${user.Email}" added to store successfully`,
+        member: {
+          userId: storeUser.UserID,
+          user: storeUser.user,
+          role: storeUser.role,
+          joinedAt: storeUser.CreatedAt,
+        },
+      };
+    });
   }
 
   /**

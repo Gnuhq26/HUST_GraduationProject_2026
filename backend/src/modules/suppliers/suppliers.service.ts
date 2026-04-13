@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma';
 import { CreateSupplierDto, UpdateSupplierDto } from './dto';
+import { PaginatedResult, PaginationParams, paginateResult } from '../../common/pagination';
 
 @Injectable()
 export class SuppliersService {
@@ -37,30 +38,42 @@ export class SuppliersService {
   }
 
   /**
-   * Lấy danh sách tất cả nhà cung cấp của store
+   * Lấy danh sách tất cả nhà cung cấp của store có phân trang
    */
-  async findAll(storeId: number, search?: string) {
-    return await this.prisma.supplier.findMany({
-      where: {
-        StoreID: storeId,
-        ...(search && {
-          OR: [
-            { SupplierName: { contains: search } },
-            { Phone: { contains: search } },
-          ],
-        }),
-      },
-      include: {
-        _count: {
-          select: {
-            receipts: true, // Đếm số phiếu nhập từ nhà cung cấp này
+  async findAll(storeId: number, search?: string, pagination?: PaginationParams): Promise<PaginatedResult<any>> {
+    const { page, limit } = pagination ?? { page: 1, limit: 20 };
+    const skip = (page - 1) * limit;
+
+    const where = {
+      StoreID: storeId,
+      ...(search && {
+        OR: [
+          { SupplierName: { contains: search } },
+          { Phone: { contains: search } },
+        ],
+      }),
+    };
+
+    const [data, total] = await Promise.all([
+      this.prisma.supplier.findMany({
+        where,
+        include: {
+          _count: {
+            select: {
+              receipts: true,
+            },
           },
         },
-      },
-      orderBy: {
-        CreatedAt: 'desc',
-      },
-    });
+        orderBy: {
+          CreatedAt: 'desc',
+        },
+        skip,
+        take: limit,
+      }),
+      this.prisma.supplier.count({ where }),
+    ]);
+
+    return paginateResult(data, total, { page, limit });
   }
 
   /**

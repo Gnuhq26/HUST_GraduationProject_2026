@@ -142,11 +142,4 @@ export class AuthController {
     return await this.authService.getRolePermissions(currentStore.roleId);
   }
 
-  @Public()
-  @Get('test')
-  @ApiOperation({ summary: 'Test endpoint' })
-  @ApiResponse({ status: 200, description: 'Test message' })
-  test(): string {
-    return this.authService.attemp();
-  }
 }

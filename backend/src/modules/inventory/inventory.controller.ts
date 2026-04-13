@@ -18,6 +18,7 @@ import { InventoryService } from './inventory.service';
 import { CreateStockReceiptDto } from './dto';
 import { DirectShipDto } from './dto/direct-ship.dto';
 import { CheckPermission, CurrentStore } from '../../common/decorators';
+import { parsePagination } from '../../common/pagination';
 
 @ApiTags('Inventory')
 @ApiBearerAuth('JWT-auth')
@@ -95,11 +96,14 @@ export class InventoryController {
     @Query('search') search?: string,
     @Query('lowStockThreshold', new ParseIntPipe({ optional: true }))
     lowStockThreshold?: number,
+    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
   ) {
     return await this.inventoryService.getInventory(
       storeId,
       search,
       lowStockThreshold,
+      parsePagination(page, limit),
     );
   }
 
@@ -131,8 +135,10 @@ export class InventoryController {
     @CurrentStore() storeId: number,
     @Query('supplierId', new ParseIntPipe({ optional: true }))
     supplierId?: number,
+    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
   ) {
-    return await this.inventoryService.getStockReceipts(storeId, supplierId);
+    return await this.inventoryService.getStockReceipts(storeId, supplierId, parsePagination(page, limit));
   }
 
   @Get('receipts/:receiptId')

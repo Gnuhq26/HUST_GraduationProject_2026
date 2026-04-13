@@ -215,7 +215,4 @@ export class AuthService {
     return rolePermissions.map((rp) => rp.permission);
   }
 
-  attemp(): string {
-    return 'Hello, i am Gnuhq26!';
-  }
 }

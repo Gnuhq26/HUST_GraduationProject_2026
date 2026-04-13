@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Body, Param, ParseIntPipe, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, ParseIntPipe, Req, Query } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto';
 import { CurrentStore } from '../../common/decorators';
 import { CheckPermission } from '../../common/decorators';
+import { parsePagination } from '../../common/pagination';
 
 @ApiTags('Đơn hàng')
 @ApiBearerAuth('JWT-auth')
@@ -43,8 +44,12 @@ export class OrdersController {
     status: 200,
     description: 'Trả về danh sách đơn hàng của cửa hàng',
   })
-  findAll(@CurrentStore() storeId: number) {
-    return this.ordersService.findAll(storeId);
+  findAll(
+    @CurrentStore() storeId: number,
+    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+  ) {
+    return this.ordersService.findAll(storeId, parsePagination(page, limit));
   }
 
   @Get(':id')
