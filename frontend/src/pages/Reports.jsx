@@ -158,7 +158,7 @@ function Reports() {
             {/* Revenue */}
             <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white">
               <div className="flex items-center justify-between mb-2">
-                <div className="text-blue-100 text-sm">Doanh thu</div>
+                <div className="text-blue-100 text-sm">Doanh thu thực thu</div>
                 <FiDollarSign className="text-3xl text-blue-200" />
               </div>
               <div className="text-2xl font-bold">
@@ -223,13 +223,33 @@ function Reports() {
                 </div>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                    <span className="text-gray-700">Tổng doanh thu</span>
+                    <span className="text-gray-700">Doanh thu thực thu</span>
                     <span className="font-semibold text-blue-600">
                       {formatCurrency(revenueReport.totalRevenue)}
                     </span>
                   </div>
+                  <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                    <span className="text-gray-700">Đơn hoàn tất ({revenueReport.completedOrders})</span>
+                    <span className="font-semibold text-green-600">
+                      {formatCurrency(revenueReport.confirmedRevenue)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-yellow-50 rounded-lg">
+                    <span className="text-gray-700">Tiền cọc đặt trước ({revenueReport.pendingOrders})</span>
+                    <span className="font-semibold text-yellow-600">
+                      {formatCurrency(revenueReport.pendingDeposit)}
+                    </span>
+                  </div>
+                  {revenueReport.pendingTotalValue > 0 && (
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-gray-500 text-sm">Giá trị đơn chờ xử lý</span>
+                      <span className="font-medium text-gray-500 text-sm">
+                        {formatCurrency(revenueReport.pendingTotalValue)}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                    <span className="text-gray-700">Số đơn hàng</span>
+                    <span className="text-gray-700">Tổng đơn hàng</span>
                     <span className="font-semibold text-gray-900">
                       {revenueReport.totalOrders}
                     </span>

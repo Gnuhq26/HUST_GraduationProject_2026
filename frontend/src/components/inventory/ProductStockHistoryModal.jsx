@@ -185,7 +185,7 @@ function ProductStockHistoryModal({ productId, onClose }) {
                             <FiTruck className="text-gray-400" />
                             <div>
                               <div className="text-sm font-medium text-gray-900">
-                                {item.Supplier.SupplierName}
+                                {item.Supplier?.SupplierName || 'N/A'}
                               </div>
                               <div className="text-xs text-gray-500">
                                 Phiếu #{item.ReceiptID}

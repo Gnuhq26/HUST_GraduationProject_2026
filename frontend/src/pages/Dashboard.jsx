@@ -29,11 +29,16 @@ export default function Dashboard() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [products, customers, orders] = await Promise.all([
+        // orders và customers trả về PaginatedResult { data, meta }; products trả về array
+        const [productsRes, customersRes, ordersRes] = await Promise.all([
           productsService.getAll().catch(() => []),
-          customersService.getAll().catch(() => []),
-          ordersService.getAll().catch(() => []),
+          customersService.getAll().catch(() => ({ data: [], meta: { total: 0 } })),
+          ordersService.getAll().catch(() => ({ data: [], meta: { total: 0 } })),
         ]);
+
+        const products = Array.isArray(productsRes) ? productsRes : (productsRes?.data ?? []);
+        const customers = customersRes?.data ?? [];
+        const orders = ordersRes?.data ?? [];
 
         const revenue = orders.reduce(
           (sum, order) => sum + parseFloat(order.TotalAmount || 0),
@@ -42,8 +47,8 @@ export default function Dashboard() {
 
         setStats({
           products: products.length,
-          customers: customers.length,
-          orders: orders.length,
+          customers: customersRes?.meta?.total ?? customers.length,
+          orders: ordersRes?.meta?.total ?? orders.length,
           revenue,
         });
 
@@ -122,11 +127,11 @@ export default function Dashboard() {
                 <div key={order.OrderID} className="py-3 flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-900">
-                      #{order.OrderID} — {order.customer?.CustomerName || 'Khách vãng lai'}
+                      {order.customer?.CustomerName || 'Khách vãng lai'}
                     </p>
-                    <p className="text-xs text-gray-500">{formatDate(order.OrderDate)}</p>
+                    <p className="text-xs text-gray-900 font-medium">{formatDate(order.OrderDate)}</p>
                   </div>
-                  <span className="text-sm font-semibold text-green-600">
+                  <span className="text-xs text-gray-500">
                     {formatCurrency(order.TotalAmount)}
                   </span>
                 </div>

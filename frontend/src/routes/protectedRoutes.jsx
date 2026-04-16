@@ -1,4 +1,4 @@
-import { FiHome, FiShoppingBag, FiGrid, FiPackage, FiShoppingCart, FiUsers, FiTruck, FiBarChart2, FiSettings, FiShield } from 'react-icons/fi';
+import { FiHome, FiShoppingBag, FiGrid, FiPackage, FiShoppingCart, FiUsers, FiTruck, FiBarChart2, FiSettings, FiShield, FiDollarSign } from 'react-icons/fi';
 import Dashboard from '../pages/Dashboard';
 import Products from '../pages/Products';
 import Categories from '../pages/Categories';
@@ -7,6 +7,7 @@ import Suppliers from '../pages/Suppliers';
 import Inventory from '../pages/Inventory';
 import Orders from '../pages/Orders';
 import Reports from '../pages/Reports';
+import Debts from '../pages/Debts';
 import StoreSettings from '../pages/StoreSettings';
 import StoreMembers from '../pages/StoreMembers';
 import Roles from '../pages/Roles';
@@ -94,6 +95,16 @@ export const protectedRoutes = [
       group: 'main',
       label: 'Báo cáo',
       icon: FiBarChart2,
+    },
+  },
+  {
+    path: '/debts',
+    component: Debts,
+    permission: { action: 'read', subject: 'Debt' },
+    menu: {
+      group: 'main',
+      label: 'Công nợ',
+      icon: FiDollarSign,
     },
   },
   {

@@ -118,7 +118,7 @@ export class InventoryService {
           StoreID: storeId,
           SupplierID: dto.supplierId,
           TotalAmount: totalAmount,
-          Status: dto.status ?? 'Received',
+          Status: dto.status ?? 'Pending',
           Note: dto.note,
         },
       });
@@ -159,7 +159,7 @@ export class InventoryService {
         });
 
         // Phân nhánh theo status
-        const isPending = (dto.status ?? 'Received') === 'Pending';
+        const isPending = (dto.status ?? 'Pending') === 'Pending';
         const oldPhysical = inventory ? Number(inventory.Quantity) : 0;
         const oldInTransit = inventory ? Number(inventory.InTransitQty) : 0;
 

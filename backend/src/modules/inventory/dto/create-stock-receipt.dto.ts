@@ -38,8 +38,8 @@ export class CreateStockReceiptDto {
   note?: string;
 
   @ApiPropertyOptional({
-    example: 'Received',
-    description: 'Trạng thái phiếu nhập (Pending: hàng đang về, Received: đã nhập kho)',
+    example: 'Pending',
+    description: 'Trạng thái phiếu nhập (Pending: hàng đang về, Received: nhập trực tiếp/mua đứt)',
     enum: ['Pending', 'Received'],
   })
   @IsOptional()

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, ParseIntPipe, Req, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, ParseIntPipe, Req, Query } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto';
@@ -66,5 +66,43 @@ export class OrdersController {
     @Param('id', ParseIntPipe) id: number,
   ) {
     return this.ordersService.findOne(storeId, id);
+  }
+
+  @Patch(':id/fulfill')
+  @CheckPermission('update', 'Order')
+  @ApiOperation({
+    summary: 'Hoàn tất đơn đặt trước',
+    description:
+      'Chuyển đơn Reserved từ Pending → Completed. Giảm ReservedQty, trừ Quantity (xuất kho thực), ghi InventoryLog.',
+  })
+  @ApiParam({ name: 'id', description: 'ID đơn hàng', type: Number })
+  @ApiResponse({ status: 200, description: 'Đơn hàng đã hoàn tất' })
+  @ApiResponse({ status: 400, description: 'Đơn hàng không ở trạng thái Pending hoặc không đủ kho' })
+  @ApiResponse({ status: 404, description: 'Đơn hàng không tồn tại' })
+  fulfill(
+    @CurrentStore() storeId: number,
+    @Req() req: any,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.ordersService.fulfillOrder(storeId, req.user.UserID, id);
+  }
+
+  @Patch(':id/cancel')
+  @CheckPermission('update', 'Order')
+  @ApiOperation({
+    summary: 'Hủy đơn hàng',
+    description:
+      'Chuyển đơn Pending → Cancelled. Hoàn trả ReservedQty, ghi InventoryLog.',
+  })
+  @ApiParam({ name: 'id', description: 'ID đơn hàng', type: Number })
+  @ApiResponse({ status: 200, description: 'Đơn hàng đã bị hủy' })
+  @ApiResponse({ status: 400, description: 'Đơn hàng không ở trạng thái Pending' })
+  @ApiResponse({ status: 404, description: 'Đơn hàng không tồn tại' })
+  cancel(
+    @CurrentStore() storeId: number,
+    @Req() req: any,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.ordersService.cancelOrder(storeId, req.user.UserID, id);
   }
 }

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { FiX, FiFileText, FiTruck, FiCalendar, FiPackage, FiDollarSign } from 'react-icons/fi';
+import { FiX, FiFileText, FiTruck, FiCalendar, FiPackage, FiDollarSign, FiCheckCircle } from 'react-icons/fi';
 import inventoryService from '../../services/inventoryService';
 
-function StockReceiptDetailModal({ receiptId, onClose }) {
+function StockReceiptDetailModal({ receiptId, onClose, onConfirmed }) {
   const [loading, setLoading] = useState(true);
   const [receipt, setReceipt] = useState(null);
+  const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
     loadReceiptDetail();
@@ -73,7 +74,7 @@ function StockReceiptDetailModal({ receiptId, onClose }) {
                   <span>•</span>
                   <div className="flex items-center gap-1">
                     <FiTruck />
-                    <span>{receipt.supplier.SupplierName}</span>
+                    <span>{receipt.supplier?.SupplierName}</span>
                   </div>
                 </div>
               )}
@@ -108,10 +109,10 @@ function StockReceiptDetailModal({ receiptId, onClose }) {
                     <span>Nhà cung cấp</span>
                   </div>
                   <div className="font-semibold text-gray-900">
-                    {receipt.supplier.SupplierName}
+                    {receipt.supplier?.SupplierName || 'N/A'}
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
-                    Mã NCC: {receipt.supplier.SupplierID}
+                    Mã NCC: {receipt.supplier?.SupplierID || '-'}
                   </div>
                 </div>
 
@@ -143,7 +144,7 @@ function StockReceiptDetailModal({ receiptId, onClose }) {
                   <FiPackage className="text-gray-600" />
                   <h3 className="font-semibold text-gray-800">Danh sách sản phẩm</h3>
                   <span className="text-sm text-gray-500">
-                    ({receipt.details.length} sản phẩm)
+                    ({(receipt.details || []).length} sản phẩm)
                   </span>
                 </div>
 
@@ -172,18 +173,18 @@ function StockReceiptDetailModal({ receiptId, onClose }) {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {receipt.details.map((detail) => {
+                      {(receipt.details || []).map((detail) => {
                         const totalPrice = Number(detail.Quantity) * Number(detail.UnitPrice);
                         return (
                           <tr key={detail.DetailID} className="hover:bg-gray-50">
                             <td className="px-4 py-4">
                               <div className="font-medium text-gray-900">
-                                {detail.product.ProductName}
+                                {detail.product?.ProductName || 'N/A'}
                               </div>
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap">
                               <span className="text-sm text-gray-600">
-                                {detail.product.SKU || '-'}
+                                {detail.product?.SKU || '-'}
                               </span>
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap">
@@ -230,10 +231,33 @@ function StockReceiptDetailModal({ receiptId, onClose }) {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t bg-gray-50">
+        <div className="p-4 border-t bg-gray-50 flex gap-3">
+          {receipt?.Status === 'Pending' && (
+            <button
+              onClick={async () => {
+                if (!confirm('Xác nhận đã nhận hàng?')) return;
+                try {
+                  setConfirming(true);
+                  await inventoryService.confirmReceipt(receiptId);
+                  alert('Xác nhận nhận hàng thành công!');
+                  onConfirmed?.();
+                  loadReceiptDetail();
+                } catch (err) {
+                  alert(err.response?.data?.message || 'Có lỗi xảy ra');
+                } finally {
+                  setConfirming(false);
+                }
+              }}
+              disabled={confirming}
+              className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <FiCheckCircle />
+              {confirming ? 'Đang xử lý...' : 'Xác nhận nhận hàng'}
+            </button>
+          )}
           <button
             onClick={onClose}
-            className="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+            className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
           >
             Đóng
           </button>

@@ -178,7 +178,7 @@ function OrderDetailModal({ orderId, onClose }) {
                     <span>Đã thanh toán</span>
                   </div>
                   <div className="font-bold text-2xl text-green-900">
-                    {formatCurrency(order.PaidAmount)}
+                    {formatCurrency(order.PaidAmount ?? 0)}
                   </div>
                 </div>
 
@@ -227,7 +227,7 @@ function OrderDetailModal({ orderId, onClose }) {
                 <div className="flex items-center gap-2 mb-3">
                   <FiPackage className="text-gray-600" />
                   <h3 className="font-semibold text-gray-800">Danh sách sản phẩm</h3>
-                  <span className="text-sm text-gray-500">({order.details.length} sản phẩm)</span>
+                  <span className="text-sm text-gray-500">({(order.details || []).length} sản phẩm)</span>
                 </div>
 
                 <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
@@ -255,18 +255,18 @@ function OrderDetailModal({ orderId, onClose }) {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {order.details.map((detail) => {
+                      {(order.details || []).map((detail) => {
                         const totalPrice = Number(detail.Quantity) * Number(detail.UnitPrice);
                         return (
                           <tr key={detail.DetailID} className="hover:bg-gray-50">
                             <td className="px-4 py-4">
                               <div className="font-medium text-gray-900">
-                                {detail.product.ProductName}
+                                {detail.product?.ProductName || 'N/A'}
                               </div>
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap">
                               <span className="text-sm text-gray-600">
-                                {detail.product.SKU || '-'}
+                                {detail.product?.SKU || '-'}
                               </span>
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap">

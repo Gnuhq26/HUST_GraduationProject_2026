@@ -254,6 +254,7 @@ export class OrdersService {
             connect: { UserID: userId },
           },
           TotalAmount: totalAmount,
+          Status: deliveryMethod === 'Reserved' ? 'Pending' : 'Completed',
           DeliveryMethod: deliveryMethod,
           Note: createOrderDto.Note || null,
           details: {
@@ -392,5 +393,247 @@ export class OrdersService {
     }
 
     return order;
+  }
+
+  /**
+   * Hoàn tất đơn đặt trước (Reserved → Completed)
+   * Quy trình:
+   * 1. Kiểm tra đơn hàng Pending + Reserved
+   * 2. Với mỗi item: giảm ReservedQty, trừ Quantity (xuất kho thực)
+   * 3. Cập nhật Status → Completed
+   * 4. Ghi InventoryLog
+   */
+  async fulfillOrder(storeId: number, userId: number, orderId: number) {
+    return this.prisma.$transaction(async (tx) => {
+      const order = await tx.order.findFirst({
+        where: { OrderID: orderId, StoreID: storeId },
+        include: {
+          details: {
+            include: {
+              product: {
+                select: { ProductName: true, BaseUnit: true, units: true },
+              },
+            },
+          },
+        },
+      });
+
+      if (!order) {
+        throw new NotFoundException(`Đơn hàng với ID ${orderId} không tồn tại`);
+      }
+
+      if (order.Status !== 'Pending') {
+        throw new BadRequestException(
+          `Chỉ có thể hoàn tất đơn hàng ở trạng thái "Chờ xử lý". Trạng thái hiện tại: ${order.Status}`,
+        );
+      }
+
+      if (order.DeliveryMethod !== 'Reserved') {
+        throw new BadRequestException(
+          `Chỉ đơn hàng đặt trước (Reserved) mới cần hoàn tất`,
+        );
+      }
+
+      // Xử lý từng item: giảm Reserved, trừ kho thực
+      for (const detail of order.details) {
+        // Tính lại quantity in base unit
+        let exchangeValue = new Prisma.Decimal(1);
+        if (detail.UnitName !== detail.product.BaseUnit) {
+          const unit = detail.product.units.find(
+            (u) => u.UnitName === detail.UnitName,
+          );
+          if (unit) exchangeValue = unit.ExchangeValue;
+        }
+        const quantityInBaseUnit = detail.Quantity.mul(exchangeValue);
+
+        const inventory = await tx.inventory.findFirst({
+          where: { StoreID: storeId, ProductID: detail.ProductID },
+        });
+
+        if (!inventory) {
+          throw new BadRequestException(
+            `Sản phẩm ${detail.product.ProductName} không tồn tại trong kho`,
+          );
+        }
+
+        // Kiểm tra kho thực đủ để xuất
+        if (inventory.Quantity.lt(quantityInBaseUnit)) {
+          throw new BadRequestException(
+            `Sản phẩm ${detail.product.ProductName} không đủ tồn kho thực tế. ` +
+            `Tồn thực: ${inventory.Quantity.toString()} ${detail.product.BaseUnit}, ` +
+            `cần: ${quantityInBaseUnit.toString()} ${detail.product.BaseUnit}`,
+          );
+        }
+
+        // Giảm ReservedQty (bỏ khóa) + trừ Quantity (xuất kho thực)
+        await tx.inventory.update({
+          where: { InventoryID: inventory.InventoryID },
+          data: {
+            ReservedQty: { decrement: quantityInBaseUnit },
+            Quantity: { decrement: quantityInBaseUnit },
+          },
+        });
+
+        // Ghi log: giảm Reserved
+        await tx.inventoryLog.create({
+          data: {
+            StoreID: storeId,
+            ProductID: detail.ProductID,
+            ChangeType: 'OUT',
+            QuantityType: 'Reserved',
+            ReferenceType: 'Order',
+            ReferenceID: orderId,
+            OldQuantity: inventory.ReservedQty,
+            ChangeQuantity: quantityInBaseUnit.negated(),
+            NewQuantity: inventory.ReservedQty.sub(quantityInBaseUnit),
+            Note: 'Hoàn tất đơn đặt trước - giải phóng Reserved',
+            CreatedBy: userId,
+          },
+        });
+
+        // Ghi log: xuất kho thực
+        await tx.inventoryLog.create({
+          data: {
+            StoreID: storeId,
+            ProductID: detail.ProductID,
+            ChangeType: 'OUT',
+            QuantityType: 'Physical',
+            ReferenceType: 'Order',
+            ReferenceID: orderId,
+            OldQuantity: inventory.Quantity,
+            ChangeQuantity: quantityInBaseUnit.negated(),
+            NewQuantity: inventory.Quantity.sub(quantityInBaseUnit),
+            Note: 'Hoàn tất đơn đặt trước - xuất kho thực',
+            CreatedBy: userId,
+          },
+        });
+      }
+
+      // Cập nhật Status → Completed
+      const updatedOrder = await tx.order.update({
+        where: { OrderID: orderId },
+        data: { Status: 'Completed' },
+        include: {
+          details: {
+            include: {
+              product: {
+                select: { ProductName: true, SKU: true, BaseUnit: true },
+              },
+            },
+          },
+          customer: { select: { CustomerName: true, Phone: true } },
+          user: { select: { FullName: true, Email: true } },
+        },
+      });
+
+      return updatedOrder;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  /**
+   * Hủy đơn hàng (Pending → Cancelled)
+   * Quy trình:
+   * 1. Kiểm tra đơn hàng Pending
+   * 2. Hoàn trả tồn kho:
+   *    - Reserved: giảm ReservedQty
+   *    - Immediate (nếu có): tăng Quantity
+   * 3. Cập nhật Status → Cancelled
+   * 4. Ghi InventoryLog
+   */
+  async cancelOrder(storeId: number, userId: number, orderId: number) {
+    return this.prisma.$transaction(async (tx) => {
+      const order = await tx.order.findFirst({
+        where: { OrderID: orderId, StoreID: storeId },
+        include: {
+          details: {
+            include: {
+              product: {
+                select: { ProductName: true, BaseUnit: true, units: true },
+              },
+            },
+          },
+        },
+      });
+
+      if (!order) {
+        throw new NotFoundException(`Đơn hàng với ID ${orderId} không tồn tại`);
+      }
+
+      if (order.Status !== 'Pending') {
+        throw new BadRequestException(
+          `Chỉ có thể hủy đơn hàng ở trạng thái "Chờ xử lý". Trạng thái hiện tại: ${order.Status}`,
+        );
+      }
+
+      // Hoàn trả tồn kho cho từng item
+      for (const detail of order.details) {
+        let exchangeValue = new Prisma.Decimal(1);
+        if (detail.UnitName !== detail.product.BaseUnit) {
+          const unit = detail.product.units.find(
+            (u) => u.UnitName === detail.UnitName,
+          );
+          if (unit) exchangeValue = unit.ExchangeValue;
+        }
+        const quantityInBaseUnit = detail.Quantity.mul(exchangeValue);
+
+        const inventory = await tx.inventory.findFirst({
+          where: { StoreID: storeId, ProductID: detail.ProductID },
+        });
+
+        if (!inventory) continue;
+
+        if (order.DeliveryMethod === 'Reserved') {
+          // Hoàn ReservedQty
+          await tx.inventory.update({
+            where: { InventoryID: inventory.InventoryID },
+            data: { ReservedQty: { decrement: quantityInBaseUnit } },
+          });
+
+          await tx.inventoryLog.create({
+            data: {
+              StoreID: storeId,
+              ProductID: detail.ProductID,
+              ChangeType: 'RETURN',
+              QuantityType: 'Reserved',
+              ReferenceType: 'Order',
+              ReferenceID: orderId,
+              OldQuantity: inventory.ReservedQty,
+              ChangeQuantity: quantityInBaseUnit.negated(),
+              NewQuantity: inventory.ReservedQty.sub(quantityInBaseUnit),
+              Note: 'Hủy đơn đặt trước - hoàn trả Reserved',
+              CreatedBy: userId,
+            },
+          });
+        }
+      }
+
+      // Ghi nhận số tiền cọc cần hoàn trả
+      const refundAmount = order.PaidAmount;
+
+      // Cập nhật Status → Cancelled, reset PaidAmount về 0
+      const updatedOrder = await tx.order.update({
+        where: { OrderID: orderId },
+        data: {
+          Status: 'Cancelled',
+          PaidAmount: 0,
+        },
+        include: {
+          details: {
+            include: {
+              product: {
+                select: { ProductName: true, SKU: true, BaseUnit: true },
+              },
+            },
+          },
+          customer: { select: { CustomerName: true, Phone: true } },
+          user: { select: { FullName: true, Email: true } },
+        },
+      });
+
+      return {
+        ...updatedOrder,
+        refundAmount,
+      };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 }
