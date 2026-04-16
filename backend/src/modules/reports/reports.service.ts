@@ -8,36 +8,54 @@ export class ReportsService {
 
   /**
    * Báo cáo Doanh thu theo khoảng thời gian
-   * Revenue = Tổng TotalAmount của các đơn hàng trong khoảng thời gian
+   * - confirmedRevenue: Tổng TotalAmount đơn Completed (doanh thu đã chốt)
+   * - pendingRevenue: Tổng PaidAmount đơn Pending (tiền cọc đã thu)
+   * - totalRevenue: confirmedRevenue + pendingRevenue
    */
   async getRevenueReport(storeId: number, query: ReportQueryDto) {
     const { startDate, endDate } = query;
 
-    // Tính tổng doanh thu từ các đơn hàng
-    const result = await this.prisma.order.aggregate({
+    const dateFilter = {
+      gte: new Date(startDate),
+      lte: new Date(endDate + 'T23:59:59.999Z'),
+    };
+
+    // Doanh thu đã chốt: đơn Completed → TotalAmount
+    const completedResult = await this.prisma.order.aggregate({
       where: {
         StoreID: storeId,
-        OrderDate: {
-          gte: new Date(startDate),
-          lte: new Date(endDate + 'T23:59:59.999Z'), // Bao gồm cả ngày endDate
-        },
-        Status: {
-          not: 'Cancelled', // Không tính đơn đã hủy
-        },
+        OrderDate: dateFilter,
+        Status: 'Completed',
       },
-      _sum: {
-        TotalAmount: true,
-      },
-      _count: {
-        _all: true,
-      },
+      _sum: { TotalAmount: true },
+      _count: { _all: true },
     });
+
+    // Doanh thu đặt cọc: đơn Pending → PaidAmount (tiền đã thu thực tế)
+    const pendingResult = await this.prisma.order.aggregate({
+      where: {
+        StoreID: storeId,
+        OrderDate: dateFilter,
+        Status: 'Pending',
+      },
+      _sum: { PaidAmount: true, TotalAmount: true },
+      _count: { _all: true },
+    });
+
+    const confirmedRevenue = Number(completedResult._sum.TotalAmount || 0);
+    const pendingDeposit = Number(pendingResult._sum.PaidAmount || 0);
+    const pendingTotalValue = Number(pendingResult._sum.TotalAmount || 0);
 
     return {
       startDate,
       endDate,
-      totalRevenue: result._sum.TotalAmount || 0,
-      totalOrders: result._count._all,
+      confirmedRevenue,
+      pendingDeposit,
+      pendingTotalValue,
+      totalRevenue: confirmedRevenue + pendingDeposit,
+      completedOrders: completedResult._count._all,
+      pendingOrders: pendingResult._count._all,
+      totalOrders: completedResult._count._all + pendingResult._count._all,
     };
   }
 

@@ -55,6 +55,12 @@ async function main() {
   });
 
   await prisma.permission.upsert({
+    where: { Action_Subject: { Action: 'update', Subject: 'Order' } },
+    update: {},
+    create: { Action: 'update', Subject: 'Order' },
+  });
+
+  await prisma.permission.upsert({
     where: { Action_Subject: { Action: 'read', Subject: 'CostPrice' } },
     update: {},
     create: { Action: 'read', Subject: 'CostPrice' }, // Xem giá vốn
@@ -291,6 +297,13 @@ async function main() {
             permission: {
               connect: {
                 Action_Subject: { Action: 'create', Subject: 'Order' },
+              },
+            },
+          },
+          {
+            permission: {
+              connect: {
+                Action_Subject: { Action: 'update', Subject: 'Order' },
               },
             },
           },

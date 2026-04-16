@@ -18,8 +18,8 @@ export default function Customers() {
   const loadCustomers = async () => {
     setLoading(true);
     try {
-      const data = await customersService.getAll();
-      setCustomers(data);
+      const res = await customersService.getAll();
+      setCustomers(Array.isArray(res) ? res : res?.data ?? []);
     } catch (error) {
       console.error('Lỗi tải khách hàng:', error);
     } finally {

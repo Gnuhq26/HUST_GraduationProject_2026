@@ -71,7 +71,7 @@ export default function Roles() {
     setSelectedRoleForPermissions(role);
     
     // Get current permissions for this role
-    const currentPermIds = role.rolePermissions.map(rp => rp.permission.PermissionID);
+    const currentPermIds = (role.rolePermissions || []).map(rp => rp.permission?.PermissionID).filter(Boolean);
     setSelectedPermissions(currentPermIds);
     
     setShowPermissionsModal(true);
@@ -232,7 +232,7 @@ export default function Roles() {
             <div>
               <p className="text-sm text-gray-600">Thành viên có vai trò</p>
               <p className="text-2xl font-bold text-gray-900">
-                {roles.reduce((sum, role) => sum + role._count.storeUsers, 0)}
+                {roles.reduce((sum, role) => sum + (role._count?.storeUsers ?? 0), 0)}
               </p>
             </div>
           </div>
@@ -269,11 +269,11 @@ export default function Roles() {
               <div className="flex items-center gap-4 mb-4 text-sm">
                 <div className="flex items-center gap-1 text-gray-600">
                   <FiUsers size={16} />
-                  <span>{role._count.storeUsers} thành viên</span>
+                  <span>{role._count?.storeUsers ?? 0} thành viên</span>
                 </div>
                 <div className="flex items-center gap-1 text-gray-600">
                   <FiKey size={16} />
-                  <span>{role.rolePermissions.length} quyền</span>
+                  <span>{(role.rolePermissions || []).length} quyền</span>
                 </div>
               </div>
 
@@ -281,21 +281,21 @@ export default function Roles() {
               <div className="mb-4">
                 <p className="text-xs font-medium text-gray-500 mb-2">QUYỀN HẠN:</p>
                 <div className="flex flex-wrap gap-1">
-                  {role.rolePermissions.length === 0 ? (
+                  {(role.rolePermissions || []).length === 0 ? (
                     <span className="text-xs text-gray-400">Chưa có quyền</span>
                   ) : (
-                    role.rolePermissions.slice(0, 3).map((rp) => (
+                    (role.rolePermissions || []).slice(0, 3).map((rp) => (
                       <span
-                        key={rp.permission.PermissionID}
-                        className={`px-2 py-1 text-xs rounded ${getActionColor(rp.permission.Action)}`}
+                        key={rp.permission?.PermissionID}
+                        className={`px-2 py-1 text-xs rounded ${getActionColor(rp.permission?.Action)}`}
                       >
-                        {rp.permission.Action}:{rp.permission.Subject}
+                        {rp.permission?.Action}:{rp.permission?.Subject}
                       </span>
                     ))
                   )}
-                  {role.rolePermissions.length > 3 && (
+                  {(role.rolePermissions || []).length > 3 && (
                     <span className="px-2 py-1 text-xs rounded bg-gray-100 text-gray-600">
-                      +{role.rolePermissions.length - 3} thêm
+                      +{(role.rolePermissions || []).length - 3} thêm
                     </span>
                   )}
                 </div>

@@ -53,7 +53,7 @@ export default function StoreMembers() {
   // Open edit modal
   const handleOpenEdit = (member) => {
     setEditingMember(member);
-    setValueEdit('roleId', member.role.RoleID);
+    setValueEdit('roleId', member.role?.RoleID);
     setShowEditModal(true);
   };
 
@@ -95,7 +95,7 @@ export default function StoreMembers() {
 
   // Remove member
   const handleRemoveMember = async (member) => {
-    if (!confirm(`Bạn có chắc muốn xóa thành viên "${member.user.Email}" khỏi cửa hàng?`)) {
+    if (!confirm(`Bạn có chắc muốn xóa thành viên "${member.user?.Email || 'N/A'}" khỏi cửa hàng?`)) {
       return;
     }
 
@@ -216,27 +216,27 @@ export default function StoreMembers() {
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
                           <span className="text-primary-600 font-semibold">
-                            {member.user.FullName?.[0]?.toUpperCase() || member.user.Email[0].toUpperCase()}
+                            {member.user?.FullName?.[0]?.toUpperCase() || member.user?.Email?.[0]?.toUpperCase() || '?'}
                           </span>
                         </div>
                         <div>
                           <div className="text-sm font-medium text-gray-900">
-                            {member.user.FullName || 'Chưa cập nhật'}
+                            {member.user?.FullName || 'Chưa cập nhật'}
                           </div>
-                          <div className="text-sm text-gray-500">{member.user.Email}</div>
+                          <div className="text-sm text-gray-500">{member.user?.Email}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">{member.user.Phone || '-'}</div>
-                      <div className="text-sm text-gray-500">{member.user.Address || '-'}</div>
+                      <div className="text-sm text-gray-900">{member.user?.Phone || '-'}</div>
+                      <div className="text-sm text-gray-500">{member.user?.Address || '-'}</div>
                     </td>
                     <td className="px-6 py-4">
                       <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-primary-100 text-primary-800">
                         <FiShield className="mr-1" />
-                        {member.role.RoleName}
+                        {member.role?.RoleName || 'N/A'}
                       </span>
-                      {member.role.Description && (
+                      {member.role?.Description && (
                         <div className="text-xs text-gray-500 mt-1">{member.role.Description}</div>
                       )}
                     </td>

@@ -15,6 +15,7 @@ const inventoryService = {
   async stockIn(data) {
     const response = await apiClient.post('/inventory/stock-in', {
       supplierId: data.supplierId,
+      status: data.status || 'Received',
       note: data.note,
       items: data.items.map(item => ({
         productId: item.productId,
@@ -43,6 +44,28 @@ const inventoryService = {
   // Chi tiết phiếu nhập
   async getStockReceiptById(receiptId) {
     const response = await apiClient.get(`/inventory/receipts/${receiptId}`);
+    return response.data;
+  },
+
+  // Xác nhận nhận hàng (Pending to Received)
+  async confirmReceipt(receiptId) {
+    const response = await apiClient.post(`/inventory/receipts/${receiptId}/receive`);
+    return response.data;
+  },
+
+  // Giao thẳng (Direct Ship)
+  async directShip(data) {
+    const response = await apiClient.post('/inventory/direct-ship', {
+      supplierId: data.supplierId,
+      productId: data.productId,
+      unitName: data.unitName,
+      totalQty: parseFloat(data.totalQty),
+      deliverQty: parseFloat(data.deliverQty),
+      importUnitPrice: parseFloat(data.importUnitPrice),
+      saleUnitPrice: parseFloat(data.saleUnitPrice),
+      customerId: data.customerId || undefined,
+      note: data.note || undefined,
+    });
     return response.data;
   },
 };

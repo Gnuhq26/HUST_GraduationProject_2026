@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FiPlus, FiShoppingCart, FiUser, FiX, FiDollarSign, FiFileText, FiEye, FiClock, FiCheckCircle, FiXCircle } from 'react-icons/fi';
+import { FiPlus, FiShoppingCart, FiUser, FiX, FiDollarSign, FiEye, FiClock, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 import ordersService from '../services/ordersService';
 import { customersService } from '../services/customersService';
 import { productsService } from '../services/productsService';
@@ -17,14 +17,15 @@ function Orders() {
   const [products, setProducts] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [note, setNote] = useState('');
+  const [deliveryMethod, setDeliveryMethod] = useState('Immediate');
   const [items, setItems] = useState([{ productId: '', unitName: '', quantity: '' }]);
 
   // Load orders
   const loadOrders = async () => {
     try {
       setLoading(true);
-      const data = await ordersService.getAll();
-      setOrders(data);
+      const res = await ordersService.getAll();
+      setOrders(Array.isArray(res) ? res : res?.data ?? []);
     } catch (err) {
       console.error('Error loading orders:', err);
     } finally {
@@ -35,12 +36,13 @@ function Orders() {
   // Load form data (customers and products)
   const loadFormData = async () => {
     try {
-      const [customersData, productsData] = await Promise.all([
+      const [customersRes, productsData] = await Promise.all([
         customersService.getAll(),
         productsService.getAll(),
       ]);
-      setCustomers(customersData);
-      setProducts(productsData.filter((p) => p.IsActive));
+      const customersArr = Array.isArray(customersRes) ? customersRes : customersRes?.data ?? [];
+      setCustomers(customersArr);
+      setProducts((Array.isArray(productsData) ? productsData : productsData?.data ?? []).filter((p) => p.IsActive));
     } catch (err) {
       console.error('Error loading form data:', err);
     }
@@ -55,6 +57,7 @@ function Orders() {
     await loadFormData();
     setSelectedCustomer('');
     setNote('');
+    setDeliveryMethod('Immediate');
     setItems([{ productId: '', unitName: '', quantity: '' }]);
     setIsCreateModalOpen(true);
   };
@@ -104,6 +107,7 @@ function Orders() {
       await ordersService.createOrder({
         customerId: selectedCustomer ? parseInt(selectedCustomer) : null,
         note,
+        deliveryMethod,
         items: validItems.map((item) => ({
           productId: parseInt(item.productId),
           unitName: item.unitName,
@@ -132,6 +136,35 @@ function Orders() {
 
       return sum + parseFloat(item.quantity) * parseFloat(price.UnitPrice);
     }, 0);
+  };
+
+  // Hoàn tất đơn đặt trước
+  const handleFulfillOrder = async (orderId) => {
+    if (!confirm(`Xác nhận hoàn tất đơn hàng #${orderId}? Hàng sẽ được xuất kho thực tế.`)) return;
+    try {
+      await ordersService.fulfillOrder(orderId);
+      alert('Hoàn tất đơn hàng thành công!');
+      loadOrders();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Có lỗi xảy ra khi hoàn tất đơn hàng');
+    }
+  };
+
+  // Hủy đơn hàng
+  const handleCancelOrder = async (orderId) => {
+    if (!confirm(`Xác nhận hủy đơn hàng #${orderId}? Hàng đã đặt trước sẽ được hoàn trả về kho.`)) return;
+    try {
+      const res = await ordersService.cancelOrder(orderId);
+      const refund = Number(res.data?.refundAmount || res.refundAmount || 0);
+      if (refund > 0) {
+        alert(`Đã hủy đơn hàng thành công!\nSố tiền cọc cần hoàn trả khách: ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(refund)}`);
+      } else {
+        alert('Đã hủy đơn hàng thành công!');
+      }
+      loadOrders();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Có lỗi xảy ra khi hủy đơn hàng');
+    }
   };
 
   // Format currency
@@ -263,13 +296,10 @@ function Orders() {
       </div>
 
       {/* Orders Table */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Mã ĐH
-              </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Ngày tạo
               </th>
@@ -284,6 +314,9 @@ function Orders() {
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Tổng tiền
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Giao hàng
               </th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Trạng thái
@@ -304,13 +337,7 @@ function Orders() {
               orders.map((order) => (
                 <tr key={order.OrderID} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <FiFileText className="text-gray-400" />
-                      <span className="font-medium text-gray-900">#{order.OrderID}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-700">
-                    {formatDate(order.OrderDate)}
+                    <span className="font-medium text-gray-900">{formatDate(order.OrderDate)}</span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
@@ -329,21 +356,48 @@ function Orders() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <span className="font-semibold text-green-600">
+                    <span className="text-sm text-gray-600">
                       {formatCurrency(order.TotalAmount)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${order.DeliveryMethod === 'Reserved' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
+                      {order.DeliveryMethod === 'Reserved' ? 'Đặt trước' : 'Giao ngay'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     {getStatusBadge(order.Status)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <button
-                      onClick={() => setSelectedOrderId(order.OrderID)}
-                      className="text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1 mx-auto"
-                    >
-                      <FiEye />
-                      Chi tiết
-                    </button>
+                    <div className="flex items-center gap-2 justify-center">
+                      <button
+                        onClick={() => setSelectedOrderId(order.OrderID)}
+                        className="text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
+                      >
+                        <FiEye />
+                        Chi tiết
+                      </button>
+                      {order.Status === 'Pending' && (
+                        <>
+                          <button
+                            onClick={() => handleFulfillOrder(order.OrderID)}
+                            className="text-green-600 hover:text-green-700 font-medium flex items-center gap-1"
+                            title="Hoàn tất đơn hàng"
+                          >
+                            <FiCheckCircle />
+                            Hoàn tất
+                          </button>
+                          <button
+                            onClick={() => handleCancelOrder(order.OrderID)}
+                            className="text-red-600 hover:text-red-700 font-medium flex items-center gap-1"
+                            title="Hủy đơn hàng"
+                          >
+                            <FiXCircle />
+                            Hủy
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))
@@ -409,6 +463,21 @@ function Orders() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                   placeholder="Ghi chú về đơn hàng..."
                 />
+              </div>
+
+              {/* Delivery Method */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Phương thức giao hàng
+                </label>
+                <select
+                  value={deliveryMethod}
+                  onChange={(e) => setDeliveryMethod(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="Immediate">Giao ngay (Immediate)</option>
+                  <option value="Reserved">Đặt trước (Reserved)</option>
+                </select>
               </div>
 
               {/* Items */}

@@ -29,8 +29,8 @@ function Suppliers() {
     try {
       setLoading(true);
       setError(null);
-      const data = await suppliersService.getAll(searchQuery);
-      setSuppliers(data);
+      const res = await suppliersService.getAll(searchQuery);
+      setSuppliers(Array.isArray(res) ? res : res?.data ?? []);
     } catch (err) {
       setError(err.response?.data?.message || 'Không thể tải danh sách nhà cung cấp');
       console.error('Error loading suppliers:', err);
