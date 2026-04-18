@@ -1,0 +1,310 @@
+import { Injectable, BadRequestException } from '@nestjs/common';
+import ExcelJS from 'exceljs';
+import { PrismaService } from '../../../common/prisma';
+import { parseExcel } from './product-import.parser';
+import { validateRows, ValidatedRow } from './product-import.validator';
+import { ensureInventoryExists } from '../../../utils';
+import { Prisma } from '@prisma/client';
+
+@Injectable()
+export class ProductImportService {
+  constructor(private prisma: PrismaService) {}
+
+  /**
+   * Phase 1 — Preview: Parse + Validate, trả kết quả phân tích.
+   * KHÔNG ghi DB.
+   */
+  async previewImport(buffer: Buffer, storeId: number) {
+    const rows = await parseExcel(buffer);
+
+    if (rows.length === 0) {
+      throw new BadRequestException('File Excel không có dữ liệu (chỉ có header)');
+    }
+
+    const { validRows, invalidRows } = await validateRows(
+      rows,
+      storeId,
+      this.prisma,
+    );
+
+    // Gom nhóm validRows theo SKU để thống kê create/update
+    const skuSet = new Set(validRows.map((r) => r.sku.toLowerCase()));
+    const existingProducts = await this.prisma.product.findMany({
+      where: {
+        StoreID: storeId,
+        SKU: { in: Array.from(skuSet) },
+      },
+      select: { SKU: true },
+    });
+    const existingSkuSet = new Set(
+      existingProducts.map((p) => p.SKU!.toLowerCase()),
+    );
+
+    const toCreate = validRows.filter(
+      (r) => !existingSkuSet.has(r.sku.toLowerCase()),
+    );
+    const toUpdate = validRows.filter((r) =>
+      existingSkuSet.has(r.sku.toLowerCase()),
+    );
+
+    return {
+      totalRows: rows.length,
+      validCount: validRows.length,
+      invalidCount: invalidRows.length,
+      createCount: new Set(toCreate.map((r) => r.sku.toLowerCase())).size,
+      updateCount: new Set(toUpdate.map((r) => r.sku.toLowerCase())).size,
+      validRows: validRows.map((r) => ({
+        rowNumber: r.rowNumber,
+        sku: r.sku,
+        productName: r.productName,
+        categoryName: r.categoryName,
+        baseUnit: r.baseUnit,
+        action: existingSkuSet.has(r.sku.toLowerCase()) ? 'UPDATE' : 'CREATE',
+      })),
+      invalidRows: invalidRows.map((r) => ({
+        rowNumber: r.rowNumber,
+        sku: r.data.sku,
+        productName: r.data.productName,
+        errors: r.errors,
+      })),
+    };
+  }
+
+  /**
+   * Phase 2 — Commit: Parse + Validate lại + Upsert vào DB.
+   * Dùng Prisma Transaction để đảm bảo atomicity.
+   */
+  async commitImport(buffer: Buffer, storeId: number) {
+    const rows = await parseExcel(buffer);
+
+    if (rows.length === 0) {
+      throw new BadRequestException('File Excel không có dữ liệu');
+    }
+
+    const { validRows, invalidRows } = await validateRows(
+      rows,
+      storeId,
+      this.prisma,
+    );
+
+    if (validRows.length === 0) {
+      throw new BadRequestException(
+        'Không có dòng nào hợp lệ để import. Vui lòng kiểm tra lại file.',
+      );
+    }
+
+    // Gom nhóm theo SKU: 1 product có thể có nhiều dòng (nhiều unit/price)
+    const productMap = this.groupBySku(validRows);
+
+    const results = await this.prisma.$transaction(
+      async (tx) => {
+        const upserted: Array<{ sku: string; action: string; productName: string }> = [];
+
+        for (const [sku, group] of productMap.entries()) {
+          const primary = group[0]; // Dòng đầu tiên chứa thông tin chính
+
+          // Gom units (bỏ trùng, bỏ dòng không có unitName)
+          const units = this.collectUnits(group);
+
+          // Gom prices (bỏ trùng, bỏ dòng không có priceName)  
+          const prices = this.collectPrices(group);
+
+          // Xóa units/prices cũ trước khi upsert (replace all strategy)
+          const existing = await tx.product.findUnique({
+            where: { StoreID_SKU: { StoreID: storeId, SKU: sku } },
+            select: { ProductID: true },
+          });
+
+          if (existing) {
+            await tx.productUnit.deleteMany({
+              where: { ProductID: existing.ProductID },
+            });
+            await tx.priceList.deleteMany({
+              where: { ProductID: existing.ProductID },
+            });
+          }
+
+          const product = await tx.product.upsert({
+            where: { StoreID_SKU: { StoreID: storeId, SKU: sku } },
+            update: {
+              ProductName: primary.productName,
+              CategoryID: primary.categoryId,
+              BaseUnit: primary.baseUnit,
+              Description: primary.description || null,
+              IsActive: true,
+              units: units.length > 0
+                ? { create: units }
+                : undefined,
+              prices: prices.length > 0
+                ? { create: prices }
+                : undefined,
+            },
+            create: {
+              StoreID: storeId,
+              CategoryID: primary.categoryId,
+              ProductName: primary.productName,
+              SKU: sku,
+              BaseUnit: primary.baseUnit,
+              Description: primary.description || null,
+              IsActive: true,
+              units: units.length > 0
+                ? { create: units }
+                : undefined,
+              prices: prices.length > 0
+                ? { create: prices }
+                : undefined,
+            },
+          });
+
+          // Đảm bảo Inventory record tồn tại
+          await ensureInventoryExists(tx as any, storeId, product.ProductID);
+
+          upserted.push({
+            sku,
+            productName: primary.productName,
+            action: existing ? 'UPDATED' : 'CREATED',
+          });
+        }
+
+        return upserted;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+
+    return {
+      success: true,
+      importedCount: results.length,
+      skippedCount: invalidRows.length,
+      results,
+    };
+  }
+
+  /**
+   * Tạo file Excel template mẫu
+   */
+  async generateTemplate(): Promise<Buffer> {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'POS System';
+    const sheet = workbook.addWorksheet('Import Sản phẩm');
+
+    // Header row
+    const headers = [
+      { header: 'Mã SKU (*)', key: 'sku', width: 18 },
+      { header: 'Tên sản phẩm (*)', key: 'productName', width: 35 },
+      { header: 'Tên danh mục (*)', key: 'categoryName', width: 20 },
+      { header: 'Đơn vị gốc (*)', key: 'baseUnit', width: 14 },
+      { header: 'Mô tả', key: 'description', width: 30 },
+      { header: 'Đơn vị quy đổi', key: 'unitName', width: 16 },
+      { header: 'Hệ số quy đổi', key: 'exchangeValue', width: 16 },
+      { header: 'Tên giá', key: 'priceName', width: 16 },
+      { header: 'Giá bán', key: 'unitPrice', width: 16 },
+      { header: 'SL tối thiểu', key: 'minQuantity', width: 14 },
+    ];
+
+    sheet.columns = headers;
+
+    // Style header
+    const headerRow = sheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF4472C4' },
+    };
+    headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+    headerRow.height = 24;
+
+    // Dòng mẫu
+    sheet.addRow({
+      sku: 'XM-HT-PCB40',
+      productName: 'Xi măng Hoàng Thạch PCB40',
+      categoryName: 'Xi măng',
+      baseUnit: 'Bao',
+      description: 'Xi măng Portland hỗn hợp',
+      unitName: 'Tấn',
+      exchangeValue: 20,
+      priceName: 'Giá lẻ',
+      unitPrice: 95000,
+      minQuantity: 0,
+    });
+    sheet.addRow({
+      sku: 'XM-HT-PCB40',
+      productName: 'Xi măng Hoàng Thạch PCB40',
+      categoryName: 'Xi măng',
+      baseUnit: 'Bao',
+      description: '',
+      unitName: '',
+      exchangeValue: null,
+      priceName: 'Giá sỉ',
+      unitPrice: 88000,
+      minQuantity: 50,
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
+  }
+
+  // ── Private helpers ─────────────────────────────────────
+
+  private groupBySku(rows: ValidatedRow[]): Map<string, ValidatedRow[]> {
+    const map = new Map<string, ValidatedRow[]>();
+    for (const row of rows) {
+      const key = row.sku;
+      const group = map.get(key) || [];
+      group.push(row);
+      map.set(key, group);
+    }
+    return map;
+  }
+
+  private collectUnits(
+    group: ValidatedRow[],
+  ): Array<{ UnitName: string; ExchangeValue: number; IsDefault: boolean }> {
+    const seen = new Set<string>();
+    const units: Array<{
+      UnitName: string;
+      ExchangeValue: number;
+      IsDefault: boolean;
+    }> = [];
+
+    for (const row of group) {
+      if (!row.unitName || seen.has(row.unitName)) continue;
+      seen.add(row.unitName);
+      units.push({
+        UnitName: row.unitName,
+        ExchangeValue: row.exchangeValue!,
+        IsDefault: false,
+      });
+    }
+    return units;
+  }
+
+  private collectPrices(
+    group: ValidatedRow[],
+  ): Array<{
+    PriceName: string;
+    UnitName: string;
+    UnitPrice: number;
+    MinQuantity: number;
+  }> {
+    const seen = new Set<string>();
+    const prices: Array<{
+      PriceName: string;
+      UnitName: string;
+      UnitPrice: number;
+      MinQuantity: number;
+    }> = [];
+
+    for (const row of group) {
+      if (!row.priceName || seen.has(row.priceName)) continue;
+      seen.add(row.priceName);
+      prices.push({
+        PriceName: row.priceName,
+        UnitName: row.unitName || row.baseUnit,
+        UnitPrice: row.unitPrice!,
+        MinQuantity: row.minQuantity ?? 0,
+      });
+    }
+    return prices;
+  }
+}
