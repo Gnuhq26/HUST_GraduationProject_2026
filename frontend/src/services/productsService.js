@@ -30,4 +30,39 @@ export const productsService = {
     const response = await api.delete(`/products/${id}`);
     return response.data;
   },
+
+  // --- Import Excel ---
+
+  // Tải file template Excel
+  downloadTemplate: async () => {
+    const response = await api.get('/products/import/template', {
+      responseType: 'blob',
+    });
+    const url = window.URL.createObjectURL(response.data);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'product-import-template.xlsx';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  },
+
+  // Preview import (upload file, nhận kết quả phân tích)
+  previewImport: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/products/import/preview', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  // Commit import (upload lại file, ghi vào DB)
+  commitImport: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/products/import/commit', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
 };

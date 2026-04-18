@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiX } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiX, FiUpload } from 'react-icons/fi';
 import { useForm } from 'react-hook-form';
 import { productsService } from '../services/productsService';
 import ProtectedAction from '../components/ProtectedAction';
+import ImportProductModal from '../components/products/ImportProductModal';
 
 export default function Products() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
 
@@ -85,15 +88,26 @@ export default function Products() {
           <h1 className="text-3xl font-bold text-gray-900">Sản phẩm</h1>
           <p className="text-gray-500 mt-1">Quản lý danh sách sản phẩm</p>
         </div>
-        <ProtectedAction action="create" subject="Product">
-          <button
-            onClick={handleCreate}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-black rounded-lg hover:bg-primary-700 transition-colors"
-          >
-            <FiPlus />
-            Thêm sản phẩm
-          </button>
-        </ProtectedAction>
+        <div className="flex items-center gap-3">
+          <ProtectedAction action="create" subject="Product">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center gap-2 px-4 py-2 border border-primary-600 text-primary-600 rounded-lg hover:bg-primary-50 transition-colors"
+            >
+              <FiUpload />
+              Import Excel
+            </button>
+          </ProtectedAction>
+          <ProtectedAction action="create" subject="Product">
+            <button
+              onClick={handleCreate}
+              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-black rounded-lg hover:bg-primary-700 transition-colors"
+            >
+              <FiPlus />
+              Thêm sản phẩm
+            </button>
+          </ProtectedAction>
+        </div>
       </div>
 
       {/* Table */}
@@ -262,6 +276,13 @@ export default function Products() {
             </form>
           </div>
         </div>
+      )}
+      {/* Import Modal */}
+      {showImportModal && (
+        <ImportProductModal
+          onClose={() => setShowImportModal(false)}
+          onSuccess={loadProducts}
+        />
       )}
     </div>
   );
