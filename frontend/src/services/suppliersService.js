@@ -39,6 +39,38 @@ const suppliersService = {
     const response = await apiClient.delete(`/suppliers/${id}`);
     return response.data;
   },
+
+  // --- Import Excel ---
+
+  async downloadTemplate() {
+    const response = await apiClient.get('/suppliers/import/template', {
+      responseType: 'blob',
+    });
+    const url = window.URL.createObjectURL(response.data);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'supplier-import-template.xlsx';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  },
+
+  async previewImport(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.post('/suppliers/import/preview', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  async commitImport(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.post('/suppliers/import/commit', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
 };
 
 export default suppliersService;

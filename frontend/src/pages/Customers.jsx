@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiX, FiUser, FiPhone, FiMapPin, FiShoppingCart } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiX, FiUser, FiPhone, FiMapPin, FiShoppingCart, FiUpload } from 'react-icons/fi';
 import { useForm } from 'react-hook-form';
 import { customersService } from '../services/customersService';
 import CustomerDetailModal from '../components/customer/CustomerDetailModal';
+import ImportCustomerModal from '../components/customer/ImportCustomerModal';
 import ProtectedAction from '../components/ProtectedAction';
 
 export default function Customers() {
@@ -11,6 +12,7 @@ export default function Customers() {
   const [showModal, setShowModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
 
@@ -85,13 +87,22 @@ export default function Customers() {
           <p className="text-gray-500 mt-1">Quản lý thông tin khách hàng</p>
         </div>
         <ProtectedAction action="manage" subject="Customer">
-          <button
-            onClick={handleCreate}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-black rounded-lg hover:bg-blue-600 transition-colors"
-          >
-            <FiPlus />
-            Thêm khách hàng
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center gap-2 px-4 py-2 border border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+            >
+              <FiUpload />
+              Import Excel
+            </button>
+            <button
+              onClick={handleCreate}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-black rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              <FiPlus />
+              Thêm khách hàng
+            </button>
+          </div>
         </ProtectedAction>
       </div>
 
@@ -303,6 +314,14 @@ export default function Customers() {
         <CustomerDetailModal
           customerId={selectedCustomerId}
           onClose={() => setSelectedCustomerId(null)}
+        />
+      )}
+
+      {/* Import Excel Modal */}
+      {showImportModal && (
+        <ImportCustomerModal
+          onClose={() => setShowImportModal(false)}
+          onSuccess={loadCustomers}
         />
       )}
     </div>

@@ -38,4 +38,36 @@ export const customersService = {
     const response = await api.delete(`/customers/${id}`);
     return response.data;
   },
+
+  // --- Import Excel ---
+
+  downloadTemplate: async () => {
+    const response = await api.get('/customers/import/template', {
+      responseType: 'blob',
+    });
+    const url = window.URL.createObjectURL(response.data);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'customer-import-template.xlsx';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  },
+
+  previewImport: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/customers/import/preview', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  commitImport: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/customers/import/commit', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
 };
