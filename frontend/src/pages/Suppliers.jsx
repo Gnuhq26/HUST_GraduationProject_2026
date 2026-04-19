@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { FiEdit2, FiTrash2, FiPlus, FiTruck, FiPhone, FiMapPin, FiSearch, FiPackage } from 'react-icons/fi';
+import { FiEdit2, FiTrash2, FiPlus, FiTruck, FiPhone, FiMapPin, FiSearch, FiPackage, FiUpload } from 'react-icons/fi';
 import suppliersService from '../services/suppliersService';
+import ImportSupplierModal from '../components/supplier/ImportSupplierModal';
 import ProtectedAction from '../components/ProtectedAction';
 
 function Suppliers() {
@@ -16,6 +17,7 @@ function Suppliers() {
     Phone: '',
     Address: '',
   });
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // Stats
   const stats = {
@@ -121,19 +123,28 @@ function Suppliers() {
           <p className="text-gray-600 text-sm mt-1">Quản lý thông tin nhà cung cấp hàng hóa</p>
         </div>
         <ProtectedAction action="create" subject="Supplier">
-          <button
-            onClick={handleCreate}
-            className="bg-primary-600 hover:bg-primary-700 text-black px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-          >
-            <FiPlus />
-            Thêm nhà cung cấp
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="border border-primary-600 text-primary-600 hover:bg-primary-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            >
+              <FiUpload />
+              Import Excel
+            </button>
+            <button
+              onClick={handleCreate}
+              className="bg-primary-600 hover:bg-primary-700 text-black px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            >
+              <FiPlus />
+              Thêm nhà cung cấp
+            </button>
+          </div>
         </ProtectedAction>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white">
+        <div className="bg-linear-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-blue-100 text-sm">Tổng số nhà cung cấp</p>
@@ -143,7 +154,7 @@ function Suppliers() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-6 text-white">
+        <div className="bg-linear-to-br from-green-500 to-green-600 rounded-lg p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-green-100 text-sm">Có phiếu nhập</p>
@@ -153,7 +164,7 @@ function Suppliers() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-6 text-white">
+        <div className="bg-linear-to-br from-purple-500 to-purple-600 rounded-lg p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-purple-100 text-sm">Có số điện thoại</p>
@@ -239,7 +250,7 @@ function Suppliers() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-start gap-2 text-gray-700">
-                      <FiMapPin className="text-gray-400 mt-0.5 flex-shrink-0" />
+                      <FiMapPin className="text-gray-400 mt-0.5 shrink-0" />
                       <span className="line-clamp-2">
                         {supplier.Address || <span className="text-gray-400 italic">Chưa có</span>}
                       </span>
@@ -353,6 +364,14 @@ function Suppliers() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Import Excel Modal */}
+      {showImportModal && (
+        <ImportSupplierModal
+          onClose={() => setShowImportModal(false)}
+          onSuccess={loadSuppliers}
+        />
       )}
     </div>
   );
