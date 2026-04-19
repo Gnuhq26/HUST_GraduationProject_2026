@@ -65,4 +65,19 @@ export const productsService = {
     });
     return response.data;
   },
+
+  // Xuất danh sách sản phẩm ra file Excel
+  exportProducts: async (params = {}) => {
+    const response = await api.get('/products/export', {
+      params,
+      responseType: 'blob',
+    });
+    const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const url = window.URL.createObjectURL(response.data);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `products-export-${timestamp}.xlsx`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  },
 };

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiX, FiUpload } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiX, FiUpload, FiDownload } from 'react-icons/fi';
 import { useForm } from 'react-hook-form';
 import { productsService } from '../services/productsService';
 import ProtectedAction from '../components/ProtectedAction';
@@ -80,6 +80,16 @@ export default function Products() {
     }
   };
 
+  // Export products to Excel
+  const handleExport = async () => {
+    try {
+      await productsService.exportProducts();
+    } catch (error) {
+      console.error('Lỗi export:', error);
+      alert('Không thể xuất file Excel');
+    }
+  };
+
   return (
     <div className="p-6">
       {/* Header */}
@@ -89,6 +99,15 @@ export default function Products() {
           <p className="text-gray-500 mt-1">Quản lý danh sách sản phẩm</p>
         </div>
         <div className="flex items-center gap-3">
+          <ProtectedAction action="read" subject="Product">
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-2 px-4 py-2 border border-green-600 text-green-600 rounded-lg hover:bg-green-50 transition-colors"
+            >
+              <FiDownload />
+              Export Excel
+            </button>
+          </ProtectedAction>
           <ProtectedAction action="create" subject="Product">
             <button
               onClick={() => setShowImportModal(true)}
