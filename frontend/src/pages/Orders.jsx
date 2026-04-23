@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FiPlus, FiShoppingCart, FiUser, FiX, FiDollarSign, FiEye, FiClock, FiCheckCircle, FiXCircle } from 'react-icons/fi';
+import { FiPlus, FiShoppingCart, FiUser, FiX, FiDollarSign, FiEye, FiClock, FiCheckCircle, FiXCircle, FiDownload } from 'react-icons/fi';
 import ordersService from '../services/ordersService';
 import { customersService } from '../services/customersService';
 import { productsService } from '../services/productsService';
@@ -11,6 +11,7 @@ function Orders() {
   const [loading, setLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   // Create Order Form States
   const [customers, setCustomers] = useState([]);
@@ -51,6 +52,18 @@ function Orders() {
   useEffect(() => {
     loadOrders();
   }, []);
+
+  // Export Excel
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      await ordersService.exportOrders();
+    } catch (err) {
+      console.error('Error exporting orders:', err);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // Open create modal
   const handleOpenCreate = async () => {
@@ -235,15 +248,27 @@ function Orders() {
           <h1 className="text-2xl font-bold text-gray-800">Quản lý Đơn hàng</h1>
           <p className="text-gray-600 text-sm mt-1">Tạo và theo dõi đơn hàng</p>
         </div>
-        <ProtectedAction action="create" subject="Order">
-          <button
-            onClick={handleOpenCreate}
-            className="bg-primary-600 hover:bg-primary-700 text-black px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-          >
-            <FiPlus />
-            Tạo đơn hàng
-          </button>
-        </ProtectedAction>
+        <div className="flex gap-3">
+          <ProtectedAction action="read" subject="Order">
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="border border-green-500 text-green-600 hover:bg-green-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
+            >
+              <FiDownload />
+              {exporting ? 'Đang xuất...' : 'Xuất Excel'}
+            </button>
+          </ProtectedAction>
+          <ProtectedAction action="create" subject="Order">
+            <button
+              onClick={handleOpenCreate}
+              className="bg-primary-600 hover:bg-primary-700 text-black px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            >
+              <FiPlus />
+              Tạo đơn hàng
+            </button>
+          </ProtectedAction>
+        </div>
       </div>
 
       {/* Stats Cards */}

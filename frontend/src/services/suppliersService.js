@@ -71,6 +71,21 @@ const suppliersService = {
     });
     return response.data;
   },
+
+  // --- Export Excel ---
+  async exportSuppliers(params = {}) {
+    const response = await apiClient.get('/suppliers/export', {
+      params,
+      responseType: 'blob',
+    });
+    const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const url = window.URL.createObjectURL(response.data);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `suppliers-export-${timestamp}.xlsx`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  },
 };
 
 export default suppliersService;

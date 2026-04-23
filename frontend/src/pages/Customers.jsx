@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiX, FiUser, FiPhone, FiMapPin, FiShoppingCart, FiUpload } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiX, FiUser, FiPhone, FiMapPin, FiShoppingCart, FiUpload, FiDownload } from 'react-icons/fi';
 import { useForm } from 'react-hook-form';
 import { customersService } from '../services/customersService';
 import CustomerDetailModal from '../components/customer/CustomerDetailModal';
@@ -13,6 +13,7 @@ export default function Customers() {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
 
@@ -78,6 +79,19 @@ export default function Customers() {
     }
   };
 
+  // Export Excel
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await customersService.exportCustomers();
+    } catch (error) {
+      console.error('Lỗi export:', error);
+      alert('Không thể xuất file Excel');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="p-6">
       {/* Header */}
@@ -86,8 +100,18 @@ export default function Customers() {
           <h1 className="text-3xl font-bold text-gray-900">Khách hàng</h1>
           <p className="text-gray-500 mt-1">Quản lý thông tin khách hàng</p>
         </div>
-        <ProtectedAction action="manage" subject="Customer">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          <ProtectedAction action="read" subject="Customer">
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="flex items-center gap-2 px-4 py-2 border border-green-500 text-green-600 rounded-lg hover:bg-green-50 transition-colors disabled:opacity-50"
+            >
+              <FiDownload />
+              {exporting ? 'Đang xuất...' : 'Export Excel'}
+            </button>
+          </ProtectedAction>
+          <ProtectedAction action="manage" subject="Customer">
             <button
               onClick={() => setShowImportModal(true)}
               className="flex items-center gap-2 px-4 py-2 border border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
@@ -102,8 +126,8 @@ export default function Customers() {
               <FiPlus />
               Thêm khách hàng
             </button>
-          </div>
-        </ProtectedAction>
+          </ProtectedAction>
+        </div>
       </div>
 
       {/* Stats */}

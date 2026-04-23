@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FiEdit2, FiTrash2, FiPlus, FiTruck, FiPhone, FiMapPin, FiSearch, FiPackage, FiUpload } from 'react-icons/fi';
+import { FiEdit2, FiTrash2, FiPlus, FiTruck, FiPhone, FiMapPin, FiSearch, FiPackage, FiUpload, FiDownload } from 'react-icons/fi';
 import suppliersService from '../services/suppliersService';
 import ImportSupplierModal from '../components/supplier/ImportSupplierModal';
 import ProtectedAction from '../components/ProtectedAction';
@@ -18,6 +18,7 @@ function Suppliers() {
     Address: '',
   });
   const [showImportModal, setShowImportModal] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   // Stats
   const stats = {
@@ -106,6 +107,19 @@ function Suppliers() {
     }
   };
 
+  // Export Excel
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await suppliersService.exportSuppliers();
+    } catch (err) {
+      console.error('Lỗi export:', err);
+      alert('Không thể xuất file Excel');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading && suppliers.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -122,8 +136,18 @@ function Suppliers() {
           <h1 className="text-2xl font-bold text-gray-800">Quản lý Nhà cung cấp</h1>
           <p className="text-gray-600 text-sm mt-1">Quản lý thông tin nhà cung cấp hàng hóa</p>
         </div>
-        <ProtectedAction action="create" subject="Supplier">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          <ProtectedAction action="read" subject="Supplier">
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="border border-green-500 text-green-600 hover:bg-green-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
+            >
+              <FiDownload />
+              {exporting ? 'Đang xuất...' : 'Export Excel'}
+            </button>
+          </ProtectedAction>
+          <ProtectedAction action="create" subject="Supplier">
             <button
               onClick={() => setShowImportModal(true)}
               className="border border-primary-600 text-primary-600 hover:bg-primary-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
@@ -138,8 +162,8 @@ function Suppliers() {
               <FiPlus />
               Thêm nhà cung cấp
             </button>
-          </div>
-        </ProtectedAction>
+          </ProtectedAction>
+        </div>
       </div>
 
       {/* Stats Cards */}
