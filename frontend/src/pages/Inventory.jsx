@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FiPlus, FiPackage, FiTruck, FiShoppingBag, FiX, FiAlertTriangle, FiFileText, FiEye, FiCheckCircle, FiZap } from 'react-icons/fi';
+import { FiPlus, FiPackage, FiTruck, FiShoppingBag, FiX, FiAlertTriangle, FiFileText, FiEye, FiCheckCircle, FiZap, FiDownload } from 'react-icons/fi';
 import inventoryService from '../services/inventoryService';
 import suppliersService from '../services/suppliersService';
 import { productsService } from '../services/productsService';
@@ -17,6 +17,7 @@ function Inventory() {
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [selectedReceiptId, setSelectedReceiptId] = useState(null);
   const [isDirectShipModalOpen, setIsDirectShipModalOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   // Stock-In Form States
   const [suppliers, setSuppliers] = useState([]);
@@ -175,6 +176,18 @@ function Inventory() {
     }, 0);
   };
 
+  // === Export Excel ===
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      await inventoryService.exportInventory();
+    } catch (err) {
+      console.error('Error exporting inventory:', err);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // === Direct Ship ===
   const handleOpenDirectShip = async () => {
     await loadFormData();
@@ -270,6 +283,18 @@ function Inventory() {
           <p className="text-gray-600 text-sm mt-1">Theo dõi tồn kho và nhập hàng</p>
         </div>
         <div className="flex gap-3">
+          {activeTab === 'inventory' && (
+            <ProtectedAction action="read" subject="Inventory">
+              <button
+                onClick={handleExport}
+                disabled={exporting}
+                className="border border-green-500 text-green-600 hover:bg-green-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
+              >
+                <FiDownload />
+                {exporting ? 'Đang xuất...' : 'Xuất Excel'}
+              </button>
+            </ProtectedAction>
+          )}
           <ProtectedAction action="create" subject="Inventory">
             <button
               onClick={handleOpenDirectShip}

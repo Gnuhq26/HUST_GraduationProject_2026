@@ -68,6 +68,23 @@ const inventoryService = {
     });
     return response.data;
   },
+
+  // Export tồn kho ra Excel
+  async exportInventory(params = {}) {
+    const response = await apiClient.get('/inventory/export', {
+      params,
+      responseType: 'blob',
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    const timestamp = new Date().toISOString().slice(0, 10);
+    link.setAttribute('download', `ton-kho-${timestamp}.xlsx`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
 };
 
 export default inventoryService;
