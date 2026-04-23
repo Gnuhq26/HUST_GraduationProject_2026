@@ -39,6 +39,23 @@ const ordersService = {
     const response = await apiClient.patch(`/orders/${orderId}/cancel`);
     return response.data;
   },
+
+  // Export đơn hàng ra Excel
+  async exportOrders(params = {}) {
+    const response = await apiClient.get('/orders/export', {
+      params,
+      responseType: 'blob',
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    const timestamp = new Date().toISOString().slice(0, 10);
+    link.setAttribute('download', `don-hang-${timestamp}.xlsx`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
 };
 
 export default ordersService;
