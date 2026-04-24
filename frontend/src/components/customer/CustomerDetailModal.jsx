@@ -119,6 +119,11 @@ export default function CustomerDetailModal({ customerId, onClose }) {
                       {customer.CustomerName}
                     </h3>
                     <p className="text-sm text-gray-600">
+                      {customer.CustomerCode && (
+                        <span className="font-mono font-medium text-primary-700 bg-white px-2 py-0.5 rounded mr-2">
+                          {customer.CustomerCode}
+                        </span>
+                      )}
                       ID: {customer.CustomerID}
                     </p>
                   </div>

@@ -242,6 +242,7 @@ export class OrdersService {
       }
 
       // 3. Tạo Order (sau khi validate xong toàn bộ, để có OrderID cho log)
+      const orderCode = await this.generateOrderCode(tx);
       const order = await tx.order.create({
         data: {
           store: {
@@ -253,6 +254,7 @@ export class OrdersService {
           user: {
             connect: { UserID: userId },
           },
+          OrderCode: orderCode,
           TotalAmount: totalAmount,
           Status: deliveryMethod === 'Reserved' ? 'Pending' : 'Completed',
           DeliveryMethod: deliveryMethod,
@@ -636,4 +638,20 @@ export class OrdersService {
       };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
+
+  /**
+   * Tạo mã đơn hàng tự động: HD-YYYYMMDD-NNN
+   * Nhận tham số tx để hoạt động trong transaction
+   */
+  private async generateOrderCode(tx: Pick<PrismaService, 'order'>): Promise<string> {
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const prefix = `HD-${dateStr}-`;
+    const last = await tx.order.findFirst({
+      where: { OrderCode: { startsWith: prefix } },
+      orderBy: { OrderCode: 'desc' },
+    });
+    const nextNum = last ? parseInt(last.OrderCode!.slice(-3)) + 1 : 1;
+    return `${prefix}${String(nextNum).padStart(3, '0')}`;
+  }
 }
+

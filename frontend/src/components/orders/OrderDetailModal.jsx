@@ -86,7 +86,7 @@ function OrderDetailModal({ orderId, onClose }) {
             <div className="text-white">
               <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">
                 <FiFileText />
-                Chi tiết đơn hàng #{orderId}
+                {order?.OrderCode || `Chi tiết đơn hàng #${orderId}`}
               </h2>
               {order && (
                 <div className="flex items-center gap-4 text-white/90 text-sm">

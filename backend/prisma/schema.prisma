@@ -216,12 +216,13 @@ model Inventory {
 // 3. Phiếu nhập kho
 model StockReceipt {
   ReceiptID    Int      @id @default(autoincrement())
+  ReceiptCode  String?  @unique @db.VarChar(30) // PN-YYYYMMDD-NNN
   StoreID      Int
   SupplierID   Int
   ImportDate   DateTime @default(now()) @db.Timestamp(0)
   TotalAmount  Decimal  @db.Decimal(18, 2)
   PaidAmount   Decimal  @db.Decimal(18, 2) @default(0) // Số tiền đã trả cho nhà cung cấp
-  Status       String   @default("Received") @db.VarChar(50)  // THÊM TRẠNG THÁI: Received, Pending
+  Status       String   @default("Pending") @db.VarChar(50)  // Trạng thái: Pending, Received
   Note         String?  @db.Text
   CreatedAt    DateTime @default(now()) @db.Timestamp(0)
 
@@ -229,6 +230,7 @@ model StockReceipt {
   store        Store    @relation(fields: [StoreID], references: [StoreID], onDelete: Cascade)
   supplier     Supplier @relation(fields: [SupplierID], references: [SupplierID], onDelete: Restrict)
   details      StockReceiptDetail[]
+  linkedOrders Order[]  @relation("OrderLinkedReceipt")
 
   @@index([StoreID])
   @@index([SupplierID])
@@ -258,6 +260,7 @@ model StockReceiptDetail {
 // 1. Quản lý Khách hàng
 model Customer {
   CustomerID   Int      @id @default(autoincrement())
+  CustomerCode String?  @unique @db.VarChar(20) // KH-YYYYMMDD-NNN
   StoreID      Int
   CustomerName String   @db.VarChar(255)
   Phone        String?  @db.VarChar(20)
@@ -275,26 +278,29 @@ model Customer {
 // 2. Đơn hàng (Hóa đơn)
 model Order {
   OrderID      Int      @id @default(autoincrement())
+  OrderCode    String?  @unique @db.VarChar(30) // HD-YYYYMMDD-NNN
   StoreID      Int
   CustomerID   Int?     // Có thể bán cho khách vãng lai (null)
   UserID       Int      // Nhân viên thực hiện bán hàng
   OrderDate    DateTime @default(now()) @db.Timestamp(0)
   DeliveryMethod String @default("Immediate") @db.VarChar(50) // Tại quầy, Giao hàng, Nhận tại kho...
-  LinkedReceiptID Int? //FK trỏ tới StockReceipt nếu là giao thẳng
+  LinkedReceiptID Int?  // FK trỏ tới StockReceipt nếu là giao thẳng
   TotalAmount  Decimal  @db.Decimal(18, 2)
   PaidAmount   Decimal  @db.Decimal(18, 2) @default(0) // Số tiền khách hàng đã trả
   Status       String   @default("Completed") @db.VarChar(50) // Completed, Pending, Cancelled
   Note         String?  @db.Text
 
   // Relations
-  store        Store         @relation(fields: [StoreID], references: [StoreID], onDelete: Cascade)
-  customer     Customer?     @relation(fields: [CustomerID], references: [CustomerID], onDelete: SetNull)
-  user         User          @relation(fields: [UserID], references: [UserID], onDelete: Restrict)
-  details      OrderDetail[]
+  store          Store          @relation(fields: [StoreID], references: [StoreID], onDelete: Cascade)
+  customer       Customer?      @relation(fields: [CustomerID], references: [CustomerID], onDelete: SetNull)
+  user           User           @relation(fields: [UserID], references: [UserID], onDelete: Restrict)
+  linkedReceipt  StockReceipt?  @relation("OrderLinkedReceipt", fields: [LinkedReceiptID], references: [ReceiptID], onDelete: SetNull)
+  details        OrderDetail[]
 
   @@index([StoreID])
   @@index([CustomerID])
   @@index([UserID])
+  @@index([LinkedReceiptID])
 }
 
 // 3. Chi tiết đơn hàng

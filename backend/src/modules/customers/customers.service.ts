@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma';
+import { Prisma } from '../../../generated/prisma/client';
 import { CreateCustomerDto, UpdateCustomerDto } from './dto';
 import { PaginatedResult, PaginationParams, paginateResult } from '../../common/pagination';
 
@@ -11,22 +12,39 @@ export class CustomersService {
    * Tạo khách hàng mới
    */
   async create(storeId: number, createCustomerDto: CreateCustomerDto) {
-    // Kiểm tra xem store có tồn tại không
-    const store = await this.prisma.store.findUnique({
-      where: { StoreID: storeId },
-    });
+    return this.prisma.$transaction(async (tx) => {
+      const store = await tx.store.findUnique({
+        where: { StoreID: storeId },
+      });
 
-    if (!store) {
-      throw new NotFoundException(`Cửa hàng với ID ${storeId} không tồn tại`);
-    }
+      if (!store) {
+        throw new NotFoundException(`Cửa hàng với ID ${storeId} không tồn tại`);
+      }
 
-    // Tạo khách hàng mới
-    return this.prisma.customer.create({
-      data: {
-        StoreID: storeId,
-        ...createCustomerDto,
-      },
+      const customerCode = await this.generateCustomerCode(tx);
+
+      return tx.customer.create({
+        data: {
+          StoreID: storeId,
+          CustomerCode: customerCode,
+          ...createCustomerDto,
+        },
+      });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  /**
+   * Tạo mã khách hàng tự động: KH-YYYYMMDD-NNN
+   */
+  private async generateCustomerCode(tx: Pick<PrismaService, 'customer'>): Promise<string> {
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const prefix = `KH-${dateStr}-`;
+    const last = await tx.customer.findFirst({
+      where: { CustomerCode: { startsWith: prefix } },
+      orderBy: { CustomerCode: 'desc' },
     });
+    const nextNum = last ? parseInt(last.CustomerCode!.slice(-3)) + 1 : 1;
+    return `${prefix}${String(nextNum).padStart(3, '0')}`;
   }
 
   /**
