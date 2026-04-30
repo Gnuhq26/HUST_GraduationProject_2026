@@ -2,7 +2,7 @@ import apiClient from './api';
 
 const reportsService = {
   // Báo cáo doanh thu
-  async getRevenueReport(startDate, endDate) {
+  async getRevenueReport(startDate: string, endDate: string) {
     const response = await apiClient.get('/reports/revenue', {
       params: { startDate, endDate },
     });
@@ -10,7 +10,7 @@ const reportsService = {
   },
 
   // Báo cáo lợi nhuận
-  async getProfitReport(startDate, endDate) {
+  async getProfitReport(startDate: string, endDate: string) {
     const response = await apiClient.get('/reports/profit', {
       params: { startDate, endDate },
     });
@@ -18,7 +18,7 @@ const reportsService = {
   },
 
   // Top sản phẩm bán chạy
-  async getTopProducts(startDate, endDate, sortBy = 'revenue', limit = 10) {
+  async getTopProducts(startDate: string, endDate: string, sortBy = 'revenue', limit = 10) {
     const response = await apiClient.get('/reports/top-products', {
       params: { startDate, endDate, sortBy, limit },
     });

@@ -1,22 +1,29 @@
 import apiClient from './api';
+import type {
+  Supplier,
+  CreateSupplierDto,
+  UpdateSupplierDto,
+  ImportPreviewResponse,
+  ImportCommitResponse,
+} from '@/types';
 
 const suppliersService = {
   // Lấy danh sách nhà cung cấp (có thể tìm kiếm)
-  async getAll(search = '') {
+  async getAll(search = ''): Promise<Supplier[]> {
     const params = search ? { search } : {};
-    const response = await apiClient.get('/suppliers', { params });
+    const response = await apiClient.get<Supplier[]>('/suppliers', { params });
     return response.data;
   },
 
   // Lấy chi tiết nhà cung cấp
-  async getById(id) {
-    const response = await apiClient.get(`/suppliers/${id}`);
+  async getById(id: number): Promise<Supplier> {
+    const response = await apiClient.get<Supplier>(`/suppliers/${id}`);
     return response.data;
   },
 
   // Tạo nhà cung cấp mới
-  async create(data) {
-    const response = await apiClient.post('/suppliers', {
+  async create(data: CreateSupplierDto): Promise<Supplier> {
+    const response = await apiClient.post<Supplier>('/suppliers', {
       supplierName: data.SupplierName,
       phone: data.Phone,
       address: data.Address,
@@ -25,8 +32,8 @@ const suppliersService = {
   },
 
   // Cập nhật nhà cung cấp
-  async update(id, data) {
-    const response = await apiClient.patch(`/suppliers/${id}`, {
+  async update(id: number, data: UpdateSupplierDto): Promise<Supplier> {
+    const response = await apiClient.patch<Supplier>(`/suppliers/${id}`, {
       supplierName: data.SupplierName,
       phone: data.Phone,
       address: data.Address,
@@ -35,14 +42,14 @@ const suppliersService = {
   },
 
   // Xóa nhà cung cấp
-  async delete(id) {
+  async delete(id: number) {
     const response = await apiClient.delete(`/suppliers/${id}`);
     return response.data;
   },
 
   // --- Import Excel ---
 
-  async downloadTemplate() {
+  async downloadTemplate(): Promise<void> {
     const response = await apiClient.get('/suppliers/import/template', {
       responseType: 'blob',
     });
@@ -54,26 +61,26 @@ const suppliersService = {
     window.URL.revokeObjectURL(url);
   },
 
-  async previewImport(file) {
+  async previewImport(file: File): Promise<ImportPreviewResponse> {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await apiClient.post('/suppliers/import/preview', formData, {
+    const response = await apiClient.post<ImportPreviewResponse>('/suppliers/import/preview', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;
   },
 
-  async commitImport(file) {
+  async commitImport(file: File): Promise<ImportCommitResponse> {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await apiClient.post('/suppliers/import/commit', formData, {
+    const response = await apiClient.post<ImportCommitResponse>('/suppliers/import/commit', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;
   },
 
   // --- Export Excel ---
-  async exportSuppliers(params = {}) {
+  async exportSuppliers(params: Record<string, unknown> = {}): Promise<void> {
     const response = await apiClient.get('/suppliers/export', {
       params,
       responseType: 'blob',

@@ -2,11 +2,7 @@ import { useState, useCallback } from 'react';
 import Markdown from 'react-markdown';
 import { FiRefreshCw, FiAlertCircle } from 'react-icons/fi';
 import aiAnalystService from '../../services/aiAnalystService';
-
-interface AiInsightsResponse {
-  insights: string;
-  generatedAt: string;
-}
+import type { AiInsightsResponse } from '@/types';
 
 export default function AiInsightsWidget() {
   const [insights, setInsights] = useState<string | null>(null);

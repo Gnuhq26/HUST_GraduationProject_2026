@@ -1,9 +1,10 @@
 import apiClient from './api';
+import type { Order, PaginatedResult, CreateOrderDto } from '@/types';
 
 const ordersService = {
   // Tạo đơn hàng mới
-  async createOrder(data) {
-    const response = await apiClient.post('/orders', {
+  async createOrder(data: CreateOrderDto): Promise<Order> {
+    const response = await apiClient.post<Order>('/orders', {
       CustomerID: data.customerId || null,
       Note: data.note || '',
       DeliveryMethod: data.deliveryMethod || 'Immediate',
@@ -17,31 +18,31 @@ const ordersService = {
   },
 
   // Lấy danh sách đơn hàng
-  async getAll() {
-    const response = await apiClient.get('/orders');
+  async getAll(): Promise<PaginatedResult<Order>> {
+    const response = await apiClient.get<PaginatedResult<Order>>('/orders');
     return response.data;
   },
 
   // Lấy chi tiết đơn hàng
-  async getById(orderId) {
-    const response = await apiClient.get(`/orders/${orderId}`);
+  async getById(orderId: number): Promise<Order> {
+    const response = await apiClient.get<Order>(`/orders/${orderId}`);
     return response.data;
   },
 
   // Hoàn tất đơn đặt trước (Pending → Completed)
-  async fulfillOrder(orderId) {
-    const response = await apiClient.patch(`/orders/${orderId}/fulfill`);
+  async fulfillOrder(orderId: number): Promise<Order> {
+    const response = await apiClient.patch<Order>(`/orders/${orderId}/fulfill`);
     return response.data;
   },
 
   // Hủy đơn hàng (Pending → Cancelled)
-  async cancelOrder(orderId) {
-    const response = await apiClient.patch(`/orders/${orderId}/cancel`);
+  async cancelOrder(orderId: number): Promise<Order> {
+    const response = await apiClient.patch<Order>(`/orders/${orderId}/cancel`);
     return response.data;
   },
 
   // Export đơn hàng ra Excel
-  async exportOrders(params = {}) {
+  async exportOrders(params: Record<string, unknown> = {}): Promise<void> {
     const response = await apiClient.get('/orders/export', {
       params,
       responseType: 'blob',

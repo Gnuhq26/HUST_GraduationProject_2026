@@ -1,32 +1,41 @@
 import api from './api';
+import type {
+  Product,
+  PaginatedResult,
+  ProductFilterParams,
+  CreateProductDto,
+  UpdateProductDto,
+  ImportPreviewResponse,
+  ImportCommitResponse,
+} from '@/types';
 
 export const productsService = {
   // Lấy danh sách sản phẩm với pagination
-  getAll: async (params = {}) => {
-    const response = await api.get('/products', { params });
+  getAll: async (params: ProductFilterParams = {}): Promise<PaginatedResult<Product>> => {
+    const response = await api.get<PaginatedResult<Product>>('/products', { params });
     return response.data;
   },
 
   // Lấy chi tiết sản phẩm
-  getById: async (id) => {
-    const response = await api.get(`/products/${id}`);
+  getById: async (id: number): Promise<Product> => {
+    const response = await api.get<Product>(`/products/${id}`);
     return response.data;
   },
 
   // Tạo sản phẩm mới
-  create: async (data) => {
-    const response = await api.post('/products', data);
+  create: async (data: CreateProductDto): Promise<Product> => {
+    const response = await api.post<Product>('/products', data);
     return response.data;
   },
 
   // Cập nhật sản phẩm
-  update: async (id, data) => {
-    const response = await api.patch(`/products/${id}`, data);
+  update: async (id: number, data: UpdateProductDto): Promise<Product> => {
+    const response = await api.patch<Product>(`/products/${id}`, data);
     return response.data;
   },
 
   // Xóa sản phẩm
-  delete: async (id) => {
+  delete: async (id: number) => {
     const response = await api.delete(`/products/${id}`);
     return response.data;
   },
@@ -34,7 +43,7 @@ export const productsService = {
   // --- Import Excel ---
 
   // Tải file template Excel
-  downloadTemplate: async () => {
+  downloadTemplate: async (): Promise<void> => {
     const response = await api.get('/products/import/template', {
       responseType: 'blob',
     });
@@ -47,27 +56,27 @@ export const productsService = {
   },
 
   // Preview import (upload file, nhận kết quả phân tích)
-  previewImport: async (file) => {
+  previewImport: async (file: File): Promise<ImportPreviewResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await api.post('/products/import/preview', formData, {
+    const response = await api.post<ImportPreviewResponse>('/products/import/preview', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;
   },
 
   // Commit import (upload lại file, ghi vào DB)
-  commitImport: async (file) => {
+  commitImport: async (file: File): Promise<ImportCommitResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await api.post('/products/import/commit', formData, {
+    const response = await api.post<ImportCommitResponse>('/products/import/commit', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;
   },
 
   // Xuất danh sách sản phẩm ra file Excel
-  exportProducts: async (params = {}) => {
+  exportProducts: async (params: ProductFilterParams = {}): Promise<void> => {
     const response = await api.get('/products/export', {
       params,
       responseType: 'blob',

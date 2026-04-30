@@ -1,4 +1,5 @@
 import apiClient from './api';
+import type { RecordPaymentDto } from '@/types';
 
 const debtsService = {
   // Lấy danh sách công nợ khách hàng
@@ -14,7 +15,7 @@ const debtsService = {
   },
 
   // Ghi nhận thanh toán
-  async recordPayment(data) {
+  async recordPayment(data: RecordPaymentDto) {
     const response = await apiClient.post('/debts/payment', {
       type: data.type,
       referenceId: data.referenceId,
