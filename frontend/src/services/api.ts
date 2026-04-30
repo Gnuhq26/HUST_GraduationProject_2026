@@ -1,6 +1,13 @@
-import axios from 'axios';
+import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 
-const api = axios.create({
+/** Backend error response shape from NestJS exception filters */
+interface ApiErrorResponse {
+  message?: string;
+  statusCode?: number;
+  error?: string;
+}
+
+const api: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
   headers: {
     'Content-Type': 'application/json',
@@ -9,7 +16,7 @@ const api = axios.create({
 
 // Request interceptor - Thêm token và store ID vào mọi request
 api.interceptors.request.use(
-  (config) => {
+  (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('token');
     const currentStoreId = localStorage.getItem('currentStoreId');
 
@@ -24,7 +31,7 @@ api.interceptors.request.use(
 
     return config;
   },
-  (error) => {
+  (error: AxiosError) => {
     return Promise.reject(error);
   }
 );
@@ -34,7 +41,7 @@ api.interceptors.response.use(
   (response) => {
     return response;
   },
-  (error) => {
+  (error: AxiosError<ApiErrorResponse>) => {
     if (error.response) {
       // Xử lý các lỗi HTTP
       switch (error.response.status) {
@@ -57,7 +64,7 @@ api.interceptors.response.use(
           console.error('Lỗi máy chủ nội bộ');
           break;
         default:
-          console.error('Đã xảy ra lỗi:', error.response.data.message);
+          console.error('Đã xảy ra lỗi:', error.response.data?.message);
       }
     } else if (error.request) {
       // Request đã được gửi nhưng không nhận được phản hồi

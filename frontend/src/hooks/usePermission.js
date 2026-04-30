@@ -6,7 +6,7 @@ import { authService } from '../services/authService';
  * Hook to check if current user has a specific permission
  * @param {string} action - Permission action (e.g., 'create', 'read', 'update', 'delete', 'manage')
  * @param {string} subject - Permission subject (e.g., 'Product', 'Order', 'Customer', 'all')
- * @returns {boolean} - True if user has permission, false otherwise
+ * @returns {{ hasPermission: boolean, loading: boolean }}
  */
 export function usePermission(action, subject) {
   const { stores, currentStoreId } = useAuthStore();
