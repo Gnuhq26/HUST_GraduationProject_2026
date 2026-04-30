@@ -151,6 +151,7 @@ export default function Customers() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mã KH</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tên khách hàng</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Số điện thoại</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Địa chỉ</th>
@@ -161,13 +162,13 @@ export default function Customers() {
             <tbody className="divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
                     Đang tải...
                   </td>
                 </tr>
               ) : customers.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
                     Chưa có khách hàng nào
                   </td>
                 </tr>
@@ -183,6 +184,11 @@ export default function Customers() {
                       }
                     }}
                   >
+                    <td className="px-6 py-4 text-sm">
+                      <span className="font-mono text-xs font-medium text-primary-700 bg-primary-50 px-2 py-1 rounded">
+                        {customer.CustomerCode || '-'}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">
                       <div className="flex items-center gap-2">
                         <FiUser className="text-gray-400" />

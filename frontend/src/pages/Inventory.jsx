@@ -534,6 +534,9 @@ function Inventory() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Mã phiếu
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Ngày nhập
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -556,13 +559,18 @@ function Inventory() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {receipts.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
                       Chưa có phiếu nhập kho
                     </td>
                   </tr>
                 ) : (
                   receipts.map((receipt) => (
                     <tr key={receipt.ReceiptID} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="font-mono text-xs font-medium text-primary-700 bg-primary-50 px-2 py-1 rounded">
+                          {receipt.ReceiptCode || '-'}
+                        </span>
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="font-medium text-gray-900">
                           {new Date(receipt.ImportDate).toLocaleDateString('vi-VN', {

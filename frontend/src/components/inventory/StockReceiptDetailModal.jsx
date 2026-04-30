@@ -63,7 +63,7 @@ function StockReceiptDetailModal({ receiptId, onClose, onConfirmed }) {
             <div className="text-white">
               <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">
                 <FiFileText />
-                Chi tiết phiếu nhập #{receiptId}
+                {receipt?.ReceiptCode || `Chi tiết phiếu nhập #${receiptId}`}
               </h2>
               {receipt && (
                 <div className="flex items-center gap-4 text-purple-50 text-sm">

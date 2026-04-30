@@ -113,10 +113,12 @@ export class InventoryService {
       }
 
       // 3. Tạo StockReceipt
+      const receiptCode = await this.generateReceiptCode(tx);
       const receipt = await tx.stockReceipt.create({
         data: {
           StoreID: storeId,
           SupplierID: dto.supplierId,
+          ReceiptCode: receiptCode,
           TotalAmount: totalAmount,
           Status: dto.status ?? 'Pending',
           Note: dto.note,
@@ -215,9 +217,11 @@ export class InventoryService {
       return {
         receipt: {
           ReceiptID: receipt.ReceiptID,
+          ReceiptCode: receipt.ReceiptCode,
           SupplierID: receipt.SupplierID,
           ImportDate: receipt.ImportDate,
           TotalAmount: receipt.TotalAmount,
+          Status: receipt.Status,
           Note: receipt.Note,
           supplier: {
             SupplierID: supplier.SupplierID,
@@ -479,11 +483,13 @@ export class InventoryService {
       const stockInBase   = totalInBase - deliverInBase; // phần thực vào kho
 
       // 2. Tạo StockReceipt (toàn bộ hàng, status Received)
+      const receiptCode = await this.generateReceiptCode(tx);
       const receipt = await tx.stockReceipt.create({
         data: {
           StoreID: storeId,
           SupplierID: dto.supplierId,
           Status: 'Received',
+          ReceiptCode: receiptCode,
           TotalAmount: dto.totalQty * dto.importUnitPrice,
           PaidAmount: 0,
           Note: dto.note,
@@ -694,5 +700,20 @@ export class InventoryService {
         },
       });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  /**
+   * Tạo mã phiếu nhập kho tự động: PN-YYYYMMDD-NNN
+   * Nhận tham số tx để hoạt động trong transaction hoặc dùng this.prisma bình thường
+   */
+  private async generateReceiptCode(tx: Pick<PrismaService, 'stockReceipt'>): Promise<string> {
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const prefix = `PN-${dateStr}-`;
+    const last = await tx.stockReceipt.findFirst({
+      where: { ReceiptCode: { startsWith: prefix } },
+      orderBy: { ReceiptCode: 'desc' },
+    });
+    const nextNum = last ? parseInt(last.ReceiptCode!.slice(-3)) + 1 : 1;
+    return `${prefix}${String(nextNum).padStart(3, '0')}`;
   }
 }
