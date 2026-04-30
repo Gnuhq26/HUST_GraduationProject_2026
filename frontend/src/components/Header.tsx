@@ -1,24 +1,25 @@
 import { useState, useEffect, useRef } from 'react';
 import { FiUser, FiLogOut, FiChevronDown, FiShoppingBag } from 'react-icons/fi';
 import useAuthStore from '../store/authStore';
+import type { StoreInfo } from '@/types';
 
 export default function Header() {
   const { user, stores, currentStoreId, setCurrentStore, logout } = useAuthStore();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showStoreMenu, setShowStoreMenu] = useState(false);
   
-  const userMenuRef = useRef(null);
-  const storeMenuRef = useRef(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const storeMenuRef = useRef<HTMLDivElement>(null);
 
-  const currentStore = stores.find(s => s.storeId === parseInt(currentStoreId));
+  const currentStore = stores.find((s: StoreInfo) => s.storeId === parseInt(currentStoreId));
 
   // Close menus when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node | null)) {
         setShowUserMenu(false);
       }
-      if (storeMenuRef.current && !storeMenuRef.current.contains(event.target)) {
+      if (storeMenuRef.current && !storeMenuRef.current.contains(event.target as Node | null)) {
         setShowStoreMenu(false);
       }
     };
@@ -34,7 +35,7 @@ export default function Header() {
     window.location.href = '/login';
   };
 
-  const handleStoreChange = (store) => {
+  const handleStoreChange = (store: StoreInfo) => {
     setCurrentStore(store);
     setShowStoreMenu(false);
     // Reload page to refresh data for new store
@@ -79,7 +80,7 @@ export default function Header() {
                   <div className="px-4 py-2 border-b border-gray-200">
                     <p className="text-xs font-semibold text-gray-400 uppercase">Chọn cửa hàng</p>
                   </div>
-                  {stores.map((store) => (
+                  {stores.map((store: StoreInfo) => (
                     <button
                       key={store.storeId}
                       onClick={() => handleStoreChange(store)}

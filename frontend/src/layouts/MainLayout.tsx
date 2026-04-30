@@ -1,8 +1,9 @@
+import type { JSX } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 
-export default function MainLayout() {
+export default function MainLayout(): JSX.Element {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}

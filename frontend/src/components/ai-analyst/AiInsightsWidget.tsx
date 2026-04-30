@@ -3,20 +3,25 @@ import Markdown from 'react-markdown';
 import { FiRefreshCw, FiAlertCircle } from 'react-icons/fi';
 import aiAnalystService from '../../services/aiAnalystService';
 
+interface AiInsightsResponse {
+  insights: string;
+  generatedAt: string;
+}
+
 export default function AiInsightsWidget() {
-  const [insights, setInsights] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [generatedAt, setGeneratedAt] = useState(null);
+  const [insights, setInsights] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
 
   const fetchInsights = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await aiAnalystService.getInsights();
+      const data = await aiAnalystService.getInsights() as AiInsightsResponse;
       setInsights(data.insights);
       setGeneratedAt(new Date(data.generatedAt));
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('AI Insights error:', err);
       setError('Không thể tải phân tích AI. Vui lòng thử lại sau.');
     } finally {
