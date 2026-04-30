@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react';
 import useAuthStore from '../store/authStore';
 import { authService } from '../services/authService';
+import type { Permission } from '@/types';
 
 /**
  * Hook to check if current user has a specific permission
- * @param {string} action - Permission action (e.g., 'create', 'read', 'update', 'delete', 'manage')
- * @param {string} subject - Permission subject (e.g., 'Product', 'Order', 'Customer', 'all')
- * @returns {{ hasPermission: boolean, loading: boolean }}
  */
-export function usePermission(action, subject) {
+export function usePermission(action: string, subject: string): { hasPermission: boolean; loading: boolean } {
   const { stores, currentStoreId } = useAuthStore();
   const [hasPermission, setHasPermission] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -33,7 +31,7 @@ export function usePermission(action, subject) {
         
         // Check for super admin permission (manage all)
         const isSuperAdmin = permissions.some(
-          p => p.Action === 'manage' && p.Subject === 'all'
+          (p: Permission) => p.Action === 'manage' && p.Subject === 'all'
         );
         
         if (isSuperAdmin) {
@@ -44,12 +42,12 @@ export function usePermission(action, subject) {
         
         // Check for specific permission
         const hasSpecificPermission = permissions.some(
-          p => p.Action === action && p.Subject === subject
+          (p: Permission) => p.Action === action && p.Subject === subject
         );
         
         setHasPermission(hasSpecificPermission);
-      } catch (error) {
-        console.error('Error checking permission:', error);
+      } catch (err: unknown) {
+        console.error('Error checking permission:', err);
         setHasPermission(false);
       } finally {
         setLoading(false);
@@ -64,11 +62,10 @@ export function usePermission(action, subject) {
 
 /**
  * Hook to get all permissions of current user
- * @returns {object} - Object with permissions array and loading state
  */
-export function usePermissions() {
+export function usePermissions(): { permissions: Permission[]; loading: boolean } {
   const { stores, currentStoreId } = useAuthStore();
-  const [permissions, setPermissions] = useState([]);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -88,8 +85,8 @@ export function usePermissions() {
       try {
         const rolePermissions = await authService.getMyPermissions();
         setPermissions(rolePermissions);
-      } catch (error) {
-        console.error('Error loading permissions:', error);
+      } catch (err: unknown) {
+        console.error('Error loading permissions:', err);
         setPermissions([]);
       } finally {
         setLoading(false);
@@ -103,27 +100,25 @@ export function usePermissions() {
 }
 
 /**
- * Hook to check if current user can perform an action
- * Similar to usePermission but returns a function
- * @returns {function} - Function that takes (action, subject) and returns boolean
+ * Hook to check if current user can perform an action.
+ * Similar to usePermission but returns a function.
  */
-export function useCanPerform() {
+export function useCanPerform(): { canPerform: (action: string, subject: string) => boolean; loading: boolean } {
   const { permissions, loading } = usePermissions();
 
-  const canPerform = (action, subject) => {
+  const canPerform = (action: string, subject: string): boolean => {
     if (loading) return false;
     
     // Check for super admin permission
-    // Backend returns array of permission objects directly
     const isSuperAdmin = permissions.some(
-      p => p.Action === 'manage' && p.Subject === 'all'
+      (p: Permission) => p.Action === 'manage' && p.Subject === 'all'
     );
     
     if (isSuperAdmin) return true;
     
     // Check for specific permission
     return permissions.some(
-      p => p.Action === action && p.Subject === subject
+      (p: Permission) => p.Action === action && p.Subject === subject
     );
   };
 

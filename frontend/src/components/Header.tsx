@@ -11,7 +11,7 @@ export default function Header() {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const storeMenuRef = useRef<HTMLDivElement>(null);
 
-  const currentStore = stores.find((s: StoreInfo) => s.storeId === parseInt(currentStoreId));
+  const currentStore = stores.find((s) => s.storeId === currentStoreId);
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -80,24 +80,24 @@ export default function Header() {
                   <div className="px-4 py-2 border-b border-gray-200">
                     <p className="text-xs font-semibold text-gray-400 uppercase">Chọn cửa hàng</p>
                   </div>
-                  {stores.map((store: StoreInfo) => (
+                  {stores.map((store) => (
                     <button
                       key={store.storeId}
                       onClick={() => handleStoreChange(store)}
                       className={`w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors ${
-                        store.storeId === parseInt(currentStoreId) ? 'bg-primary-50' : ''
+                        store.storeId === currentStoreId ? 'bg-primary-50' : ''
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <div>
                           <div className={`font-medium ${
-                            store.storeId === parseInt(currentStoreId) ? 'text-primary-700' : 'text-gray-900'
+                            store.storeId === currentStoreId ? 'text-primary-700' : 'text-gray-900'
                           }`}>
                             {store.storeName}
                           </div>
                           <div className="text-xs text-gray-500">{store.subdomain}</div>
                         </div>
-                        {store.storeId === parseInt(currentStoreId) && (
+                        {store.storeId === currentStoreId && (
                           <div className="w-2 h-2 bg-primary-600 rounded-full"></div>
                         )}
                       </div>
