@@ -7,12 +7,13 @@ import Forbidden from '../pages/Forbidden';
 import MainLayout from '../layouts/MainLayout';
 import PermissionRoute from '../components/PermissionRoute';
 import { protectedRoutes } from './protectedRoutes';
+import type { RouteConfig } from './protectedRoutes';
 import useAuthStore from '../store/authStore';
 
 export default function AppRoutes() {
   const { isAuthenticated } = useAuthStore();
 
-  const renderProtectedElement = (route) => {
+  const renderProtectedElement = (route: RouteConfig) => {
     const Component = route.component;
     const element = <Component />;
 

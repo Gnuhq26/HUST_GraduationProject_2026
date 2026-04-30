@@ -2,11 +2,12 @@ import { NavLink } from 'react-router-dom';
 import { FiShoppingBag } from 'react-icons/fi';
 import { useCanPerform } from '../hooks/usePermission';
 import { protectedRoutes } from '../routes/protectedRoutes';
+import type { RouteConfig } from '../routes/protectedRoutes';
 
 export default function Sidebar() {
   const { canPerform, loading } = useCanPerform();
 
-  const canAccessRoute = (route) => {
+  const canAccessRoute = (route: RouteConfig): boolean => {
     if (!route.permission) return true;
     if (loading) return false; // Avoid flashing unauthorized items while loading
 

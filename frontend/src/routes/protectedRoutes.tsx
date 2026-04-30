@@ -1,3 +1,4 @@
+import type { ComponentType } from 'react';
 import { FiHome, FiShoppingBag, FiGrid, FiPackage, FiShoppingCart, FiUsers, FiTruck, FiBarChart2, FiSettings, FiShield, FiDollarSign } from 'react-icons/fi';
 import Dashboard from '../pages/Dashboard';
 import Products from '../pages/Products';
@@ -12,11 +13,29 @@ import StoreSettings from '../pages/StoreSettings';
 import StoreMembers from '../pages/StoreMembers';
 import Roles from '../pages/Roles';
 
+interface RoutePermission {
+  action: string;
+  subject: string;
+}
+
+interface RouteMenu {
+  group: 'main' | 'store';
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+}
+
+export interface RouteConfig {
+  path: string;
+  component: ComponentType;
+  permission: RoutePermission | null;
+  menu: RouteMenu;
+}
+
 /**
  * Single source of truth for authenticated app routes.
  * This config is shared by both router and sidebar to avoid permission drift.
  */
-export const protectedRoutes = [
+export const protectedRoutes: RouteConfig[] = [
   {
     path: '/',
     component: Dashboard,
