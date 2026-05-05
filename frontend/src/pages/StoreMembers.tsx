@@ -1,27 +1,57 @@
 import { useState, useEffect } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiX, FiUsers, FiMail, FiShield, FiAlertCircle, FiUserPlus } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiX, FiUsers, FiShield, FiAlertCircle, FiUserPlus } from 'react-icons/fi';
 import { useForm } from 'react-hook-form';
 import storesService from '../services/storesService';
 import rolesService from '../services/rolesService';
+import type { Role } from '@/types';
+
+interface MemberUser {
+  FullName: string | null;
+  Email: string;
+  Phone?: string | null;
+  Address?: string | null;
+}
+
+interface MemberRole {
+  RoleID: number;
+  RoleName: string;
+  Description?: string | null;
+}
+
+interface Member {
+  userId: number;
+  joinedAt: string;
+  user: MemberUser;
+  role: MemberRole;
+}
+
+interface AddMemberForm {
+  email: string;
+  roleId: string;
+}
+
+interface EditMemberForm {
+  roleId: string;
+}
 
 export default function StoreMembers() {
-  const [members, setMembers] = useState([]);
-  const [roles, setRoles] = useState([]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editingMember, setEditingMember] = useState(null);
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const { register: registerAdd, handleSubmit: handleSubmitAdd, reset: resetAdd, formState: { errors: errorsAdd } } = useForm();
-  const { register: registerEdit, handleSubmit: handleSubmitEdit, reset: resetEdit, setValue: setValueEdit, formState: { errors: errorsEdit } } = useForm();
+  const { register: registerAdd, handleSubmit: handleSubmitAdd, reset: resetAdd, formState: { errors: errorsAdd } } = useForm<AddMemberForm>();
+  const { register: registerEdit, handleSubmit: handleSubmitEdit, setValue: setValueEdit, formState: { errors: errorsEdit } } = useForm<EditMemberForm>();
 
   // Load members
   const loadMembers = async () => {
     try {
       setLoading(true);
       const data = await storesService.getMembers();
-      setMembers(data);
+      setMembers(data as unknown as Member[]);
     } catch (error) {
       console.error('Error loading members:', error);
     } finally {
@@ -51,14 +81,14 @@ export default function StoreMembers() {
   };
 
   // Open edit modal
-  const handleOpenEdit = (member) => {
+  const handleOpenEdit = (member: Member) => {
     setEditingMember(member);
-    setValueEdit('roleId', member.role?.RoleID);
+    setValueEdit('roleId', String(member.role?.RoleID));
     setShowEditModal(true);
   };
 
   // Submit add member
-  const onSubmitAdd = async (data) => {
+  const onSubmitAdd = async (data: AddMemberForm) => {
     try {
       setSubmitting(true);
       await storesService.addMember({
@@ -68,33 +98,33 @@ export default function StoreMembers() {
       setShowAddModal(false);
       loadMembers();
       alert('Thêm thành viên thành công!');
-    } catch (error) {
-      alert(error.response?.data?.message || 'Có lỗi xảy ra khi thêm thành viên');
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { message?: string } } };
+      alert(e.response?.data?.message || 'Có lỗi xảy ra khi thêm thành viên');
     } finally {
       setSubmitting(false);
     }
   };
 
   // Submit edit member role
-  const onSubmitEdit = async (data) => {
+  const onSubmitEdit = async (data: EditMemberForm) => {
+    if (!editingMember) return;
     try {
       setSubmitting(true);
-      await storesService.updateMemberRole(
-        editingMember.userId,
-        parseInt(data.roleId)
-      );
+      await storesService.updateMemberRole(editingMember.userId, parseInt(data.roleId));
       setShowEditModal(false);
       loadMembers();
       alert('Cập nhật vai trò thành công!');
-    } catch (error) {
-      alert(error.response?.data?.message || 'Có lỗi xảy ra');
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { message?: string } } };
+      alert(e.response?.data?.message || 'Có lỗi xảy ra');
     } finally {
       setSubmitting(false);
     }
   };
 
   // Remove member
-  const handleRemoveMember = async (member) => {
+  const handleRemoveMember = async (member: Member) => {
     if (!confirm(`Bạn có chắc muốn xóa thành viên "${member.user?.Email || 'N/A'}" khỏi cửa hàng?`)) {
       return;
     }
@@ -103,13 +133,14 @@ export default function StoreMembers() {
       await storesService.removeMember(member.userId);
       loadMembers();
       alert('Đã xóa thành viên khỏi cửa hàng');
-    } catch (error) {
-      alert(error.response?.data?.message || 'Không thể xóa thành viên');
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { message?: string } } };
+      alert(e.response?.data?.message || 'Không thể xóa thành viên');
     }
   };
 
   // Format date
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString('vi-VN', {
       year: 'numeric',
       month: '2-digit',
@@ -170,7 +201,7 @@ export default function StoreMembers() {
             <div>
               <p className="text-sm text-gray-600">Thành viên mới</p>
               <p className="text-2xl font-bold text-gray-900">
-                {members.filter(m => {
+                {members.filter((m) => {
                   const joinDate = new Date(m.joinedAt);
                   const sevenDaysAgo = new Date();
                   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -199,13 +230,13 @@ export default function StoreMembers() {
             <tbody className="divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
                     Đang tải...
                   </td>
                 </tr>
               ) : members.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
                     Chưa có thành viên nào
                   </td>
                 </tr>
@@ -273,7 +304,7 @@ export default function StoreMembers() {
           <div className="bg-white rounded-xl max-w-md w-full">
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900">Thêm thành viên mới</h2>
-              <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowAddModal(false)} title="Đóng" className="text-gray-400 hover:text-gray-600">
                 <FiX size={24} />
               </button>
             </div>
@@ -281,7 +312,7 @@ export default function StoreMembers() {
             <form onSubmit={handleSubmitAdd(onSubmitAdd)} className="p-6 space-y-4">
               {/* Info Alert */}
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex gap-2">
-                <FiAlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" />
+                <FiAlertCircle className="text-blue-600 shrink-0 mt-0.5" />
                 <div className="text-sm text-blue-800">
                   Nếu email chưa tồn tại trong hệ thống, một tài khoản mới sẽ được tạo với mật khẩu mặc định: <strong>123456</strong>
                 </div>
@@ -358,7 +389,7 @@ export default function StoreMembers() {
           <div className="bg-white rounded-xl max-w-md w-full">
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900">Đổi vai trò</h2>
-              <button onClick={() => setShowEditModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowEditModal(false)} title="Đóng" className="text-gray-400 hover:text-gray-600">
                 <FiX size={24} />
               </button>
             </div>

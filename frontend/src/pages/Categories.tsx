@@ -1,24 +1,36 @@
 import { useState, useEffect } from 'react';
 import { FiPlus, FiEdit2, FiTrash2, FiX, FiSearch, FiPackage } from 'react-icons/fi';
-import { useForm } from 'react-hook-form';
+import { useForm, type SubmitHandler } from 'react-hook-form';
 import { categoriesService } from '../services/categoriesService';
 import ProtectedAction from '../components/ProtectedAction';
+import type { Category } from '@/types';
+
+interface CategoryWithCount extends Category {
+  _count?: {
+    products?: number;
+  };
+}
+
+interface CategoryFormData {
+  CategoryName: string;
+  Description?: string;
+}
 
 export default function Categories() {
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState<CategoryWithCount[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [editingCategory, setEditingCategory] = useState(null);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<CategoryFormData>();
 
   // Load categories
   const loadCategories = async (search = '') => {
     setLoading(true);
     try {
       const data = await categoriesService.getAll(search);
-      setCategories(data);
+      setCategories(data as CategoryWithCount[]);
     } catch (error) {
       console.error('Lỗi tải danh mục:', error);
     } finally {
@@ -31,7 +43,7 @@ export default function Categories() {
   }, []);
 
   // Search handler
-  const handleSearch = (e) => {
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     loadCategories(searchTerm);
   };
@@ -44,15 +56,15 @@ export default function Categories() {
   };
 
   // Open modal for edit
-  const handleEdit = (category) => {
+  const handleEdit = (category: Category) => {
     setEditingCategory(category);
     setValue('CategoryName', category.CategoryName);
-    setValue('Description', category.Description);
+    setValue('Description', category.Description ?? '');
     setShowModal(true);
   };
 
   // Submit form
-  const onSubmit = async (data) => {
+  const onSubmit: SubmitHandler<CategoryFormData> = async (data) => {
     try {
       if (editingCategory) {
         await categoriesService.update(editingCategory.CategoryID, data);
@@ -61,22 +73,24 @@ export default function Categories() {
       }
       setShowModal(false);
       loadCategories(searchTerm);
-    } catch (error) {
-      console.error('Lỗi:', error);
-      alert(error.response?.data?.message || 'Có lỗi xảy ra');
+    } catch (err: unknown) {
+      console.error('Lỗi:', err);
+      const e = err as { response?: { data?: { message?: string } } };
+      alert(e.response?.data?.message || 'Có lỗi xảy ra');
     }
   };
 
   // Delete category
-  const handleDelete = async (id, categoryName) => {
+  const handleDelete = async (id: number, categoryName: string) => {
     if (!confirm(`Bạn có chắc muốn xóa danh mục "${categoryName}"?`)) return;
     
     try {
       await categoriesService.delete(id);
       loadCategories(searchTerm);
-    } catch (error) {
-      console.error('Lỗi xóa:', error);
-      alert(error.response?.data?.message || 'Không thể xóa danh mục (có thể đang có sản phẩm)');
+    } catch (err: unknown) {
+      console.error('Lỗi xóa:', err);
+      const e = err as { response?: { data?: { message?: string } } };
+      alert(e.response?.data?.message || 'Không thể xóa danh mục (có thể đang có sản phẩm)');
     }
   };
 
@@ -148,13 +162,13 @@ export default function Categories() {
             <tbody className="divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan="4" className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
                     Đang tải...
                   </td>
                 </tr>
               ) : categories.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
                     {searchTerm ? 'Không tìm thấy danh mục nào' : 'Chưa có danh mục nào'}
                   </td>
                 </tr>
@@ -209,7 +223,7 @@ export default function Categories() {
               <h2 className="text-xl font-bold text-gray-900">
                 {editingCategory ? 'Cập nhật danh mục' : 'Thêm danh mục mới'}
               </h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowModal(false)} title="Đóng" className="text-gray-400 hover:text-gray-600">
                 <FiX size={24} />
               </button>
             </div>
@@ -237,7 +251,7 @@ export default function Categories() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
                 <textarea
                   {...register('Description')}
-                  rows="4"
+                  rows={4}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="Nhập mô tả danh mục (không bắt buộc)"
                 />

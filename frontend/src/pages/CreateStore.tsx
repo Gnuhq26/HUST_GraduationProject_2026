@@ -4,19 +4,26 @@ import { FiHome, FiArrowLeft } from 'react-icons/fi';
 import storesService from '../services/storesService';
 import useAuthStore from '../store/authStore';
 
+interface CreateStoreFormData {
+  storeName: string;
+  subdomain: string;
+  phone: string;
+  address: string;
+}
+
 function CreateStore() {
   const navigate = useNavigate();
   const { refreshAuth, setCurrentStore } = useAuthStore();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CreateStoreFormData>({
     storeName: '',
     subdomain: '',
     phone: '',
     address: '',
   });
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     
     // Auto-generate subdomain from store name
@@ -49,8 +56,8 @@ function CreateStore() {
     }
   };
 
-  const validateForm = () => {
-    const newErrors = {};
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
 
     if (!formData.storeName.trim()) {
       newErrors.storeName = 'Tên cửa hàng không được để trống';
@@ -66,34 +73,43 @@ function CreateStore() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!validateForm()) return;
 
     try {
       setLoading(true);
-      await storesService.createStore(formData);
+      await storesService.createStore({
+        storeName: formData.storeName,
+        subdomain: formData.subdomain,
+        phone: formData.phone,
+        address: formData.address,
+      });
       
-      // Refresh auth to get updated stores list and set current store
-      const result = await refreshAuth();
+      // Refresh auth to get updated stores list
+      await refreshAuth();
+      const updatedStores = useAuthStore.getState().stores;
 
-      if(result.success && result.stores?.length > 0) {
-        const createdStore = result.stores.find((s) => s.subdomain === formData.subdomain) || result.stores[result.stores.length - 1];
+      if (updatedStores.length > 0) {
+        const createdStore =
+          updatedStores.find(s => s.subdomain === formData.subdomain) ||
+          updatedStores[updatedStores.length - 1];
 
-        if(createdStore) {
+        if (createdStore) {
           setCurrentStore(createdStore.storeId);
         }
       }
       
       alert('Tạo cửa hàng thành công!');
       navigate('/');
-    } catch (error) {
-      console.error('Error creating store:', error);
-      if (error.response?.data?.message?.includes('subdomain')) {
+    } catch (err: unknown) {
+      console.error('Error creating store:', err);
+      const e = err as { response?: { data?: { message?: string } } };
+      if (e.response?.data?.message?.includes('subdomain')) {
         setErrors({ subdomain: 'Subdomain này đã được sử dụng' });
       } else {
-        alert(error.response?.data?.message || 'Có lỗi xảy ra khi tạo cửa hàng');
+        alert(e.response?.data?.message || 'Có lỗi xảy ra khi tạo cửa hàng');
       }
     } finally {
       setLoading(false);
@@ -101,7 +117,7 @@ function CreateStore() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-linear-to-br from-primary-50 to-primary-100 flex items-center justify-center p-6">
       <div className="max-w-2xl w-full">
         {/* Back Button */}
         <button
@@ -193,7 +209,7 @@ function CreateStore() {
                 value={formData.address}
                 onChange={handleChange}
                 placeholder="79 Cầu Giấy, Hà Nội"
-                rows="3"
+                rows={3}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>

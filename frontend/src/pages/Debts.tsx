@@ -1,15 +1,63 @@
-import { useState, useEffect } from 'react';
-import { FiDollarSign, FiUsers, FiTruck, FiX, FiCreditCard } from 'react-icons/fi';
+import React, { useState, useEffect, useCallback } from 'react';
+import { FiUsers, FiTruck, FiX, FiCreditCard } from 'react-icons/fi';
 import debtsService from '../services/debtsService';
 
-const formatCurrency = (value) => {
+interface DebtOrder {
+  orderId: number;
+  orderDate: string;
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+}
+
+interface CustomerDebt {
+  customerName: string;
+  phone: string | null;
+  totalDebt: number;
+  orders: DebtOrder[];
+}
+
+interface CustomerDebtsResponse {
+  totalDebtAmount: number;
+  totalCustomersInDebt: number;
+  customers: CustomerDebt[];
+}
+
+interface DebtReceipt {
+  receiptId: number;
+  importDate: string;
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+}
+
+interface SupplierDebt {
+  supplierName: string;
+  phone: string | null;
+  totalDebt: number;
+  receipts: DebtReceipt[];
+}
+
+interface SupplierDebtsResponse {
+  totalDebtAmount: number;
+  totalSuppliersInDebt: number;
+  suppliers: SupplierDebt[];
+}
+
+interface PaymentModal {
+  type: 'customer' | 'supplier';
+  referenceId: number;
+  remaining: number;
+}
+
+const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
     currency: 'VND',
   }).format(value);
 };
 
-const formatDate = (dateString) => {
+const formatDate = (dateString: string): string => {
   return new Date(dateString).toLocaleDateString('vi-VN', {
     year: 'numeric',
     month: '2-digit',
@@ -18,37 +66,37 @@ const formatDate = (dateString) => {
 };
 
 export default function Debts() {
-  const [activeTab, setActiveTab] = useState('customers');
-  const [customerDebts, setCustomerDebts] = useState(null);
-  const [supplierDebts, setSupplierDebts] = useState(null);
+  const [activeTab, setActiveTab] = useState<'customers' | 'suppliers'>('customers');
+  const [customerDebts, setCustomerDebts] = useState<CustomerDebtsResponse | null>(null);
+  const [supplierDebts, setSupplierDebts] = useState<SupplierDebtsResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [paymentModal, setPaymentModal] = useState(null);
+  const [paymentModal, setPaymentModal] = useState<PaymentModal | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentNote, setPaymentNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const loadDebts = async () => {
+  const loadDebts = useCallback(async () => {
     try {
       setLoading(true);
       if (activeTab === 'customers') {
         const data = await debtsService.getCustomerDebts();
-        setCustomerDebts(data);
+        setCustomerDebts(data as CustomerDebtsResponse);
       } else {
         const data = await debtsService.getSupplierDebts();
-        setSupplierDebts(data);
+        setSupplierDebts(data as SupplierDebtsResponse);
       }
     } catch (err) {
       console.error('Error loading debts:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab]);
 
   useEffect(() => {
     loadDebts();
-  }, [activeTab]);
+  }, [loadDebts]);
 
-  const handlePayment = async (e) => {
+  const handlePayment = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!paymentModal || !paymentAmount) return;
 
@@ -65,14 +113,15 @@ export default function Debts() {
       setPaymentAmount('');
       setPaymentNote('');
       loadDebts();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Có lỗi xảy ra');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      alert(e.response?.data?.message || 'Có lỗi xảy ra');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const openPaymentModal = (type, referenceId, remaining) => {
+  const openPaymentModal = (type: 'customer' | 'supplier', referenceId: number, remaining: number) => {
     setPaymentModal({ type, referenceId, remaining });
     setPaymentAmount('');
     setPaymentNote('');
@@ -120,13 +169,13 @@ export default function Debts() {
         <>
           {/* Customer Debts Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-lg p-6 text-white">
+            <div className="bg-linear-to-br from-red-500 to-red-600 rounded-lg p-6 text-white">
               <p className="text-red-100 text-sm">Tổng nợ khách hàng</p>
               <p className="text-3xl font-bold mt-1">
                 {formatCurrency(customerDebts?.totalDebtAmount || 0)}
               </p>
             </div>
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white">
+            <div className="bg-linear-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white">
               <p className="text-blue-100 text-sm">Khách hàng đang nợ</p>
               <p className="text-3xl font-bold mt-1">{customerDebts?.totalCustomersInDebt || 0}</p>
             </div>
@@ -139,7 +188,7 @@ export default function Debts() {
                 Không có công nợ khách hàng
               </div>
             ) : (
-              customerDebts.customers.map((customer, idx) => (
+              customerDebts!.customers.map((customer, idx) => (
                 <div key={idx} className="bg-white rounded-lg shadow-sm border p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div>
@@ -194,13 +243,13 @@ export default function Debts() {
         <>
           {/* Supplier Debts Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg p-6 text-white">
+            <div className="bg-linear-to-br from-orange-500 to-orange-600 rounded-lg p-6 text-white">
               <p className="text-orange-100 text-sm">Tổng nợ nhà cung cấp</p>
               <p className="text-3xl font-bold mt-1">
                 {formatCurrency(supplierDebts?.totalDebtAmount || 0)}
               </p>
             </div>
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-6 text-white">
+            <div className="bg-linear-to-br from-purple-500 to-purple-600 rounded-lg p-6 text-white">
               <p className="text-purple-100 text-sm">NCC đang nợ</p>
               <p className="text-3xl font-bold mt-1">{supplierDebts?.totalSuppliersInDebt || 0}</p>
             </div>
@@ -213,7 +262,7 @@ export default function Debts() {
                 Không có công nợ nhà cung cấp
               </div>
             ) : (
-              supplierDebts.suppliers.map((supplier, idx) => (
+              supplierDebts!.suppliers.map((supplier, idx) => (
                 <div key={idx} className="bg-white rounded-lg shadow-sm border p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div>
@@ -279,7 +328,7 @@ export default function Debts() {
             <div className="p-6 border-b">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-bold text-gray-800">Ghi nhận thanh toán</h2>
-                <button onClick={() => setPaymentModal(null)} className="text-gray-400 hover:text-gray-600">
+                <button onClick={() => setPaymentModal(null)} title="Đóng" className="text-gray-400 hover:text-gray-600">
                   <FiX className="text-2xl" />
                 </button>
               </div>

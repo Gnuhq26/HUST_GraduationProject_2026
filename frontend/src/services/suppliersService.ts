@@ -1,6 +1,7 @@
 import apiClient from './api';
 import type {
   Supplier,
+  PaginatedResult,
   CreateSupplierDto,
   UpdateSupplierDto,
   ImportPreviewResponse,
@@ -11,8 +12,8 @@ const suppliersService = {
   // Lấy danh sách nhà cung cấp (có thể tìm kiếm)
   async getAll(search = ''): Promise<Supplier[]> {
     const params = search ? { search } : {};
-    const response = await apiClient.get<Supplier[]>('/suppliers', { params });
-    return response.data;
+    const response = await apiClient.get<PaginatedResult<Supplier>>('/suppliers', { params });
+    return response.data.data;
   },
 
   // Lấy chi tiết nhà cung cấp

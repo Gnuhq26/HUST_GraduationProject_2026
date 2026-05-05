@@ -10,19 +10,17 @@ function NoStore() {
   // Check if user has stores on mount (they might have been added after login)
   useEffect(() => {
     const checkStores = async () => {
-      const result = await refreshAuth();
-      if (result.success) {
-        const stores = result.stores || [];
-        
-        if (stores.length === 1) {
-          navigate('/', { replace: true });
-        } else if (stores.length > 1) {
-          navigate('/select-store', { replace: true });
-        }
-        // If stores.length === 0, stay on this page
+      await refreshAuth();
+      const currentStores = useAuthStore.getState().stores;
+
+      if (currentStores.length === 1) {
+        navigate('/', { replace: true });
+      } else if (currentStores.length > 1) {
+        navigate('/select-store', { replace: true });
       }
+      // If stores.length === 0, stay on this page
     };
-    
+
     checkStores();
   }, [refreshAuth, navigate]);
 
@@ -36,7 +34,7 @@ function NoStore() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-linear-to-br from-primary-50 to-primary-100 flex items-center justify-center p-6">
       <div className="max-w-4xl w-full">
         {/* Header */}
         <div className="text-center mb-12">

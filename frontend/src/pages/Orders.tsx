@@ -5,28 +5,45 @@ import { customersService } from '../services/customersService';
 import { productsService } from '../services/productsService';
 import OrderDetailModal from '../components/orders/OrderDetailModal';
 import ProtectedAction from '../components/ProtectedAction';
+import type { Order, Customer, Product, DeliveryMethod } from '@/types';
+
+interface OrderWithCount extends Order {
+  _count?: { details: number };
+}
+
+interface OrderFormItem {
+  productId: string;
+  unitName: string;
+  quantity: string;
+}
+
+interface StatusConfig {
+  icon: React.ComponentType<{ className?: string }>;
+  className: string;
+  label: string;
+}
 
 function Orders() {
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState<OrderWithCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [exporting, setExporting] = useState(false);
 
   // Create Order Form States
-  const [customers, setCustomers] = useState([]);
-  const [products, setProducts] = useState([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [note, setNote] = useState('');
-  const [deliveryMethod, setDeliveryMethod] = useState('Immediate');
-  const [items, setItems] = useState([{ productId: '', unitName: '', quantity: '' }]);
+  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('Immediate');
+  const [items, setItems] = useState<OrderFormItem[]>([{ productId: '', unitName: '', quantity: '' }]);
 
   // Load orders
   const loadOrders = async () => {
     try {
       setLoading(true);
       const res = await ordersService.getAll();
-      setOrders(Array.isArray(res) ? res : res?.data ?? []);
+      setOrders((Array.isArray(res) ? res : (res as { data?: OrderWithCount[] })?.data ?? []) as OrderWithCount[]);
     } catch (err) {
       console.error('Error loading orders:', err);
     } finally {
@@ -41,9 +58,9 @@ function Orders() {
         customersService.getAll(),
         productsService.getAll(),
       ]);
-      const customersArr = Array.isArray(customersRes) ? customersRes : customersRes?.data ?? [];
-      setCustomers(customersArr);
-      setProducts((Array.isArray(productsData) ? productsData : productsData?.data ?? []).filter((p) => p.IsActive));
+      const customersArr = Array.isArray(customersRes) ? customersRes : (customersRes as { data?: Customer[] })?.data ?? [];
+      setCustomers(customersArr as Customer[]);
+      setProducts((Array.isArray(productsData) ? productsData : (productsData as { data?: Product[] })?.data ?? []).filter((p: Product) => p.IsActive));
     } catch (err) {
       console.error('Error loading form data:', err);
     }
@@ -81,16 +98,16 @@ function Orders() {
   };
 
   // Remove item
-  const handleRemoveItem = (index) => {
+  const handleRemoveItem = (index: number) => {
     if (items.length > 1) {
       setItems(items.filter((_, i) => i !== index));
     }
   };
 
   // Update item
-  const handleItemChange = (index, field, value) => {
+  const handleItemChange = (index: number, field: keyof OrderFormItem, value: string) => {
     const newItems = [...items];
-    newItems[index][field] = value;
+    newItems[index] = { ...newItems[index], [field]: value };
 
     // Auto-fill BaseUnit when product selected
     if (field === 'productId') {
@@ -104,7 +121,7 @@ function Orders() {
   };
 
   // Submit create order
-  const handleSubmitCreate = async (e) => {
+  const handleSubmitCreate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const validItems = items.filter(
@@ -124,21 +141,22 @@ function Orders() {
         items: validItems.map((item) => ({
           productId: parseInt(item.productId),
           unitName: item.unitName,
-          quantity: parseFloat(item.quantity),
+          quantity: item.quantity,
         })),
       });
 
       alert('Tạo đơn hàng thành công!');
       setIsCreateModalOpen(false);
       loadOrders();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Có lỗi xảy ra khi tạo đơn hàng');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      alert(e.response?.data?.message || 'Có lỗi xảy ra khi tạo đơn hàng');
       console.error('Error creating order:', err);
     }
   };
 
   // Calculate total
-  const calculateTotal = () => {
+  const calculateTotal = (): number => {
     return items.reduce((sum, item) => {
       const product = products.find((p) => p.ProductID === parseInt(item.productId));
       if (!product || !item.quantity || !item.unitName) return sum;
@@ -152,22 +170,23 @@ function Orders() {
   };
 
   // Hoàn tất đơn đặt trước
-  const handleFulfillOrder = async (orderId) => {
+  const handleFulfillOrder = async (orderId: number) => {
     if (!confirm(`Xác nhận hoàn tất đơn hàng #${orderId}? Hàng sẽ được xuất kho thực tế.`)) return;
     try {
       await ordersService.fulfillOrder(orderId);
       alert('Hoàn tất đơn hàng thành công!');
       loadOrders();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Có lỗi xảy ra khi hoàn tất đơn hàng');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      alert(e.response?.data?.message || 'Có lỗi xảy ra khi hoàn tất đơn hàng');
     }
   };
 
   // Hủy đơn hàng
-  const handleCancelOrder = async (orderId) => {
+  const handleCancelOrder = async (orderId: number) => {
     if (!confirm(`Xác nhận hủy đơn hàng #${orderId}? Hàng đã đặt trước sẽ được hoàn trả về kho.`)) return;
     try {
-      const res = await ordersService.cancelOrder(orderId);
+      const res = await ordersService.cancelOrder(orderId) as unknown as { data?: { refundAmount?: number }; refundAmount?: number };
       const refund = Number(res.data?.refundAmount || res.refundAmount || 0);
       if (refund > 0) {
         alert(`Đã hủy đơn hàng thành công!\nSố tiền cọc cần hoàn trả khách: ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(refund)}`);
@@ -175,21 +194,22 @@ function Orders() {
         alert('Đã hủy đơn hàng thành công!');
       }
       loadOrders();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Có lỗi xảy ra khi hủy đơn hàng');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      alert(e.response?.data?.message || 'Có lỗi xảy ra khi hủy đơn hàng');
     }
   };
 
   // Format currency
-  const formatCurrency = (value) => {
+  const formatCurrency = (value: number | string): string => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND',
-    }).format(value);
+    }).format(Number(value));
   };
 
   // Format date
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString('vi-VN', {
       year: 'numeric',
       month: '2-digit',
@@ -200,8 +220,8 @@ function Orders() {
   };
 
   // Get status badge
-  const getStatusBadge = (status) => {
-    const statusConfig = {
+  const getStatusBadge = (status: string): React.ReactElement => {
+    const statusConfig: Record<string, StatusConfig> = {
       Completed: {
         icon: FiCheckCircle,
         className: 'bg-green-100 text-green-800',
@@ -219,7 +239,7 @@ function Orders() {
       },
     };
 
-    const config = statusConfig[status] || statusConfig.Completed;
+    const config = statusConfig[status] || statusConfig['Completed'];
     const Icon = config.icon;
 
     return (
@@ -273,7 +293,7 @@ function Orders() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white">
+        <div className="bg-linear-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-blue-100 text-sm">Tổng đơn hàng</p>
@@ -283,7 +303,7 @@ function Orders() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-6 text-white">
+        <div className="bg-linear-to-br from-green-500 to-green-600 rounded-lg p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-green-100 text-sm">Hoàn thành</p>
@@ -295,7 +315,7 @@ function Orders() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg p-6 text-white">
+        <div className="bg-linear-to-br from-yellow-500 to-yellow-600 rounded-lg p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-yellow-100 text-sm">Chờ xử lý</p>
@@ -307,7 +327,7 @@ function Orders() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-6 text-white">
+        <div className="bg-linear-to-br from-purple-500 to-purple-600 rounded-lg p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-purple-100 text-sm">Doanh thu</p>
@@ -357,7 +377,7 @@ function Orders() {
           <tbody className="bg-white divide-y divide-gray-200">
             {orders.length === 0 ? (
               <tr>
-                <td colSpan="9" className="px-6 py-8 text-center text-gray-500">
+                <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
                   Chưa có đơn hàng
                 </td>
               </tr>
@@ -454,6 +474,7 @@ function Orders() {
                 <h2 className="text-xl font-bold text-gray-800">Tạo đơn hàng mới</h2>
                 <button
                   onClick={() => setIsCreateModalOpen(false)}
+                  title="Đóng"
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <FiX className="text-2xl" />
@@ -470,6 +491,7 @@ function Orders() {
                 <div className="relative">
                   <FiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <select
+                    title="Khách hàng"
                     value={selectedCustomer}
                     onChange={(e) => setSelectedCustomer(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -504,8 +526,9 @@ function Orders() {
                   Phương thức giao hàng
                 </label>
                 <select
+                  title="Phương thức giao hàng"
                   value={deliveryMethod}
-                  onChange={(e) => setDeliveryMethod(e.target.value)}
+                  onChange={(e) => setDeliveryMethod(e.target.value as DeliveryMethod)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                   <option value="Immediate">Giao ngay (Immediate)</option>
@@ -554,6 +577,7 @@ function Orders() {
                           {/* Product */}
                           <select
                             required
+                            title="Sản phẩm"
                             value={item.productId}
                             onChange={(e) => handleItemChange(index, 'productId', e.target.value)}
                             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -569,6 +593,7 @@ function Orders() {
                           {/* Unit Name */}
                           <select
                             required
+                            title="Đơn vị tính"
                             disabled={!item.productId}
                             value={item.unitName}
                             onChange={(e) => handleItemChange(index, 'unitName', e.target.value)}
@@ -578,8 +603,8 @@ function Orders() {
                             {availableUnits.map((unit, idx) => (
                               <option key={idx} value={unit.UnitName}>
                                 {unit.UnitName}{' '}
-                                {unit.ExchangeValue > 1 &&
-                                  `(1 = ${unit.ExchangeValue} ${selectedProduct.BaseUnit})`}
+                                {Number(unit.ExchangeValue) > 1 &&
+                                  `(1 = ${unit.ExchangeValue} ${selectedProduct?.BaseUnit || ''})`}
                               </option>
                             ))}
                           </select>
@@ -601,6 +626,7 @@ function Orders() {
                         {items.length > 1 && (
                           <button
                             type="button"
+                            title="Xóa dòng"
                             onClick={() => handleRemoveItem(index)}
                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           >

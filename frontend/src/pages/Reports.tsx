@@ -2,6 +2,36 @@ import { useState, useEffect } from 'react';
 import { FiDollarSign, FiTrendingUp, FiPackage, FiBarChart2, FiCalendar, FiAward } from 'react-icons/fi';
 import reportsService from '../services/reportsService';
 
+interface RevenueReport {
+  totalRevenue: number;
+  totalOrders: number;
+  completedOrders: number;
+  pendingOrders: number;
+  confirmedRevenue: number;
+  pendingDeposit: number;
+  pendingTotalValue: number;
+}
+
+interface ProfitReport {
+  totalProfit: number;
+  totalRevenue: number;
+  totalCost: number;
+  profitMargin: number;
+}
+
+interface TopProduct {
+  productId: number;
+  productName: string;
+  sku: string | null;
+  baseUnit: string;
+  totalQuantity: number;
+  totalRevenue: number;
+}
+
+interface TopProductsReport {
+  products: TopProduct[];
+}
+
 function Reports() {
   const [loading, setLoading] = useState(false);
   
@@ -12,12 +42,12 @@ function Reports() {
   const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
 
   // Reports data
-  const [revenueReport, setRevenueReport] = useState(null);
-  const [profitReport, setProfitReport] = useState(null);
-  const [topProducts, setTopProducts] = useState(null);
+  const [revenueReport, setRevenueReport] = useState<RevenueReport | null>(null);
+  const [profitReport, setProfitReport] = useState<ProfitReport | null>(null);
+  const [topProducts, setTopProducts] = useState<TopProductsReport | null>(null);
   
   // Top products options
-  const [sortBy, setSortBy] = useState('revenue');
+  const [sortBy, setSortBy] = useState<'revenue' | 'quantity'>('revenue');
   const [limit, setLimit] = useState(10);
 
   // Load all reports
@@ -30,9 +60,9 @@ function Reports() {
         reportsService.getTopProducts(startDate, endDate, sortBy, limit),
       ]);
       
-      setRevenueReport(revenue);
-      setProfitReport(profit);
-      setTopProducts(products);
+      setRevenueReport(revenue as RevenueReport);
+      setProfitReport(profit as ProfitReport);
+      setTopProducts(products as TopProductsReport);
     } catch (err) {
       console.error('Error loading reports:', err);
       alert('Có lỗi khi tải báo cáo');
@@ -51,7 +81,7 @@ function Reports() {
   };
 
   // Format currency
-  const formatCurrency = (value) => {
+  const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND',
@@ -59,7 +89,7 @@ function Reports() {
   };
 
   // Format number
-  const formatNumber = (value) => {
+  const formatNumber = (value: number): string => {
     return new Intl.NumberFormat('vi-VN', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
@@ -67,7 +97,7 @@ function Reports() {
   };
 
   // Format percent
-  const formatPercent = (value) => {
+  const formatPercent = (value: number): string => {
     return `${value.toFixed(2)}%`;
   };
 
@@ -89,6 +119,7 @@ function Reports() {
             </label>
             <input
               type="date"
+              title="Từ ngày"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -102,6 +133,7 @@ function Reports() {
             </label>
             <input
               type="date"
+              title="Đến ngày"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -113,8 +145,9 @@ function Reports() {
               Sắp xếp theo
             </label>
             <select
+              title="Sắp xếp theo"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              onChange={(e) => setSortBy(e.target.value as 'revenue' | 'quantity')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
               <option value="revenue">Doanh thu</option>
@@ -128,6 +161,7 @@ function Reports() {
             </label>
             <input
               type="number"
+              title="Số lượng hiển thị"
               min="1"
               max="50"
               value={limit}
@@ -156,7 +190,7 @@ function Reports() {
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             {/* Revenue */}
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white">
+            <div className="bg-linear-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-blue-100 text-sm">Doanh thu thực thu</div>
                 <FiDollarSign className="text-3xl text-blue-200" />
@@ -170,7 +204,7 @@ function Reports() {
             </div>
 
             {/* Profit */}
-            <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-6 text-white">
+            <div className="bg-linear-to-br from-green-500 to-green-600 rounded-lg p-6 text-white">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-green-100 text-sm">Lợi nhuận</div>
                 <FiTrendingUp className="text-3xl text-green-200" />
@@ -184,7 +218,7 @@ function Reports() {
             </div>
 
             {/* Cost */}
-            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg p-6 text-white">
+            <div className="bg-linear-to-br from-orange-500 to-orange-600 rounded-lg p-6 text-white">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-orange-100 text-sm">Giá vốn</div>
                 <FiPackage className="text-3xl text-orange-200" />
@@ -198,7 +232,7 @@ function Reports() {
             </div>
 
             {/* Top Products Count */}
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-6 text-white">
+            <div className="bg-linear-to-br from-purple-500 to-purple-600 rounded-lg p-6 text-white">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-purple-100 text-sm">SP bán chạy</div>
                 <FiAward className="text-3xl text-purple-200" />
@@ -342,7 +376,7 @@ function Reports() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {topProducts.products.length === 0 ? (
                       <tr>
-                        <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                        <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
                           Không có dữ liệu sản phẩm trong khoảng thời gian này
                         </td>
                       </tr>

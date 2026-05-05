@@ -1,11 +1,24 @@
+import type { ComponentType } from 'react';
 import { useEffect, useState } from 'react';
 import { FiX, FiUser, FiPhone, FiMapPin, FiCalendar, FiShoppingCart, FiLoader, FiDollarSign, FiCheckCircle, FiClock, FiXCircle } from 'react-icons/fi';
 import { customersService } from '../../services/customersService';
+import type { Customer, Order } from '@/types';
 
-export default function CustomerDetailModal({ customerId, onClose }) {
-  const [customer, setCustomer] = useState(null);
+interface Props {
+  customerId: number;
+  onClose: () => void;
+}
+
+interface StatusBadge {
+  label: string;
+  color: string;
+  icon: ComponentType<{ size?: number; className?: string }>;
+}
+
+export default function CustomerDetailModal({ customerId, onClose }: Props) {
+  const [customer, setCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadCustomerDetail = async () => {
@@ -27,7 +40,7 @@ export default function CustomerDetailModal({ customerId, onClose }) {
     }
   }, [customerId]);
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
     return date.toLocaleString('vi-VN', {
@@ -39,15 +52,15 @@ export default function CustomerDetailModal({ customerId, onClose }) {
     });
   };
 
-  const formatCurrency = (amount) => {
+  const formatCurrency = (amount: number | string | null | undefined) => {
     if (!amount) return '0đ';
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND',
-    }).format(amount);
+    }).format(Number(amount));
   };
 
-  const getStatusBadge = (order) => {
+  const getStatusBadge = (order: Order): StatusBadge => {
     const debt = Number(order.TotalAmount) - Number(order.PaidAmount);
     
     // Nếu còn nợ, hiển thị trạng thái "Chưa thanh toán" bất kể Status từ backend
@@ -60,7 +73,7 @@ export default function CustomerDetailModal({ customerId, onClose }) {
     }
     
     // Nếu đã thanh toán đủ, dựa vào Status từ backend
-    const statusConfig = {
+    const statusConfig: Record<string, StatusBadge> = {
       Completed: { label: 'Hoàn thành', color: 'bg-green-100 text-green-700', icon: FiCheckCircle },
       Pending: { label: 'Chờ xử lý', color: 'bg-yellow-100 text-yellow-700', icon: FiClock },
       Cancelled: { label: 'Đã hủy', color: 'bg-red-100 text-red-700', icon: FiXCircle },
@@ -71,7 +84,7 @@ export default function CustomerDetailModal({ customerId, onClose }) {
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-[60] p-4"
+      className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-60 p-4"
       onClick={onClose}
     >
       <div 
@@ -83,6 +96,7 @@ export default function CustomerDetailModal({ customerId, onClose }) {
           <h2 className="text-xl font-bold text-gray-900">Chi tiết khách hàng</h2>
           <button
             onClick={onClose}
+            title="Đóng"
             className="text-gray-400 hover:text-gray-600 transition-colors"
           >
             <FiX size={24} />
@@ -109,7 +123,7 @@ export default function CustomerDetailModal({ customerId, onClose }) {
           ) : customer ? (
             <div className="space-y-6">
               {/* Customer Info Card */}
-              <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg p-6">
+              <div className="bg-linear-to-br from-primary-50 to-primary-100 rounded-lg p-6">
                 <div className="flex items-start gap-4">
                   <div className="p-3 bg-white rounded-full shadow-sm">
                     <FiUser className="text-primary-600" size={32} />
@@ -137,7 +151,7 @@ export default function CustomerDetailModal({ customerId, onClose }) {
                 </h4>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <FiPhone className="text-gray-400 flex-shrink-0" size={20} />
+                    <FiPhone className="text-gray-400 shrink-0" size={20} />
                     <div>
                       <p className="text-xs text-gray-500">Số điện thoại</p>
                       <p className="text-sm font-medium text-gray-900">
@@ -147,7 +161,7 @@ export default function CustomerDetailModal({ customerId, onClose }) {
                   </div>
 
                   <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                    <FiMapPin className="text-gray-400 flex-shrink-0 mt-0.5" size={20} />
+                    <FiMapPin className="text-gray-400 shrink-0 mt-0.5" size={20} />
                     <div>
                       <p className="text-xs text-gray-500">Địa chỉ</p>
                       <p className="text-sm font-medium text-gray-900">

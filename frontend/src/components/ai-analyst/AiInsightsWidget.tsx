@@ -56,7 +56,7 @@ export default function AiInsightsWidget() {
       {/* Error State */}
       {!loading && error && (
         <div className="flex items-start gap-3 p-4 bg-red-50 rounded-lg">
-          <FiAlertCircle className="text-red-500 text-xl flex-shrink-0 mt-0.5" />
+          <FiAlertCircle className="text-red-500 text-xl shrink-0 mt-0.5" />
           <div>
             <p className="text-sm text-red-700">{error}</p>
             <button

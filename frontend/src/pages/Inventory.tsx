@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiPlus, FiPackage, FiTruck, FiShoppingBag, FiX, FiAlertTriangle, FiFileText, FiEye, FiCheckCircle, FiZap, FiDownload } from 'react-icons/fi';
 import inventoryService from '../services/inventoryService';
 import suppliersService from '../services/suppliersService';
@@ -7,29 +7,73 @@ import { customersService } from '../services/customersService';
 import ProductStockHistoryModal from '../components/inventory/ProductStockHistoryModal';
 import StockReceiptDetailModal from '../components/inventory/StockReceiptDetailModal';
 import ProtectedAction from '../components/ProtectedAction';
+import type { Supplier, Customer, Product, StockReceiptStatus } from '@/types';
+
+interface InventoryItem {
+  InventoryID: number;
+  StoreID: number;
+  ProductID: number;
+  ProductName: string;
+  SKU: string | null;
+  BaseUnit: string;
+  Category?: { CategoryName: string };
+  Quantity: string;
+  ReservedQty: string;
+  InTransitQty: string;
+  AvailableQty?: string;
+}
+
+interface StockReceiptWithCount {
+  ReceiptID: number;
+  ReceiptCode: string | null;
+  ImportDate: string;
+  TotalAmount: string;
+  Status: string;
+  supplier?: { SupplierName: string };
+  _count?: { details: number };
+}
+
+interface StockInFormItem {
+  productId: string;
+  unitName: string;
+  quantity: string;
+  unitPrice: string;
+}
+
+interface DirectShipState {
+  supplierId: string;
+  productId: string;
+  unitName: string;
+  totalQty: string;
+  deliverQty: string;
+  importUnitPrice: string;
+  saleUnitPrice: string;
+  customerId: string;
+  note: string;
+}
 
 function Inventory() {
-  const [activeTab, setActiveTab] = useState('inventory'); // 'inventory' | 'receipts'
-  const [inventory, setInventory] = useState([]);
-  const [receipts, setReceipts] = useState([]);
+  const [activeTab, setActiveTab] = useState<'inventory' | 'receipts'>('inventory');
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [receipts, setReceipts] = useState<StockReceiptWithCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [isStockInModalOpen, setIsStockInModalOpen] = useState(false);
-  const [selectedProductId, setSelectedProductId] = useState(null);
-  const [selectedReceiptId, setSelectedReceiptId] = useState(null);
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  const [selectedReceiptId, setSelectedReceiptId] = useState<number | null>(null);
   const [isDirectShipModalOpen, setIsDirectShipModalOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
 
   // Stock-In Form States
-  const [suppliers, setSuppliers] = useState([]);
-  const [products, setProducts] = useState([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [selectedSupplier, setSelectedSupplier] = useState('');
-  const [stockInStatus, setStockInStatus] = useState('Pending');
+  const [stockInStatus, setStockInStatus] = useState<StockReceiptStatus>('Pending');
   const [note, setNote] = useState('');
-  const [items, setItems] = useState([{ productId: '', unitName: '', quantity: '', unitPrice: '' }]);
+  const [items, setItems] = useState<StockInFormItem[]>([{ productId: '', unitName: '', quantity: '', unitPrice: '' }]);
 
   // Direct Ship Form States
-  const [customers, setCustomers] = useState([]);
-  const [ds, setDs] = useState({
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [ds, setDs] = useState<DirectShipState>({
     supplierId: '', productId: '', unitName: '', totalQty: '', deliverQty: '',
     importUnitPrice: '', saleUnitPrice: '', customerId: '', note: '',
   });
@@ -39,7 +83,7 @@ function Inventory() {
     try {
       setLoading(true);
       const res = await inventoryService.getInventory();
-      setInventory(Array.isArray(res) ? res : res?.data ?? []);
+      setInventory((Array.isArray(res) ? res : (res as { data?: InventoryItem[] })?.data ?? []) as unknown as InventoryItem[]);
     } catch (err) {
       console.error('Error loading inventory:', err);
     } finally {
@@ -52,7 +96,7 @@ function Inventory() {
     try {
       setLoading(true);
       const res = await inventoryService.getStockReceipts();
-      setReceipts(Array.isArray(res) ? res : res?.data ?? []);
+      setReceipts((Array.isArray(res) ? res : (res as { data?: StockReceiptWithCount[] })?.data ?? []) as StockReceiptWithCount[]);
     } catch (err) {
       console.error('Error loading receipts:', err);
     } finally {
@@ -67,10 +111,10 @@ function Inventory() {
         suppliersService.getAll(),
         productsService.getAll(),
       ]);
-      const suppliersArr = Array.isArray(suppliersRes) ? suppliersRes : suppliersRes?.data ?? [];
-      setSuppliers(suppliersArr);
-      const productsArr = Array.isArray(productsData) ? productsData : productsData?.data ?? [];
-      setProducts(productsArr.filter(p => p.IsActive)); // Chỉ lấy sản phẩm active
+      const suppliersArr = Array.isArray(suppliersRes) ? suppliersRes : (suppliersRes as { data?: Supplier[] })?.data ?? [];
+      setSuppliers(suppliersArr as Supplier[]);
+      const productsArr = Array.isArray(productsData) ? productsData : (productsData as { data?: Product[] })?.data ?? [];
+      setProducts((productsArr as Product[]).filter((p: Product) => p.IsActive));
     } catch (err) {
       console.error('Error loading form data:', err);
     }
@@ -100,20 +144,20 @@ function Inventory() {
   };
 
   // Xóa dòng item
-  const handleRemoveItem = (index) => {
+  const handleRemoveItem = (index: number) => {
     if (items.length > 1) {
       setItems(items.filter((_, i) => i !== index));
     }
   };
 
   // Cập nhật item
-  const handleItemChange = (index, field, value) => {
+  const handleItemChange = (index: number, field: keyof StockInFormItem, value: string) => {
     const newItems = [...items];
-    newItems[index][field] = value;
+    newItems[index] = { ...newItems[index], [field]: value };
 
     // Khi chọn product, tự động điền BaseUnit
     if (field === 'productId') {
-      const product = products.find(p => p.ProductID === parseInt(value));
+      const product = products.find((p) => p.ProductID === parseInt(value));
       if (product) {
         newItems[index].unitName = product.BaseUnit;
       }
@@ -123,7 +167,7 @@ function Inventory() {
   };
 
   // Submit nhập kho
-  const handleSubmitStockIn = async (e) => {
+  const handleSubmitStockIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     // Validation
@@ -133,7 +177,7 @@ function Inventory() {
     }
 
     const validItems = items.filter(
-      item => item.productId && item.unitName && item.quantity && item.unitPrice
+      (item) => item.productId && item.unitName && item.quantity && item.unitPrice
     );
 
     if (validItems.length === 0) {
@@ -146,7 +190,7 @@ function Inventory() {
         supplierId: parseInt(selectedSupplier),
         status: stockInStatus,
         note,
-        items: validItems.map(item => ({
+        items: validItems.map((item) => ({
           productId: parseInt(item.productId),
           unitName: item.unitName,
           quantity: item.quantity,
@@ -161,18 +205,19 @@ function Inventory() {
       } else {
         loadReceipts();
       }
-    } catch (err) {
-      alert(err.response?.data?.message || 'Có lỗi xảy ra khi nhập kho');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      alert(e.response?.data?.message || 'Có lỗi xảy ra khi nhập kho');
       console.error('Error stock-in:', err);
     }
   };
 
   // Tính tổng tiền
-  const calculateTotal = () => {
+  const calculateTotal = (): number => {
     return items.reduce((sum, item) => {
       const quantity = parseFloat(item.quantity) || 0;
       const price = parseFloat(item.unitPrice) || 0;
-      return sum + (quantity * price);
+      return sum + quantity * price;
     }, 0);
   };
 
@@ -193,7 +238,7 @@ function Inventory() {
     await loadFormData();
     try {
       const custRes = await customersService.getAll();
-      setCustomers(Array.isArray(custRes) ? custRes : custRes?.data ?? []);
+      setCustomers((Array.isArray(custRes) ? custRes : (custRes as { data?: Customer[] })?.data ?? []) as Customer[]);
     } catch (err) {
       console.error('Error loading customers:', err);
     }
@@ -204,18 +249,18 @@ function Inventory() {
     setIsDirectShipModalOpen(true);
   };
 
-  const handleDsChange = (field, value) => {
-    setDs(prev => {
+  const handleDsChange = (field: keyof DirectShipState, value: string) => {
+    setDs((prev) => {
       const next = { ...prev, [field]: value };
       if (field === 'productId') {
-        const product = products.find(p => p.ProductID === parseInt(value));
+        const product = products.find((p) => p.ProductID === parseInt(value));
         if (product) next.unitName = product.BaseUnit;
       }
       return next;
     });
   };
 
-  const handleSubmitDirectShip = async (e) => {
+  const handleSubmitDirectShip = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!ds.supplierId || !ds.productId || !ds.totalQty || !ds.deliverQty || !ds.importUnitPrice || !ds.saleUnitPrice) {
       alert('Vui lòng điền đầy đủ thông tin bắt buộc');
@@ -230,10 +275,10 @@ function Inventory() {
         supplierId: parseInt(ds.supplierId),
         productId: parseInt(ds.productId),
         unitName: ds.unitName,
-        totalQty: parseFloat(ds.totalQty),
-        deliverQty: parseFloat(ds.deliverQty),
-        importUnitPrice: parseFloat(ds.importUnitPrice),
-        saleUnitPrice: parseFloat(ds.saleUnitPrice),
+        totalQty: ds.totalQty,
+        deliverQty: ds.deliverQty,
+        importUnitPrice: ds.importUnitPrice,
+        saleUnitPrice: ds.saleUnitPrice,
         customerId: ds.customerId ? parseInt(ds.customerId) : undefined,
         note: ds.note || undefined,
       });
@@ -241,8 +286,9 @@ function Inventory() {
       setIsDirectShipModalOpen(false);
       loadInventory();
       loadReceipts();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Có lỗi xảy ra khi giao thẳng');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      alert(e.response?.data?.message || 'Có lỗi xảy ra khi giao thẳng');
       console.error('Error direct ship:', err);
     }
   };
@@ -250,7 +296,7 @@ function Inventory() {
   // Lấy danh sách units cho 1 product
   const getDsUnits = () => {
     if (!ds.productId) return [];
-    const product = products.find(p => p.ProductID === parseInt(ds.productId));
+    const product = products.find((p) => p.ProductID === parseInt(ds.productId));
     if (!product) return [];
     return [
       { UnitName: product.BaseUnit, ExchangeValue: 1 },
@@ -259,11 +305,11 @@ function Inventory() {
   };
 
   // Format currency
-  const formatCurrency = (value) => {
+  const formatCurrency = (value: number | string): string => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND',
-    }).format(value);
+    }).format(Number(value));
   };
 
   if (loading) {
@@ -347,7 +393,7 @@ function Inventory() {
         <>
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white">
+            <div className="bg-linear-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-blue-100 text-sm">Tổng sản phẩm</p>
@@ -357,24 +403,24 @@ function Inventory() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-6 text-white">
+            <div className="bg-linear-to-br from-green-500 to-green-600 rounded-lg p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-green-100 text-sm">Còn hàng</p>
                   <p className="text-3xl font-bold mt-1">
-                    {inventory.filter(item => Number(item.Quantity) > 0).length}
+                    {inventory.filter((item) => Number(item.Quantity) > 0).length}
                   </p>
                 </div>
                 <FiPackage className="text-4xl text-green-200" />
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg p-6 text-white">
+            <div className="bg-linear-to-br from-orange-500 to-orange-600 rounded-lg p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-orange-100 text-sm">Hết hàng</p>
                   <p className="text-3xl font-bold mt-1">
-                    {inventory.filter(item => Number(item.Quantity) === 0).length}
+                    {inventory.filter((item) => Number(item.Quantity) === 0).length}
                   </p>
                 </div>
                 <FiAlertTriangle className="text-4xl text-orange-200" />
@@ -384,116 +430,116 @@ function Inventory() {
 
           {/* Inventory Table */}
           <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Sản phẩm
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Danh mục
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                SKU
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Đơn vị
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Tồn kho
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Đã đặt
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Đang về
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Có thể bán
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Trạng thái
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {inventory.length === 0 ? (
-              <tr>
-                <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
-                  Chưa có dữ liệu tồn kho
-                </td>
-              </tr>
-            ) : (
-              inventory.map((item) => {
-                const quantity = Number(item.Quantity);
-                const isOutOfStock = quantity === 0;
-
-                return (
-                  <tr 
-                    key={item.InventoryID} 
-                    onClick={() => setSelectedProductId(item.ProductID)}
-                    className="hover:bg-gray-50 cursor-pointer transition-colors"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">
-                        {item.ProductName || 'N/A'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">
-                        {item.Category?.CategoryName || 'N/A'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-700">
-                      {item.SKU || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-700">
-                      {item.BaseUnit || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <span className={`font-semibold ${isOutOfStock ? 'text-red-600' : 'text-gray-900'}`}>
-                        {quantity.toLocaleString('vi-VN')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <span className="text-orange-600 font-medium">
-                        {Number(item.ReservedQty || 0).toLocaleString('vi-VN')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <span className="text-blue-600 font-medium">
-                        {Number(item.InTransitQty || 0).toLocaleString('vi-VN')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <span className="text-green-600 font-semibold">
-                        {Number(item.AvailableQty ?? quantity).toLocaleString('vi-VN')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      {isOutOfStock ? (
-                        <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                          Hết hàng
-                        </span>
-                      ) : (
-                        <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                          Còn hàng
-                        </span>
-                      )}
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Sản phẩm
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Danh mục
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    SKU
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Đơn vị
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tồn kho
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Đã đặt
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Đang về
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Có thể bán
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Trạng thái
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {inventory.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                      Chưa có dữ liệu tồn kho
                     </td>
                   </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                ) : (
+                  inventory.map((item) => {
+                    const quantity = Number(item.Quantity);
+                    const isOutOfStock = quantity === 0;
+
+                    return (
+                      <tr
+                        key={item.InventoryID}
+                        onClick={() => setSelectedProductId(item.ProductID)}
+                        className="hover:bg-gray-50 cursor-pointer transition-colors"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="font-medium text-gray-900">
+                            {item.ProductName || 'N/A'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="font-medium text-gray-900">
+                            {item.Category?.CategoryName || 'N/A'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-gray-700">
+                          {item.SKU || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-gray-700">
+                          {item.BaseUnit || 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <span className={`font-semibold ${isOutOfStock ? 'text-red-600' : 'text-gray-900'}`}>
+                            {quantity.toLocaleString('vi-VN')}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <span className="text-orange-600 font-medium">
+                            {Number(item.ReservedQty || 0).toLocaleString('vi-VN')}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <span className="text-blue-600 font-medium">
+                            {Number(item.InTransitQty || 0).toLocaleString('vi-VN')}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <span className="text-green-600 font-semibold">
+                            {Number(item.AvailableQty ?? quantity).toLocaleString('vi-VN')}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          {isOutOfStock ? (
+                            <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                              Hết hàng
+                            </span>
+                          ) : (
+                            <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                              Còn hàng
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </>
       ) : (
         <>
           {/* Receipts Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-6 text-white">
+            <div className="bg-linear-to-br from-purple-500 to-purple-600 rounded-lg p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-purple-100 text-sm">Tổng phiếu nhập</p>
@@ -503,7 +549,7 @@ function Inventory() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white">
+            <div className="bg-linear-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-blue-100 text-sm">Tổng sản phẩm nhập</p>
@@ -515,7 +561,7 @@ function Inventory() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-6 text-white">
+            <div className="bg-linear-to-br from-green-500 to-green-600 rounded-lg p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-green-100 text-sm">Tổng giá trị</p>
@@ -559,7 +605,7 @@ function Inventory() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {receipts.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
                       Chưa có phiếu nhập kho
                     </td>
                   </tr>
@@ -621,8 +667,9 @@ function Inventory() {
                                   alert('Xác nhận nhận hàng thành công!');
                                   loadReceipts();
                                   loadInventory();
-                                } catch (err) {
-                                  alert(err.response?.data?.message || 'Có lỗi xảy ra');
+                                } catch (err: unknown) {
+                                  const e = err as { response?: { data?: { message?: string } } };
+                                  alert(e.response?.data?.message || 'Có lỗi xảy ra');
                                 }
                               }}
                               className="text-green-600 hover:text-green-700 font-medium flex items-center gap-1"
@@ -657,6 +704,7 @@ function Inventory() {
                 <h2 className="text-xl font-bold text-gray-800">Nhập kho (Stock-In)</h2>
                 <button
                   onClick={() => setIsStockInModalOpen(false)}
+                  title="Đóng"
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <FiX className="text-2xl" />
@@ -674,6 +722,7 @@ function Inventory() {
                   <FiTruck className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <select
                     required
+                    title="Nhà cung cấp"
                     value={selectedSupplier}
                     onChange={(e) => setSelectedSupplier(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -702,7 +751,7 @@ function Inventory() {
                       name="stockInStatus"
                       value="Pending"
                       checked={stockInStatus === 'Pending'}
-                      onChange={(e) => setStockInStatus(e.target.value)}
+                      onChange={(e) => setStockInStatus(e.target.value as StockReceiptStatus)}
                       className="text-yellow-600"
                     />
                     <div>
@@ -718,7 +767,7 @@ function Inventory() {
                       name="stockInStatus"
                       value="Received"
                       checked={stockInStatus === 'Received'}
-                      onChange={(e) => setStockInStatus(e.target.value)}
+                      onChange={(e) => setStockInStatus(e.target.value as StockReceiptStatus)}
                       className="text-green-600"
                     />
                     <div>
@@ -760,16 +809,14 @@ function Inventory() {
 
                 <div className="space-y-3">
                   {items.map((item, index) => {
-                    // Tìm product được chọn để lấy danh sách units
-                    const selectedProduct = item.productId 
-                      ? products.find(p => p.ProductID === parseInt(item.productId))
+                    const selectedProduct = item.productId
+                      ? products.find((p) => p.ProductID === parseInt(item.productId))
                       : null;
-                    
-                    // Tạo danh sách units: BaseUnit + các ProductUnit
-                    const availableUnits = selectedProduct 
+
+                    const availableUnits = selectedProduct
                       ? [
                           { UnitName: selectedProduct.BaseUnit, ExchangeValue: 1, IsDefault: true },
-                          ...(selectedProduct.units || [])
+                          ...(selectedProduct.units || []),
                         ]
                       : [];
 
@@ -779,6 +826,7 @@ function Inventory() {
                           {/* Product */}
                           <select
                             required
+                            title="Sản phẩm"
                             value={item.productId}
                             onChange={(e) => handleItemChange(index, 'productId', e.target.value)}
                             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -794,6 +842,7 @@ function Inventory() {
                           {/* Unit Name - Dropdown */}
                           <select
                             required
+                            title="Đơn vị tính"
                             disabled={!item.productId}
                             value={item.unitName}
                             onChange={(e) => handleItemChange(index, 'unitName', e.target.value)}
@@ -802,7 +851,7 @@ function Inventory() {
                             <option value="">-- Chọn đơn vị --</option>
                             {availableUnits.map((unit, idx) => (
                               <option key={idx} value={unit.UnitName}>
-                                {unit.UnitName} {unit.ExchangeValue > 1 && `(1 = ${unit.ExchangeValue} ${selectedProduct.BaseUnit})`}
+                                {unit.UnitName} {Number(unit.ExchangeValue) > 1 && `(1 = ${unit.ExchangeValue} ${selectedProduct?.BaseUnit || ''})`}
                               </option>
                             ))}
                           </select>
@@ -836,6 +885,7 @@ function Inventory() {
                         {items.length > 1 && (
                           <button
                             type="button"
+                            title="Xóa dòng"
                             onClick={() => handleRemoveItem(index)}
                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           >
@@ -896,7 +946,7 @@ function Inventory() {
                   </h2>
                   <p className="text-sm text-gray-500 mt-1">Nhập hàng từ NCC và giao một phần trực tiếp cho khách</p>
                 </div>
-                <button onClick={() => setIsDirectShipModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <button onClick={() => setIsDirectShipModalOpen(false)} title="Đóng" className="text-gray-400 hover:text-gray-600">
                   <FiX className="text-2xl" />
                 </button>
               </div>
@@ -910,12 +960,13 @@ function Inventory() {
                 </label>
                 <select
                   required
+                  title="Nhà cung cấp"
                   value={ds.supplierId}
                   onChange={(e) => handleDsChange('supplierId', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   <option value="">-- Chọn nhà cung cấp --</option>
-                  {suppliers.map(s => (
+                  {suppliers.map((s) => (
                     <option key={s.SupplierID} value={s.SupplierID}>{s.SupplierName}</option>
                   ))}
                 </select>
@@ -929,12 +980,13 @@ function Inventory() {
                   </label>
                   <select
                     required
+                    title="Sản phẩm"
                     value={ds.productId}
                     onChange={(e) => handleDsChange('productId', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   >
                     <option value="">-- Chọn sản phẩm --</option>
-                    {products.map(p => (
+                    {products.map((p) => (
                       <option key={p.ProductID} value={p.ProductID}>{p.ProductName} ({p.SKU})</option>
                     ))}
                   </select>
@@ -945,6 +997,7 @@ function Inventory() {
                   </label>
                   <select
                     required
+                    title="Đơn vị tính"
                     disabled={!ds.productId}
                     value={ds.unitName}
                     onChange={(e) => handleDsChange('unitName', e.target.value)}
@@ -952,7 +1005,7 @@ function Inventory() {
                   >
                     <option value="">-- Đơn vị --</option>
                     {getDsUnits().map((u, i) => (
-                      <option key={i} value={u.UnitName}>{u.UnitName} {u.ExchangeValue > 1 && `(×${u.ExchangeValue})`}</option>
+                      <option key={i} value={u.UnitName}>{u.UnitName} {Number(u.ExchangeValue) > 1 && `(×${u.ExchangeValue})`}</option>
                     ))}
                   </select>
                 </div>
@@ -1057,12 +1110,13 @@ function Inventory() {
                   Khách hàng <span className="text-gray-400">(tùy chọn)</span>
                 </label>
                 <select
+                  title="Khách hàng"
                   value={ds.customerId}
                   onChange={(e) => handleDsChange('customerId', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   <option value="">-- Khách vãng lai --</option>
-                  {customers.map(c => (
+                  {customers.map((c) => (
                     <option key={c.CustomerID} value={c.CustomerID}>{c.CustomerName}</option>
                   ))}
                 </select>

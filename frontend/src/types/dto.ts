@@ -204,21 +204,37 @@ export interface PermissionGroup {
 // ===== IMPORT / EXPORT =====
 
 export interface ImportPreviewRow {
-  rowIndex: number;
-  data: Record<string, unknown>;
+  rowNumber: number;
   errors: string[];
-  isValid: boolean;
+  isValid?: boolean;
+  action?: string;
+  // Customer fields
+  customerName?: string;
+  // Supplier fields
+  supplierName?: string;
+  // Shared contact fields
+  phone?: string;
+  address?: string;
+  // Product fields
+  sku?: string;
+  productName?: string;
+  categoryName?: string;
+  baseUnit?: string;
+  unitName?: string;
+  unitPrice?: number | null;
+  [key: string]: unknown;
 }
 
 export interface ImportPreviewResponse {
   totalRows: number;
-  validRows: number;
-  invalidRows: number;
-  rows: ImportPreviewRow[];
+  validCount: number;
+  invalidCount: number;
+  validRows?: ImportPreviewRow[];
+  invalidRows?: ImportPreviewRow[];
 }
 
 export interface ImportCommitResponse {
-  imported: number;
-  failed: number;
-  errors: string[];
+  created: number;
+  updated: number;
+  skipped: number;
 }

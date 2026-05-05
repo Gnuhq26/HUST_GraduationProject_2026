@@ -1,10 +1,17 @@
 import { useState, useEffect } from 'react';
 import { FiX, FiFileText, FiTruck, FiCalendar, FiPackage, FiDollarSign, FiCheckCircle } from 'react-icons/fi';
 import inventoryService from '../../services/inventoryService';
+import type { StockReceipt } from '@/types';
 
-function StockReceiptDetailModal({ receiptId, onClose, onConfirmed }) {
+interface Props {
+  receiptId: number;
+  onClose: () => void;
+  onConfirmed?: () => void;
+}
+
+function StockReceiptDetailModal({ receiptId, onClose, onConfirmed }: Props) {
   const [loading, setLoading] = useState(true);
-  const [receipt, setReceipt] = useState(null);
+  const [receipt, setReceipt] = useState<StockReceipt | null>(null);
   const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
@@ -24,14 +31,14 @@ function StockReceiptDetailModal({ receiptId, onClose, onConfirmed }) {
     }
   };
 
-  const formatCurrency = (value) => {
+  const formatCurrency = (value: number | string) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND',
-    }).format(value);
+    }).format(Number(value));
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('vi-VN', {
       year: 'numeric',
       month: '2-digit',
@@ -41,7 +48,7 @@ function StockReceiptDetailModal({ receiptId, onClose, onConfirmed }) {
     });
   };
 
-  const formatQuantity = (quantity) => {
+  const formatQuantity = (quantity: number | string) => {
     return Number(quantity).toLocaleString('vi-VN', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
@@ -58,7 +65,7 @@ function StockReceiptDetailModal({ receiptId, onClose, onConfirmed }) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-6 border-b bg-gradient-to-r from-purple-500 to-purple-600">
+        <div className="p-6 border-b bg-linear-to-r from-purple-500 to-purple-600">
           <div className="flex justify-between items-start">
             <div className="text-white">
               <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">
@@ -81,6 +88,7 @@ function StockReceiptDetailModal({ receiptId, onClose, onConfirmed }) {
             </div>
             <button
               onClick={onClose}
+              title="Đóng"
               className="text-red-400 hover:text-red-600 transition-colors"
             >
               <FiX className="text-2xl" />
@@ -213,7 +221,7 @@ function StockReceiptDetailModal({ receiptId, onClose, onConfirmed }) {
                     </tbody>
                     <tfoot className="bg-gray-50">
                       <tr>
-                        <td colSpan="5" className="px-4 py-4 text-right font-semibold text-gray-700">
+                        <td colSpan={5} className="px-4 py-4 text-right font-semibold text-gray-700">
                           Tổng cộng:
                         </td>
                         <td className="px-4 py-4 text-right">
@@ -235,15 +243,16 @@ function StockReceiptDetailModal({ receiptId, onClose, onConfirmed }) {
           {receipt?.Status === 'Pending' && (
             <button
               onClick={async () => {
-                if (!confirm('Xác nhận đã nhận hàng?')) return;
+                if (!window.confirm('Xác nhận đã nhận hàng?')) return;
                 try {
                   setConfirming(true);
                   await inventoryService.confirmReceipt(receiptId);
                   alert('Xác nhận nhận hàng thành công!');
                   onConfirmed?.();
                   loadReceiptDetail();
-                } catch (err) {
-                  alert(err.response?.data?.message || 'Có lỗi xảy ra');
+                } catch (err: unknown) {
+                  const e = err as { response?: { data?: { message?: string } } };
+                  alert(e.response?.data?.message || 'Có lỗi xảy ra');
                 } finally {
                   setConfirming(false);
                 }

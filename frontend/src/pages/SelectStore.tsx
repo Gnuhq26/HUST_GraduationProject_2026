@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiHome, FiUsers, FiMapPin } from 'react-icons/fi';
+import { FiHome, FiMapPin } from 'react-icons/fi';
 import useAuthStore from '../store/authStore';
+import type { StoreInfo } from '@/types';
 
 function SelectStore() {
   const navigate = useNavigate();
   const { stores, setCurrentStore } = useAuthStore();
 
-  const handleSelectStore = (store) => {
+  const handleSelectStore = (store: StoreInfo) => {
     setCurrentStore(store);
     navigate('/');
   };
@@ -28,7 +29,7 @@ function SelectStore() {
   }, [stores.length, navigate]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-linear-to-br from-primary-50 to-primary-100 flex items-center justify-center p-6">
       <div className="max-w-4xl w-full">
         {/* Header */}
         <div className="text-center mb-8">
@@ -61,11 +62,11 @@ function SelectStore() {
                   {store.roleName}
                 </span>
               </div>
-              
+
               <h3 className="text-lg font-bold text-gray-800 mb-2">
                 {store.storeName}
               </h3>
-              
+
               <div className="space-y-2 text-sm text-gray-600">
                 <div className="flex items-center gap-2">
                   <FiMapPin className="text-gray-400" />

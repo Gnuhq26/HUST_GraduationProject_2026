@@ -1,26 +1,35 @@
 import { useState, useEffect } from 'react';
 import { FiPlus, FiEdit2, FiTrash2, FiX, FiUpload, FiDownload } from 'react-icons/fi';
-import { useForm } from 'react-hook-form';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { productsService } from '../services/productsService';
 import ProtectedAction from '../components/ProtectedAction';
 import ImportProductModal from '../components/products/ImportProductModal';
+import type { Product } from '@/types';
+
+interface ProductFormData {
+  ProductName: string;
+  Description?: string;
+  SKU?: string;
+  BaseUnit: string;
+  CategoryID?: number;
+  IsActive?: string;
+}
 
 export default function Products() {
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
-
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
 
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<ProductFormData>();
 
   // Load products
   const loadProducts = async () => {
     setLoading(true);
     try {
       const data = await productsService.getAll();
-      setProducts(data);
+      setProducts(data ?? []);
     } catch (error) {
       console.error('Lỗi tải sản phẩm:', error);
     } finally {
@@ -40,19 +49,19 @@ export default function Products() {
   };
 
   // Open modal for edit
-  const handleEdit = (product) => {
+  const handleEdit = (product: Product) => {
     setEditingProduct(product);
     setValue('ProductName', product.ProductName);
-    setValue('Description', product.Description);
-    setValue('SKU', product.SKU);
+    setValue('Description', product.Description ?? '');
+    setValue('SKU', product.SKU ?? '');
     setValue('BaseUnit', product.BaseUnit);
     setValue('CategoryID', product.CategoryID);
-    setValue('IsActive', product.IsActive);
+    setValue('IsActive', String(product.IsActive));
     setShowModal(true);
   };
 
   // Submit form
-  const onSubmit = async (data) => {
+  const onSubmit: SubmitHandler<ProductFormData> = async (data) => {
     try {
       if (editingProduct) {
         await productsService.update(editingProduct.ProductID, data);
@@ -61,22 +70,24 @@ export default function Products() {
       }
       setShowModal(false);
       loadProducts();
-    } catch (error) {
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { message?: string } } };
       console.error('Lỗi:', error);
-      alert(error.response?.data?.message || 'Có lỗi xảy ra');
+      alert(e.response?.data?.message || 'Có lỗi xảy ra');
     }
   };
 
   // Delete product
-  const handleDelete = async (id) => {
+  const handleDelete = async (id: number) => {
     if (!confirm('Bạn có chắc muốn xóa sản phẩm này?')) return;
-    
+
     try {
       await productsService.delete(id);
       loadProducts();
-    } catch (error) {
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { message?: string } } };
       console.error('Lỗi xóa:', error);
-      alert(error.response?.data?.message || 'Không thể xóa sản phẩm');
+      alert(e.response?.data?.message || 'Không thể xóa sản phẩm');
     }
   };
 
@@ -145,13 +156,13 @@ export default function Products() {
             <tbody className="divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
                     Đang tải...
                   </td>
                 </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
                     Chưa có sản phẩm nào
                   </td>
                 </tr>
@@ -170,6 +181,7 @@ export default function Products() {
                       <ProtectedAction action="update" subject="Product">
                         <button
                           onClick={() => handleEdit(product)}
+                          title="Chỉnh sửa"
                           className="text-primary-600 hover:text-primary-700 mr-3"
                         >
                           <FiEdit2 />
@@ -178,6 +190,7 @@ export default function Products() {
                       <ProtectedAction action="delete" subject="Product">
                         <button
                           onClick={() => handleDelete(product.ProductID)}
+                          title="Xóa"
                           className="text-red-600 hover:text-red-700"
                         >
                           <FiTrash2 />
@@ -200,7 +213,7 @@ export default function Products() {
               <h2 className="text-xl font-bold text-gray-900">
                 {editingProduct ? 'Cập nhật sản phẩm' : 'Thêm sản phẩm mới'}
               </h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowModal(false)} title="Đóng" className="text-gray-400 hover:text-gray-600">
                 <FiX size={24} />
               </button>
             </div>
@@ -222,7 +235,7 @@ export default function Products() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
                 <textarea
                   {...register('Description')}
-                  rows="3"
+                  rows={3}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="Nhập mô tả sản phẩm"
                 />

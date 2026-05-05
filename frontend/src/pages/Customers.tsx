@@ -1,28 +1,39 @@
 import { useState, useEffect } from 'react';
 import { FiPlus, FiEdit2, FiTrash2, FiX, FiUser, FiPhone, FiMapPin, FiShoppingCart, FiUpload, FiDownload } from 'react-icons/fi';
-import { useForm } from 'react-hook-form';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { customersService } from '../services/customersService';
 import CustomerDetailModal from '../components/customer/CustomerDetailModal';
 import ImportCustomerModal from '../components/customer/ImportCustomerModal';
 import ProtectedAction from '../components/ProtectedAction';
+import type { Customer } from '@/types';
+
+interface CustomerWithCount extends Customer {
+  _count?: { orders: number };
+}
+
+interface CustomerFormData {
+  CustomerName: string;
+  Phone?: string;
+  Address?: string;
+}
 
 export default function Customers() {
-  const [customers, setCustomers] = useState([]);
+  const [customers, setCustomers] = useState<CustomerWithCount[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState(null);
-  const [selectedCustomerId, setSelectedCustomerId] = useState(null);
+  const [editingCustomer, setEditingCustomer] = useState<CustomerWithCount | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
   const [exporting, setExporting] = useState(false);
 
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<CustomerFormData>();
 
   // Load customers
   const loadCustomers = async () => {
     setLoading(true);
     try {
       const res = await customersService.getAll();
-      setCustomers(Array.isArray(res) ? res : res?.data ?? []);
+      setCustomers(Array.isArray(res) ? (res as CustomerWithCount[]) : ((res as { data?: CustomerWithCount[] })?.data ?? []));
     } catch (error) {
       console.error('Lỗi tải khách hàng:', error);
     } finally {
@@ -42,16 +53,16 @@ export default function Customers() {
   };
 
   // Open modal for edit
-  const handleEdit = (customer) => {
+  const handleEdit = (customer: CustomerWithCount) => {
     setEditingCustomer(customer);
     setValue('CustomerName', customer.CustomerName);
-    setValue('Phone', customer.Phone);
-    setValue('Address', customer.Address);
+    setValue('Phone', customer.Phone ?? '');
+    setValue('Address', customer.Address ?? '');
     setShowModal(true);
   };
 
   // Submit form
-  const onSubmit = async (data) => {
+  const onSubmit: SubmitHandler<CustomerFormData> = async (data) => {
     try {
       if (editingCustomer) {
         await customersService.update(editingCustomer.CustomerID, data);
@@ -60,22 +71,24 @@ export default function Customers() {
       }
       setShowModal(false);
       loadCustomers();
-    } catch (error) {
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { message?: string } } };
       console.error('Lỗi:', error);
-      alert(error.response?.data?.message || 'Có lỗi xảy ra');
+      alert(e.response?.data?.message || 'Có lỗi xảy ra');
     }
   };
 
   // Delete customer
-  const handleDelete = async (id, customerName) => {
+  const handleDelete = async (id: number, customerName: string) => {
     if (!confirm(`Bạn có chắc muốn xóa khách hàng "${customerName}"?`)) return;
-    
+
     try {
       await customersService.delete(id);
       loadCustomers();
-    } catch (error) {
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { message?: string } } };
       console.error('Lỗi xóa:', error);
-      alert(error.response?.data?.message || 'Không thể xóa khách hàng (có thể đã có đơn hàng)');
+      alert(e.response?.data?.message || 'Không thể xóa khách hàng (có thể đã có đơn hàng)');
     }
   };
 
@@ -162,24 +175,24 @@ export default function Customers() {
             <tbody className="divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
                     Đang tải...
                   </td>
                 </tr>
               ) : customers.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
                     Chưa có khách hàng nào
                   </td>
                 </tr>
               ) : (
                 customers.map((customer) => (
-                  <tr 
-                    key={customer.CustomerID} 
+                  <tr
+                    key={customer.CustomerID}
                     className="hover:bg-gray-50 cursor-pointer"
-                    onClick={(e) => {
+                    onClick={(e: React.MouseEvent<HTMLTableRowElement>) => {
                       // Không mở detail modal khi click vào button
-                      if (!e.target.closest('button')) {
+                      if (!(e.target as Element).closest('button')) {
                         setSelectedCustomerId(customer.CustomerID);
                       }
                     }}
@@ -208,7 +221,7 @@ export default function Customers() {
                     <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
                       {customer.Address ? (
                         <div className="flex items-center gap-2">
-                          <FiMapPin className="text-gray-400 flex-shrink-0" size={14} />
+                          <FiMapPin className="text-gray-400 shrink-0" size={14} />
                           <span className="truncate">{customer.Address}</span>
                         </div>
                       ) : (
@@ -217,8 +230,8 @@ export default function Customers() {
                     </td>
                     <td className="px-6 py-4 text-center text-sm">
                       <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
-                        customer._count?.orders > 0 
-                          ? 'bg-green-100 text-green-700' 
+                        (customer._count?.orders ?? 0) > 0
+                          ? 'bg-green-100 text-green-700'
                           : 'bg-gray-100 text-gray-500'
                       }`}>
                         <FiShoppingCart size={12} />
@@ -267,7 +280,7 @@ export default function Customers() {
               <h2 className="text-xl font-bold text-gray-900">
                 {editingCustomer ? 'Cập nhật khách hàng' : 'Thêm khách hàng mới'}
               </h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowModal(false)} title="Đóng" className="text-gray-400 hover:text-gray-600">
                 <FiX size={24} />
               </button>
             </div>
@@ -278,9 +291,9 @@ export default function Customers() {
                   Tên khách hàng <span className="text-red-500">*</span>
                 </label>
                 <input
-                  {...register('CustomerName', { 
+                  {...register('CustomerName', {
                     required: 'Tên khách hàng là bắt buộc',
-                    maxLength: { value: 100, message: 'Tên khách hàng không được quá 100 ký tự' }
+                    maxLength: { value: 100, message: 'Tên khách hàng không được quá 100 ký tự' },
                   })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="Nhập tên khách hàng"
@@ -294,7 +307,7 @@ export default function Customers() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
                 <input
                   {...register('Phone', {
-                    maxLength: { value: 20, message: 'Số điện thoại không được quá 20 ký tự' }
+                    maxLength: { value: 20, message: 'Số điện thoại không được quá 20 ký tự' },
                   })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="0912345678"
@@ -308,9 +321,9 @@ export default function Customers() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ</label>
                 <textarea
                   {...register('Address', {
-                    maxLength: { value: 255, message: 'Địa chỉ không được quá 255 ký tự' }
+                    maxLength: { value: 255, message: 'Địa chỉ không được quá 255 ký tự' },
                   })}
-                  rows="3"
+                  rows={3}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="Nhập địa chỉ khách hàng"
                 />

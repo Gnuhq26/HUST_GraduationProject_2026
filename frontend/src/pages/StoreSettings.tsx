@@ -1,27 +1,36 @@
 import { useState, useEffect } from 'react';
 import { FiSave, FiInfo, FiUsers, FiShield } from 'react-icons/fi';
-import { useForm } from 'react-hook-form';
+import { useForm, type SubmitHandler } from 'react-hook-form';
 import storesService from '../services/storesService';
-import useAuthStore from '../store/authStore';
+import type { Store } from '@/types';
+
+interface StoreWithCount extends Store {
+  _count?: {
+    storeUsers?: number;
+    roles?: number;
+  };
+}
+
+type StoreFormData = {
+  StoreName: string;
+  Subdomain: string;
+  Phone: string;
+  Address: string;
+};
 
 export default function StoreSettings() {
-  const [store, setStore] = useState(null);
+  const [store, setStore] = useState<StoreWithCount | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const { stores, currentStoreId } = useAuthStore();
-
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm();
-
-  // Get current store info from authStore
-  const currentStore = stores.find(s => s.storeId === parseInt(currentStoreId));
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<StoreFormData>();
 
   // Load store details
   const loadStoreDetails = async () => {
     try {
       setLoading(true);
-      const data = await storesService.getStoreDetails();
+      const data = await storesService.getStoreDetails() as StoreWithCount;
       setStore(data);
-      
+
       // Populate form
       setValue('StoreName', data.StoreName);
       setValue('Subdomain', data.Subdomain);
@@ -40,14 +49,15 @@ export default function StoreSettings() {
 
   // Note: Backend không có API update store info yet
   // Sẽ cần thêm endpoint PUT /stores trong backend
-  const onSubmit = async (data) => {
+  const onSubmit: SubmitHandler<StoreFormData> = async (_data) => {
     setSaving(true);
     try {
       // TODO: Backend cần implement endpoint này
       // await storesService.updateStore(data);
       alert('Tính năng cập nhật thông tin store sẽ được bổ sung trong phiên bản tiếp theo');
-    } catch (error) {
-      alert(error.response?.data?.message || 'Có lỗi xảy ra');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      alert(e.response?.data?.message || 'Có lỗi xảy ra');
     } finally {
       setSaving(false);
     }
@@ -132,8 +142,8 @@ export default function StoreSettings() {
               </label>
               <div className="flex items-center h-10">
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  store?.Status === 'Active' 
-                    ? 'bg-green-100 text-green-800' 
+                  store?.Status === 'Active'
+                    ? 'bg-green-100 text-green-800'
                     : 'bg-gray-100 text-gray-800'
                 }`}>
                   {store?.Status === 'Active' ? 'Đang hoạt động' : 'Tạm ngưng'}
@@ -149,7 +159,7 @@ export default function StoreSettings() {
             </label>
             <textarea
               {...register('Address')}
-              rows="3"
+              rows={3}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               placeholder="Nhập địa chỉ cửa hàng"
             />
@@ -201,7 +211,7 @@ export default function StoreSettings() {
       {/* Info Note */}
       <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <div className="flex gap-3">
-          <FiInfo className="text-blue-600 flex-shrink-0 mt-0.5" />
+          <FiInfo className="text-blue-600 shrink-0 mt-0.5" />
           <div className="text-sm text-blue-800">
             <p className="font-medium mb-1">Lưu ý:</p>
             <ul className="list-disc list-inside space-y-1">

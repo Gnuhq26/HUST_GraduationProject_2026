@@ -1,7 +1,6 @@
 import api from './api';
 import type {
   Product,
-  PaginatedResult,
   ProductFilterParams,
   CreateProductDto,
   UpdateProductDto,
@@ -11,8 +10,8 @@ import type {
 
 export const productsService = {
   // Lấy danh sách sản phẩm với pagination
-  getAll: async (params: ProductFilterParams = {}): Promise<PaginatedResult<Product>> => {
-    const response = await api.get<PaginatedResult<Product>>('/products', { params });
+  getAll: async (params: ProductFilterParams = {}): Promise<Product[]> => {
+    const response = await api.get<Product[]>('/products', { params });
     return response.data;
   },
 

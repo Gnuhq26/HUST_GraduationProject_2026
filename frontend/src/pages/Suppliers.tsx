@@ -3,16 +3,27 @@ import { FiEdit2, FiTrash2, FiPlus, FiTruck, FiPhone, FiMapPin, FiSearch, FiPack
 import suppliersService from '../services/suppliersService';
 import ImportSupplierModal from '../components/supplier/ImportSupplierModal';
 import ProtectedAction from '../components/ProtectedAction';
+import type { Supplier } from '@/types';
+
+interface SupplierWithCount extends Supplier {
+  _count?: { receipts: number };
+}
+
+interface SupplierFormData {
+  SupplierName: string;
+  Phone: string;
+  Address: string;
+}
 
 function Suppliers() {
-  const [suppliers, setSuppliers] = useState([]);
+  const [suppliers, setSuppliers] = useState<SupplierWithCount[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [currentSupplier, setCurrentSupplier] = useState(null);
+  const [currentSupplier, setCurrentSupplier] = useState<SupplierWithCount | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<SupplierFormData>({
     SupplierName: '',
     Phone: '',
     Address: '',
@@ -23,7 +34,7 @@ function Suppliers() {
   // Stats
   const stats = {
     total: suppliers.length,
-    withReceipts: suppliers.filter((s) => s._count?.receipts > 0).length,
+    withReceipts: suppliers.filter((s) => (s._count?.receipts ?? 0) > 0).length,
     withPhone: suppliers.filter((s) => s.Phone).length,
   };
 
@@ -33,9 +44,10 @@ function Suppliers() {
       setLoading(true);
       setError(null);
       const res = await suppliersService.getAll(searchQuery);
-      setSuppliers(Array.isArray(res) ? res : res?.data ?? []);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Không thể tải danh sách nhà cung cấp');
+      setSuppliers(res as SupplierWithCount[]);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      setError(e.response?.data?.message || 'Không thể tải danh sách nhà cung cấp');
       console.error('Error loading suppliers:', err);
     } finally {
       setLoading(false);
@@ -47,7 +59,7 @@ function Suppliers() {
   }, [searchQuery]);
 
   // Xử lý search
-  const handleSearch = (e) => {
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     loadSuppliers();
   };
@@ -65,7 +77,7 @@ function Suppliers() {
   };
 
   // Mở modal chỉnh sửa
-  const handleEdit = (supplier) => {
+  const handleEdit = (supplier: SupplierWithCount) => {
     setIsEditing(true);
     setCurrentSupplier(supplier);
     setFormData({
@@ -77,32 +89,34 @@ function Suppliers() {
   };
 
   // Xử lý submit form
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      if (isEditing) {
+      if (isEditing && currentSupplier) {
         await suppliersService.update(currentSupplier.SupplierID, formData);
       } else {
         await suppliersService.create(formData);
       }
       setIsModalOpen(false);
       loadSuppliers();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Có lỗi xảy ra');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      alert(e.response?.data?.message || 'Có lỗi xảy ra');
       console.error('Error saving supplier:', err);
     }
   };
 
   // Xử lý xóa
-  const handleDelete = async (supplier) => {
+  const handleDelete = async (supplier: SupplierWithCount) => {
     if (!confirm(`Bạn có chắc muốn xóa nhà cung cấp "${supplier.SupplierName}"?`)) {
       return;
     }
     try {
       await suppliersService.delete(supplier.SupplierID);
       loadSuppliers();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Không thể xóa nhà cung cấp');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      alert(e.response?.data?.message || 'Không thể xóa nhà cung cấp');
       console.error('Error deleting supplier:', err);
     }
   };
@@ -112,7 +126,7 @@ function Suppliers() {
     setExporting(true);
     try {
       await suppliersService.exportSuppliers();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Lỗi export:', err);
       alert('Không thể xuất file Excel');
     } finally {
@@ -253,7 +267,7 @@ function Suppliers() {
           <tbody className="bg-white divide-y divide-gray-200">
             {suppliers.length === 0 ? (
               <tr>
-                <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
                   Không có nhà cung cấp nào
                 </td>
               </tr>
@@ -313,11 +327,11 @@ function Suppliers() {
 
       {/* Modal Form */}
       {isModalOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4"
           onClick={() => setIsModalOpen(false)}
         >
-          <div 
+          <div
             className="bg-white rounded-lg shadow-xl w-full max-w-md"
             onClick={(e) => e.stopPropagation()}
           >

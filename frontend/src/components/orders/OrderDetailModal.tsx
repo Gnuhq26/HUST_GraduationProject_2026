@@ -1,10 +1,23 @@
+import type { ComponentType } from 'react';
 import { useState, useEffect } from 'react';
 import { FiX, FiFileText, FiUser, FiCalendar, FiPackage, FiDollarSign, FiCheckCircle, FiClock, FiXCircle } from 'react-icons/fi';
 import ordersService from '../../services/ordersService';
+import type { Order } from '@/types';
 
-function OrderDetailModal({ orderId, onClose }) {
+interface Props {
+  orderId: number;
+  onClose: () => void;
+}
+
+interface StatusConfig {
+  icon: ComponentType<{ className?: string }>;
+  className: string;
+  label: string;
+}
+
+function OrderDetailModal({ orderId, onClose }: Props) {
   const [loading, setLoading] = useState(true);
-  const [order, setOrder] = useState(null);
+  const [order, setOrder] = useState<Order | null>(null);
 
   useEffect(() => {
     loadOrderDetail();
@@ -23,14 +36,14 @@ function OrderDetailModal({ orderId, onClose }) {
     }
   };
 
-  const formatCurrency = (value) => {
+  const formatCurrency = (value: number | string) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND',
-    }).format(value);
+    }).format(Number(value));
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('vi-VN', {
       year: 'numeric',
       month: '2-digit',
@@ -40,15 +53,15 @@ function OrderDetailModal({ orderId, onClose }) {
     });
   };
 
-  const formatQuantity = (quantity) => {
+  const formatQuantity = (quantity: number | string) => {
     return Number(quantity).toLocaleString('vi-VN', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     });
   };
 
-  const getStatusConfig = (status) => {
-    const statusConfig = {
+  const getStatusConfig = (status: string): StatusConfig => {
+    const statusConfig: Record<string, StatusConfig> = {
       Completed: {
         icon: FiCheckCircle,
         className: 'bg-green-500',
@@ -65,7 +78,7 @@ function OrderDetailModal({ orderId, onClose }) {
         label: 'Đã hủy',
       },
     };
-    return statusConfig[status] || statusConfig.Completed;
+    return statusConfig[status] || statusConfig['Completed'];
   };
 
   const statusConfig = order ? getStatusConfig(order.Status) : null;
@@ -81,7 +94,7 @@ function OrderDetailModal({ orderId, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className={`p-6 border-b ${statusConfig?.className} bg-gradient-to-r`}>
+        <div className={`p-6 border-b ${statusConfig?.className} bg-linear-to-r`}>
           <div className="flex justify-between items-start">
             <div className="text-white">
               <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">
@@ -97,13 +110,14 @@ function OrderDetailModal({ orderId, onClose }) {
                   <span>•</span>
                   <div className="flex items-center gap-2">
                     {StatusIcon && <StatusIcon />}
-                    <span>{statusConfig.label}</span>
+                    <span>{statusConfig!.label}</span>
                   </div>
                 </div>
               )}
             </div>
             <button
               onClick={onClose}
+              title="Đóng"
               className="text-red-400 hover:text-red-600 transition-colors"
             >
               <FiX className="text-2xl" />
@@ -295,7 +309,7 @@ function OrderDetailModal({ orderId, onClose }) {
                     </tbody>
                     <tfoot className="bg-gray-50">
                       <tr>
-                        <td colSpan="5" className="px-4 py-4 text-right font-semibold text-gray-700">
+                        <td colSpan={5} className="px-4 py-4 text-right font-semibold text-gray-700">
                           Tổng cộng:
                         </td>
                         <td className="px-4 py-4 text-right">

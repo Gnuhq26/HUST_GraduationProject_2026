@@ -1,47 +1,50 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, type SubmitHandler } from 'react-hook-form';
 import useAuthStore from '../store/authStore';
+
+type LoginFormData = {
+  email: string;
+  password: string;
+};
 
 export default function Login() {
   const navigate = useNavigate();
   const { login, isLoading, error, isAuthenticated, refreshAuth } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
-  
+
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm();
+  } = useForm<LoginFormData>();
 
   // Check if user is already authenticated and redirect accordingly
   useEffect(() => {
     const checkAuthAndRedirect = async () => {
       if (isAuthenticated) {
         // Refresh to get latest store list
-        const result = await refreshAuth();
-        if (result.success) {
-          const stores = result.stores || [];
-          
-          if (stores.length === 0) {
-            navigate('/no-store', { replace: true });
-          } else if (stores.length === 1) {
-            navigate('/', { replace: true });
-          } else {
-            navigate('/select-store', { replace: true });
-          }
+        await refreshAuth();
+        const stores = useAuthStore.getState().stores;
+
+        if (stores.length === 0) {
+          navigate('/no-store', { replace: true });
+        } else if (stores.length === 1) {
+          navigate('/', { replace: true });
+        } else {
+          navigate('/select-store', { replace: true });
         }
       }
     };
-    
+
     checkAuthAndRedirect();
   }, [isAuthenticated, refreshAuth, navigate]);
 
-  const onSubmit = async (data) => {
+  const onSubmit: SubmitHandler<LoginFormData> = async (data) => {
     const result = await login(data.email, data.password);
     if (result.success) {
-      const stores = result.data.stores || [];
-      
+      const stores = useAuthStore.getState().stores;
+
       // Multi-store routing logic
       if (stores.length === 0) {
         // No stores - show create/wait options

@@ -3,29 +3,51 @@ import { FiPlus, FiEdit2, FiTrash2, FiX, FiShield, FiUsers, FiKey, FiAlertCircle
 import { useForm } from 'react-hook-form';
 import rolesService from '../services/rolesService';
 import permissionsService from '../services/permissionsService';
+import type { Permission } from '@/types';
+
+interface RolePermissionEntry {
+  permission?: {
+    PermissionID: number;
+    Action: string;
+    Subject: string;
+  };
+}
+
+interface RoleWithDetails {
+  RoleID: number;
+  RoleName: string;
+  Description: string | null;
+  rolePermissions?: RolePermissionEntry[];
+  _count: { storeUsers: number };
+}
+
+interface RoleForm {
+  roleName: string;
+  description?: string;
+}
 
 export default function Roles() {
-  const [roles, setRoles] = useState([]);
-  const [permissions, setPermissions] = useState([]);
-  const [groupedPermissions, setGroupedPermissions] = useState({});
+  const [roles, setRoles] = useState<RoleWithDetails[]>([]);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [groupedPermissions, setGroupedPermissions] = useState<Record<string, Permission[]>>({});
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
-  const [editingRole, setEditingRole] = useState(null);
-  const [selectedRoleForPermissions, setSelectedRoleForPermissions] = useState(null);
-  const [selectedPermissions, setSelectedPermissions] = useState([]);
+  const [editingRole, setEditingRole] = useState<RoleWithDetails | null>(null);
+  const [selectedRoleForPermissions, setSelectedRoleForPermissions] = useState<RoleWithDetails | null>(null);
+  const [selectedPermissions, setSelectedPermissions] = useState<number[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  const { register: registerCreate, handleSubmit: handleSubmitCreate, reset: resetCreate, formState: { errors: errorsCreate } } = useForm();
-  const { register: registerEdit, handleSubmit: handleSubmitEdit, reset: resetEdit, setValue: setValueEdit, formState: { errors: errorsEdit } } = useForm();
+  const { register: registerCreate, handleSubmit: handleSubmitCreate, reset: resetCreate, formState: { errors: errorsCreate } } = useForm<RoleForm>();
+  const { register: registerEdit, handleSubmit: handleSubmitEdit, setValue: setValueEdit, formState: { errors: errorsEdit } } = useForm<RoleForm>();
 
   // Load roles
   const loadRoles = async () => {
     try {
       setLoading(true);
       const data = await rolesService.getAll();
-      setRoles(data);
+      setRoles(data as unknown as RoleWithDetails[]);
     } catch (error) {
       console.error('Error loading roles:', error);
     } finally {
@@ -41,7 +63,7 @@ export default function Roles() {
         permissionsService.getGrouped(),
       ]);
       setPermissions(allPerms);
-      setGroupedPermissions(grouped);
+      setGroupedPermissions(grouped as unknown as Record<string, Permission[]>);
     } catch (error) {
       console.error('Error loading permissions:', error);
     }
@@ -59,7 +81,7 @@ export default function Roles() {
   };
 
   // Open edit modal
-  const handleOpenEdit = (role) => {
+  const handleOpenEdit = (role: RoleWithDetails) => {
     setEditingRole(role);
     setValueEdit('roleName', role.RoleName);
     setValueEdit('description', role.Description || '');
@@ -67,48 +89,53 @@ export default function Roles() {
   };
 
   // Open permissions modal
-  const handleOpenPermissions = async (role) => {
+  const handleOpenPermissions = async (role: RoleWithDetails) => {
     setSelectedRoleForPermissions(role);
-    
+
     // Get current permissions for this role
-    const currentPermIds = (role.rolePermissions || []).map(rp => rp.permission?.PermissionID).filter(Boolean);
+    const currentPermIds = (role.rolePermissions || [])
+      .map((rp) => rp.permission?.PermissionID)
+      .filter((id): id is number => id !== undefined);
     setSelectedPermissions(currentPermIds);
-    
+
     setShowPermissionsModal(true);
   };
 
   // Submit create role
-  const onSubmitCreate = async (data) => {
+  const onSubmitCreate = async (data: RoleForm) => {
     try {
       setSubmitting(true);
       await rolesService.create(data);
       setShowCreateModal(false);
       loadRoles();
       alert('Tạo vai trò thành công!');
-    } catch (error) {
-      alert(error.response?.data?.message || 'Có lỗi xảy ra');
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { message?: string } } };
+      alert(e.response?.data?.message || 'Có lỗi xảy ra');
     } finally {
       setSubmitting(false);
     }
   };
 
   // Submit edit role
-  const onSubmitEdit = async (data) => {
+  const onSubmitEdit = async (data: RoleForm) => {
+    if (!editingRole) return;
     try {
       setSubmitting(true);
       await rolesService.update(editingRole.RoleID, data);
       setShowEditModal(false);
       loadRoles();
       alert('Cập nhật vai trò thành công!');
-    } catch (error) {
-      alert(error.response?.data?.message || 'Có lỗi xảy ra');
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { message?: string } } };
+      alert(e.response?.data?.message || 'Có lỗi xảy ra');
     } finally {
       setSubmitting(false);
     }
   };
 
   // Delete role
-  const handleDeleteRole = async (role) => {
+  const handleDeleteRole = async (role: RoleWithDetails) => {
     if (!confirm(`Bạn có chắc muốn xóa vai trò "${role.RoleName}"?`)) {
       return;
     }
@@ -117,16 +144,17 @@ export default function Roles() {
       await rolesService.delete(role.RoleID);
       loadRoles();
       alert('Đã xóa vai trò');
-    } catch (error) {
-      alert(error.response?.data?.message || 'Không thể xóa vai trò (có thành viên đang dùng)');
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { message?: string } } };
+      alert(e.response?.data?.message || 'Không thể xóa vai trò (có thành viên đang dùng)');
     }
   };
 
   // Toggle permission
-  const togglePermission = (permId) => {
-    setSelectedPermissions(prev => {
+  const togglePermission = (permId: number) => {
+    setSelectedPermissions((prev) => {
       if (prev.includes(permId)) {
-        return prev.filter(id => id !== permId);
+        return prev.filter((id) => id !== permId);
       } else {
         return [...prev, permId];
       }
@@ -134,17 +162,17 @@ export default function Roles() {
   };
 
   // Toggle all permissions in a subject
-  const toggleSubject = (subject) => {
+  const toggleSubject = (subject: string) => {
     const subjectPerms = groupedPermissions[subject] || [];
-    const subjectPermIds = subjectPerms.map(p => p.PermissionID);
-    const allSelected = subjectPermIds.every(id => selectedPermissions.includes(id));
+    const subjectPermIds = subjectPerms.map((p) => p.PermissionID);
+    const allSelected = subjectPermIds.every((id) => selectedPermissions.includes(id));
 
     if (allSelected) {
       // Deselect all
-      setSelectedPermissions(prev => prev.filter(id => !subjectPermIds.includes(id)));
+      setSelectedPermissions((prev) => prev.filter((id) => !subjectPermIds.includes(id)));
     } else {
       // Select all
-      setSelectedPermissions(prev => {
+      setSelectedPermissions((prev) => {
         const newSet = new Set([...prev, ...subjectPermIds]);
         return Array.from(newSet);
       });
@@ -153,32 +181,31 @@ export default function Roles() {
 
   // Save permissions
   const handleSavePermissions = async () => {
+    if (!selectedRoleForPermissions) return;
     try {
       setSubmitting(true);
-      await rolesService.assignPermissions(
-        selectedRoleForPermissions.RoleID,
-        selectedPermissions
-      );
+      await rolesService.assignPermissions(selectedRoleForPermissions.RoleID, selectedPermissions);
       setShowPermissionsModal(false);
       loadRoles();
       alert('Cập nhật quyền thành công!');
-    } catch (error) {
-      alert(error.response?.data?.message || 'Có lỗi xảy ra');
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { message?: string } } };
+      alert(e.response?.data?.message || 'Có lỗi xảy ra');
     } finally {
       setSubmitting(false);
     }
   };
 
   // Get permission badge color
-  const getActionColor = (action) => {
-    const colors = {
+  const getActionColor = (action: string | undefined) => {
+    const colors: Record<string, string> = {
       manage: 'bg-purple-100 text-purple-800',
       create: 'bg-green-100 text-green-800',
       read: 'bg-blue-100 text-blue-800',
       update: 'bg-yellow-100 text-yellow-800',
       delete: 'bg-red-100 text-red-800',
     };
-    return colors[action] || 'bg-gray-100 text-gray-800';
+    return colors[action || ''] || 'bg-gray-100 text-gray-800';
   };
 
   return (
@@ -312,6 +339,7 @@ export default function Roles() {
                 </button>
                 <button
                   onClick={() => handleOpenEdit(role)}
+                  title="Chỉnh sửa"
                   className="px-3 py-2 text-sm bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   <FiEdit2 />
@@ -336,7 +364,7 @@ export default function Roles() {
           <div className="bg-white rounded-xl max-w-md w-full">
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900">Tạo vai trò mới</h2>
-              <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowCreateModal(false)} title="Đóng" className="text-gray-400 hover:text-gray-600">
                 <FiX size={24} />
               </button>
             </div>
@@ -362,7 +390,7 @@ export default function Roles() {
                 </label>
                 <textarea
                   {...registerCreate('description')}
-                  rows="3"
+                  rows={3}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="Quản lý kho hàng và báo cáo tài chính"
                 />
@@ -395,7 +423,7 @@ export default function Roles() {
           <div className="bg-white rounded-xl max-w-md w-full">
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900">Chỉnh sửa vai trò</h2>
-              <button onClick={() => setShowEditModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowEditModal(false)} title="Đóng" className="text-gray-400 hover:text-gray-600">
                 <FiX size={24} />
               </button>
             </div>
@@ -421,7 +449,7 @@ export default function Roles() {
                 </label>
                 <textarea
                   {...registerEdit('description')}
-                  rows="3"
+                  rows={3}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="Quản lý kho hàng và báo cáo tài chính"
                 />
@@ -459,7 +487,7 @@ export default function Roles() {
                   {selectedRoleForPermissions.RoleName} - {selectedPermissions.length} quyền đã chọn
                 </p>
               </div>
-              <button onClick={() => setShowPermissionsModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowPermissionsModal(false)} title="Đóng" className="text-gray-400 hover:text-gray-600">
                 <FiX size={24} />
               </button>
             </div>
@@ -467,7 +495,7 @@ export default function Roles() {
             <div className="flex-1 overflow-y-auto p-6">
               {/* Info Alert */}
               <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex gap-2">
-                <FiAlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" />
+                <FiAlertCircle className="text-blue-600 shrink-0 mt-0.5" />
                 <div className="text-sm text-blue-800">
                   Chọn các quyền mà vai trò này sẽ được phép thực hiện. Click vào tiêu đề để chọn/bỏ chọn tất cả quyền trong nhóm.
                 </div>
@@ -477,8 +505,8 @@ export default function Roles() {
               <div className="space-y-4">
                 {Object.keys(groupedPermissions).sort().map((subject) => {
                   const perms = groupedPermissions[subject];
-                  const allSelected = perms.every(p => selectedPermissions.includes(p.PermissionID));
-                  const someSelected = perms.some(p => selectedPermissions.includes(p.PermissionID));
+                  const allSelected = perms.every((p) => selectedPermissions.includes(p.PermissionID));
+                  const someSelected = perms.some((p) => selectedPermissions.includes(p.PermissionID));
 
                   return (
                     <div key={subject} className="border border-gray-200 rounded-lg overflow-hidden">
@@ -490,13 +518,13 @@ export default function Roles() {
                         <span className="font-semibold text-gray-900">{subject}</span>
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-gray-500">
-                            {perms.filter(p => selectedPermissions.includes(p.PermissionID)).length} / {perms.length}
+                            {perms.filter((p) => selectedPermissions.includes(p.PermissionID)).length} / {perms.length}
                           </span>
                           <div className={`w-5 h-5 border-2 rounded ${
-                            allSelected 
-                              ? 'bg-primary-600 border-primary-600' 
-                              : someSelected 
-                              ? 'bg-primary-200 border-primary-600' 
+                            allSelected
+                              ? 'bg-primary-600 border-primary-600'
+                              : someSelected
+                              ? 'bg-primary-200 border-primary-600'
                               : 'border-gray-300'
                           }`}>
                             {allSelected && (

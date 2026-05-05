@@ -235,6 +235,7 @@ export interface Customer {
   Address: string | null;
   CreatedAt: string;
   UpdatedAt: string;
+  orders?: Order[];
 }
 
 export interface OrderDetail {
@@ -267,8 +268,8 @@ export interface Order {
   PaidAmount: string;
   Status: OrderStatus;
   Note: string | null;
-  customer?: Pick<Customer, 'CustomerID' | 'CustomerCode' | 'CustomerName' | 'Phone'> | null;
-  user?: Pick<User, 'UserID' | 'FullName'>;
+  customer?: Pick<Customer, 'CustomerID' | 'CustomerCode' | 'CustomerName' | 'Phone' | 'Address'> | null;
+  user?: Pick<User, 'UserID' | 'FullName' | 'Email'>;
   details?: OrderDetail[];
   linkedReceipt?: Pick<StockReceipt, 'ReceiptID' | 'ReceiptCode'> | null;
 }

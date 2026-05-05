@@ -1,15 +1,32 @@
 import { useState, useEffect } from 'react';
 import { FiShoppingBag, FiShoppingCart, FiUsers, FiDollarSign } from 'react-icons/fi';
+import type { ComponentType } from 'react';
 import { productsService } from '../services/productsService';
 import { customersService } from '../services/customersService';
 import ordersService from '../services/ordersService';
 import AiInsightsWidget from '../components/ai-analyst/AiInsightsWidget';
+import type { Order, PaginatedResult, Product, Customer } from '@/types';
 
-function formatCurrency(amount) {
+interface DashboardStats {
+  products: number;
+  orders: number;
+  customers: number;
+  revenue: number;
+}
+
+interface StatCard {
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  value: number | string;
+  color: string;
+  bg: string;
+}
+
+function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
 }
 
-function formatDate(dateStr) {
+function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('vi-VN', {
     day: '2-digit', month: '2-digit', year: 'numeric',
   });
@@ -17,38 +34,35 @@ function formatDate(dateStr) {
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<DashboardStats>({
     products: 0,
     orders: 0,
     customers: 0,
     revenue: 0,
   });
-  const [recentOrders, setRecentOrders] = useState([]);
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // orders và customers trả về PaginatedResult { data, meta }; products trả về array
         const [productsRes, customersRes, ordersRes] = await Promise.all([
-          productsService.getAll().catch(() => []),
-          customersService.getAll().catch(() => ({ data: [], meta: { total: 0 } })),
-          ordersService.getAll().catch(() => ({ data: [], meta: { total: 0 } })),
+          productsService.getAll().catch((): Product[] => []),
+          customersService.getAll().catch((): Customer[] => []),
+          ordersService.getAll().catch((): PaginatedResult<Order> => ({ data: [], meta: { total: 0, page: 1, limit: 10, totalPages: 0 } })),
         ]);
 
-        const products = Array.isArray(productsRes) ? productsRes : (productsRes?.data ?? []);
-        const customers = customersRes?.data ?? [];
-        const orders = ordersRes?.data ?? [];
+        const orders = ordersRes.data;
 
         const revenue = orders.reduce(
-          (sum, order) => sum + parseFloat(order.TotalAmount || 0),
+          (sum, order) => sum + parseFloat(order.TotalAmount || '0'),
           0,
         );
 
         setStats({
-          products: products.length,
-          customers: customersRes?.meta?.total ?? customers.length,
-          orders: ordersRes?.meta?.total ?? orders.length,
+          products: productsRes.length,
+          customers: customersRes.length,
+          orders: ordersRes.meta?.total ?? orders.length,
           revenue,
         });
 
@@ -64,7 +78,7 @@ export default function Dashboard() {
     fetchData();
   }, []);
 
-  const statCards = [
+  const statCards: StatCard[] = [
     { icon: FiShoppingBag, label: 'Sản phẩm', value: stats.products, color: 'text-blue-600', bg: 'bg-blue-50' },
     { icon: FiShoppingCart, label: 'Đơn hàng', value: stats.orders, color: 'text-green-600', bg: 'bg-green-50' },
     { icon: FiUsers, label: 'Khách hàng', value: stats.customers, color: 'text-purple-600', bg: 'bg-purple-50' },
@@ -132,7 +146,7 @@ export default function Dashboard() {
                     <p className="text-xs text-gray-900 font-medium">{formatDate(order.OrderDate)}</p>
                   </div>
                   <span className="text-xs text-gray-500">
-                    {formatCurrency(order.TotalAmount)}
+                    {formatCurrency(parseFloat(order.TotalAmount || '0'))}
                   </span>
                 </div>
               ))}
