@@ -1,42 +1,35 @@
-import { useState, useEffect } from 'react';
-import { FiPlus, FiShoppingCart, FiUser, FiX, FiDollarSign, FiEye, FiClock, FiCheckCircle, FiXCircle, FiDownload } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import { Plus, ShoppingCart, User, Download, Loader2, Calendar } from 'lucide-react';
 import ordersService from '../services/ordersService';
-import { customersService } from '../services/customersService';
-import { productsService } from '../services/productsService';
 import OrderDetailModal from '../components/orders/OrderDetailModal';
+import CreateOrderModal from '../components/orders/CreateOrderModal';
 import ProtectedAction from '../components/ProtectedAction';
-import type { Order, Customer, Product, DeliveryMethod } from '@/types';
+import ConfirmModal from '../components/ConfirmModal';
+import { useToast } from '../components/ToastProvider';
+import type { Order } from '@/types';
 
 interface OrderWithCount extends Order {
   _count?: { details: number };
 }
 
-interface OrderFormItem {
-  productId: string;
-  unitName: string;
-  quantity: string;
-}
+type StatusTab = 'All' | 'Pending' | 'Completed' | 'Cancelled';
 
-interface StatusConfig {
-  icon: React.ComponentType<{ className?: string }>;
-  className: string;
-  label: string;
+interface ConfirmState {
+  open: boolean;
+  orderId: number | null;
+  orderCode: string | null;
+  action: 'fulfill' | 'cancel' | null;
 }
 
 function Orders() {
+  const toast = useToast();
   const [orders, setOrders] = useState<OrderWithCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [exporting, setExporting] = useState(false);
-
-  // Create Order Form States
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [selectedCustomer, setSelectedCustomer] = useState('');
-  const [note, setNote] = useState('');
-  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('Immediate');
-  const [items, setItems] = useState<OrderFormItem[]>([{ productId: '', unitName: '', quantity: '' }]);
+  const [activeTab, setActiveTab] = useState<StatusTab>('All');
+  const [confirmState, setConfirmState] = useState<ConfirmState>({ open: false, orderId: null, orderCode: null, action: null });
 
   // Load orders
   const loadOrders = async () => {
@@ -51,21 +44,6 @@ function Orders() {
     }
   };
 
-  // Load form data (customers and products)
-  const loadFormData = async () => {
-    try {
-      const [customersRes, productsData] = await Promise.all([
-        customersService.getAll(),
-        productsService.getAll(),
-      ]);
-      const customersArr = Array.isArray(customersRes) ? customersRes : (customersRes as { data?: Customer[] })?.data ?? [];
-      setCustomers(customersArr as Customer[]);
-      setProducts((Array.isArray(productsData) ? productsData : (productsData as { data?: Product[] })?.data ?? []).filter((p: Product) => p.IsActive));
-    } catch (err) {
-      console.error('Error loading form data:', err);
-    }
-  };
-
   useEffect(() => {
     loadOrders();
   }, []);
@@ -75,137 +53,59 @@ function Orders() {
     try {
       setExporting(true);
       await ordersService.exportOrders();
+      toast.success('Xuất Excel thành công!');
     } catch (err) {
       console.error('Error exporting orders:', err);
+      toast.error('Có lỗi khi xuất Excel');
     } finally {
       setExporting(false);
     }
   };
 
   // Open create modal
-  const handleOpenCreate = async () => {
-    await loadFormData();
-    setSelectedCustomer('');
-    setNote('');
-    setDeliveryMethod('Immediate');
-    setItems([{ productId: '', unitName: '', quantity: '' }]);
+  const handleOpenCreate = () => {
     setIsCreateModalOpen(true);
   };
 
-  // Add item
-  const handleAddItem = () => {
-    setItems([...items, { productId: '', unitName: '', quantity: '' }]);
-  };
-
-  // Remove item
-  const handleRemoveItem = (index: number) => {
-    if (items.length > 1) {
-      setItems(items.filter((_, i) => i !== index));
-    }
-  };
-
-  // Update item
-  const handleItemChange = (index: number, field: keyof OrderFormItem, value: string) => {
-    const newItems = [...items];
-    newItems[index] = { ...newItems[index], [field]: value };
-
-    // Auto-fill BaseUnit when product selected
-    if (field === 'productId') {
-      const product = products.find((p) => p.ProductID === parseInt(value));
-      if (product) {
-        newItems[index].unitName = product.BaseUnit;
-      }
-    }
-
-    setItems(newItems);
-  };
-
-  // Submit create order
-  const handleSubmitCreate = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    const validItems = items.filter(
-      (item) => item.productId && item.unitName && item.quantity
-    );
-
-    if (validItems.length === 0) {
-      alert('Vui lòng thêm ít nhất 1 sản phẩm hợp lệ');
-      return;
-    }
-
-    try {
-      await ordersService.createOrder({
-        customerId: selectedCustomer ? parseInt(selectedCustomer) : null,
-        note,
-        deliveryMethod,
-        items: validItems.map((item) => ({
-          productId: parseInt(item.productId),
-          unitName: item.unitName,
-          quantity: item.quantity,
-        })),
-      });
-
-      alert('Tạo đơn hàng thành công!');
-      setIsCreateModalOpen(false);
-      loadOrders();
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      alert(e.response?.data?.message || 'Có lỗi xảy ra khi tạo đơn hàng');
-      console.error('Error creating order:', err);
-    }
-  };
-
-  // Calculate total
-  const calculateTotal = (): number => {
-    return items.reduce((sum, item) => {
-      const product = products.find((p) => p.ProductID === parseInt(item.productId));
-      if (!product || !item.quantity || !item.unitName) return sum;
-
-      // Find matching price
-      const price = product.prices?.find((p) => p.UnitName === item.unitName);
-      if (!price) return sum;
-
-      return sum + parseFloat(item.quantity) * parseFloat(price.UnitPrice);
-    }, 0);
-  };
-
   // Hoàn tất đơn đặt trước
-  const handleFulfillOrder = async (orderId: number) => {
-    if (!confirm(`Xác nhận hoàn tất đơn hàng #${orderId}? Hàng sẽ được xuất kho thực tế.`)) return;
-    try {
-      await ordersService.fulfillOrder(orderId);
-      alert('Hoàn tất đơn hàng thành công!');
-      loadOrders();
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      alert(e.response?.data?.message || 'Có lỗi xảy ra khi hoàn tất đơn hàng');
-    }
+  const handleFulfillOrder = (orderId: number, orderCode: string) => {
+    setConfirmState({ open: true, orderId, orderCode, action: 'fulfill' });
   };
 
   // Hủy đơn hàng
-  const handleCancelOrder = async (orderId: number) => {
-    if (!confirm(`Xác nhận hủy đơn hàng #${orderId}? Hàng đã đặt trước sẽ được hoàn trả về kho.`)) return;
-    try {
-      const res = await ordersService.cancelOrder(orderId) as unknown as { data?: { refundAmount?: number }; refundAmount?: number };
-      const refund = Number(res.data?.refundAmount || res.refundAmount || 0);
-      if (refund > 0) {
-        alert(`Đã hủy đơn hàng thành công!\nSố tiền cọc cần hoàn trả khách: ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(refund)}`);
-      } else {
-        alert('Đã hủy đơn hàng thành công!');
-      }
-      loadOrders();
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      alert(e.response?.data?.message || 'Có lỗi xảy ra khi hủy đơn hàng');
-    }
+  const handleCancelOrder = (orderId: number, orderCode: string) => {
+    setConfirmState({ open: true, orderId, orderCode, action: 'cancel' });
   };
 
-  // Format currency
-  const formatCurrency = (value: number | string): string => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(Number(value));
+  const handleConfirmAction = async () => {
+    const { orderId, action } = confirmState;
+    if (!orderId || !action) return;
+    setConfirmState({ open: false, orderId: null, orderCode: null, action: null });
+
+    if (action === 'fulfill') {
+      try {
+        await ordersService.fulfillOrder(orderId);
+        toast.success('Hoàn tất đơn hàng thành công!');
+        loadOrders();
+      } catch (err: unknown) {
+        const e = err as { response?: { data?: { message?: string } } };
+        toast.error(e.response?.data?.message || 'Có lỗi xảy ra khi hoàn tất đơn hàng');
+      }
+    } else {
+      try {
+        const res = await ordersService.cancelOrder(orderId) as unknown as { data?: { refundAmount?: number }; refundAmount?: number };
+        const refund = Number(res.data?.refundAmount || res.refundAmount || 0);
+        if (refund > 0) {
+          toast.info(`Đã hủy đơn hàng. Cần hoàn tiền cọc: ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(refund)}`);
+        } else {
+          toast.success('Đã hủy đơn hàng thành công!');
+        }
+        loadOrders();
+      } catch (err: unknown) {
+        const e = err as { response?: { data?: { message?: string } } };
+        toast.error(e.response?.data?.message || 'Có lỗi xảy ra khi hủy đơn hàng');
+      }
+    }
   };
 
   // Format date
@@ -221,41 +121,54 @@ function Orders() {
 
   // Get status badge
   const getStatusBadge = (status: string): React.ReactElement => {
-    const statusConfig: Record<string, StatusConfig> = {
-      Completed: {
-        icon: FiCheckCircle,
-        className: 'bg-green-100 text-green-800',
-        label: 'Hoàn thành',
-      },
-      Pending: {
-        icon: FiClock,
-        className: 'bg-yellow-100 text-yellow-800',
-        label: 'Chờ xử lý',
-      },
-      Cancelled: {
-        icon: FiXCircle,
-        className: 'bg-red-100 text-red-800',
-        label: 'Đã hủy',
-      },
+    const statusMap: Record<string, { className: string; label: string }> = {
+      Completed: { className: 'bg-accent-green text-basic-white', label: 'Hoàn thành' },
+      Pending:   { className: 'bg-yellowfish-300 text-basic-white', label: 'Chờ xử lý' },
+      Cancelled: { className: 'bg-accent-red text-basic-white',    label: 'Đã hủy' },
     };
-
-    const config = statusConfig[status] || statusConfig['Completed'];
-    const Icon = config.icon;
-
+    const config = statusMap[status] ?? statusMap['Completed'];
     return (
-      <span
-        className={`px-3 py-1 inline-flex items-center gap-1 text-xs leading-5 font-semibold rounded-full ${config.className}`}
-      >
-        <Icon className="text-sm" />
+      <span className={`px-2.5 py-1 inline-flex items-center gap-1.5 text-xs font-semibold rounded-full ${config.className}`}>
         {config.label}
       </span>
     );
   };
 
+  const TABS: { key: StatusTab; label: string }[] = [
+    { key: 'All',       label: 'Tất cả' },
+    { key: 'Pending',   label: 'Chờ xử lý' },
+    { key: 'Completed', label: 'Hoàn thành' },
+    { key: 'Cancelled', label: 'Đã hủy' },
+  ];
+
+  const filteredOrders = activeTab === 'All' ? orders : orders.filter((o) => o.Status === activeTab);
+  const tabCount = (key: StatusTab) => key === 'All' ? orders.length : orders.filter((o) => o.Status === key).length;
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Đang tải...</div>
+      <div className="p-6 space-y-6">
+        <div className="flex justify-between items-center">
+          <div className="space-y-2">
+            <div className="h-7 w-48 bg-blacky-100 rounded animate-pulse" />
+            <div className="h-4 w-64 bg-blacky-100 rounded animate-pulse" />
+          </div>
+          <div className="h-10 w-36 bg-blacky-100 rounded-lg animate-pulse" />
+        </div>
+        <div className="flex gap-2">
+          {[...Array(4)].map((_, i) => <div key={i} className="h-9 w-24 bg-blacky-100 rounded-lg animate-pulse" />)}
+        </div>
+        <div className="bg-basic-white rounded-xl border border-basic-border overflow-hidden">
+          <div className="divide-y divide-basic-border">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="px-6 py-4 flex gap-4 animate-pulse">
+                <div className="h-4 w-28 bg-blacky-100 rounded" />
+                <div className="h-4 w-32 bg-blacky-100 rounded" />
+                <div className="h-4 w-40 bg-blacky-100 rounded" />
+                <div className="h-4 w-24 bg-blacky-100 rounded ml-auto" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -263,413 +176,136 @@ function Orders() {
   return (
     <div className="p-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-start mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Quản lý Đơn hàng</h1>
-          <p className="text-gray-600 text-sm mt-1">Tạo và theo dõi đơn hàng</p>
+          <h1 className="text-2xl font-bold text-blacky-950">Quản lý Đơn hàng</h1>
+          <p className="text-blacky-500 text-sm mt-1">Tạo và theo dõi đơn hàng bán hàng</p>
         </div>
         <div className="flex gap-3">
           <ProtectedAction action="read" subject="Order">
             <button
               onClick={handleExport}
               disabled={exporting}
-              className="border border-green-500 text-green-600 hover:bg-green-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
+              className="btn btn-secondary gap-2 disabled:opacity-50"
             >
-              <FiDownload />
+              {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               {exporting ? 'Đang xuất...' : 'Xuất Excel'}
             </button>
           </ProtectedAction>
           <ProtectedAction action="create" subject="Order">
-            <button
-              onClick={handleOpenCreate}
-              className="bg-primary-600 hover:bg-primary-700 text-black px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-            >
-              <FiPlus />
+            <button onClick={handleOpenCreate} className="btn btn-primary gap-2">
+              <Plus className="w-4 h-4" />
               Tạo đơn hàng
             </button>
           </ProtectedAction>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-linear-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-blue-100 text-sm">Tổng đơn hàng</p>
-              <p className="text-3xl font-bold mt-1">{orders.length}</p>
-            </div>
-            <FiShoppingCart className="text-4xl text-blue-200" />
-          </div>
-        </div>
-
-        <div className="bg-linear-to-br from-green-500 to-green-600 rounded-lg p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-green-100 text-sm">Hoàn thành</p>
-              <p className="text-3xl font-bold mt-1">
-                {orders.filter((o) => o.Status === 'Completed').length}
-              </p>
-            </div>
-            <FiCheckCircle className="text-4xl text-green-200" />
-          </div>
-        </div>
-
-        <div className="bg-linear-to-br from-yellow-500 to-yellow-600 rounded-lg p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-yellow-100 text-sm">Chờ xử lý</p>
-              <p className="text-3xl font-bold mt-1">
-                {orders.filter((o) => o.Status === 'Pending').length}
-              </p>
-            </div>
-            <FiClock className="text-4xl text-yellow-200" />
-          </div>
-        </div>
-
-        <div className="bg-linear-to-br from-purple-500 to-purple-600 rounded-lg p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-purple-100 text-sm">Doanh thu</p>
-              <p className="text-2xl font-bold mt-1">
-                {formatCurrency(orders.reduce((sum, o) => sum + Number(o.TotalAmount), 0))}
-              </p>
-            </div>
-            <FiDollarSign className="text-4xl text-purple-200" />
-          </div>
-        </div>
-      </div>
-
-      {/* Orders Table */}
-      <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Mã đơn
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Ngày tạo
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Khách hàng
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Nhân viên
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Số SP
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Tổng tiền
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Giao hàng
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Trạng thái
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Thao tác
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {orders.length === 0 ? (
-              <tr>
-                <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
-                  Chưa có đơn hàng
-                </td>
-              </tr>
-            ) : (
-              orders.map((order) => (
-                <tr key={order.OrderID} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="font-mono text-xs font-medium text-primary-700 bg-primary-50 px-2 py-1 rounded">
-                      {order.OrderCode || '-'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="font-medium text-gray-900">{formatDate(order.OrderDate)}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <FiUser className="text-gray-400" />
-                      <span className="text-gray-900">
-                        {order.customer?.CustomerName || 'Khách vãng lai'}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-700">
-                    {order.user?.FullName || order.user?.Email}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
-                      {order._count?.details || 0}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <span className="text-sm text-gray-600">
-                      {formatCurrency(order.TotalAmount)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${order.DeliveryMethod === 'Reserved' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
-                      {order.DeliveryMethod === 'Reserved' ? 'Đặt trước' : 'Giao ngay'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    {getStatusBadge(order.Status)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <div className="flex items-center gap-2 justify-center">
-                      <button
-                        onClick={() => setSelectedOrderId(order.OrderID)}
-                        className="text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
-                      >
-                        <FiEye />
-                        Chi tiết
-                      </button>
-                      {order.Status === 'Pending' && (
-                        <>
-                          <button
-                            onClick={() => handleFulfillOrder(order.OrderID)}
-                            className="text-green-600 hover:text-green-700 font-medium flex items-center gap-1"
-                            title="Hoàn tất đơn hàng"
-                          >
-                            <FiCheckCircle />
-                            Hoàn tất
-                          </button>
-                          <button
-                            onClick={() => handleCancelOrder(order.OrderID)}
-                            className="text-red-600 hover:text-red-700 font-medium flex items-center gap-1"
-                            title="Hủy đơn hàng"
-                          >
-                            <FiXCircle />
-                            Hủy
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Create Order Modal */}
-      {isCreateModalOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4"
-          onClick={() => setIsCreateModalOpen(false)}
-        >
-          <div
-            className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
+      {/* Status Tabs */}
+      <div className="flex items-center gap-1 mb-6 border-b border-basic-border">
+        {TABS.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`px-4 py-2.5 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+              activeTab === tab.key
+                ? 'border-yellowfish-400 text-bluesh-800'
+                : 'border-transparent text-blacky-500 hover:text-blacky-700'
+            }`}
           >
-            <div className="p-6 border-b sticky top-0 bg-white z-10">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-bold text-gray-800">Tạo đơn hàng mới</h2>
-                <button
-                  onClick={() => setIsCreateModalOpen(false)}
-                  title="Đóng"
-                  className="text-gray-400 hover:text-gray-600"
+            {tab.label}
+            <span className={`px-3 py-0.5 rounded-full text-xs font-semibold ${
+              activeTab === tab.key ? 'bg-bluesh-800 text-basic-white' : 'bg-blacky-100 text-blacky-500'
+            }`}>
+              {tabCount(tab.key)}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Orders List */}
+      {filteredOrders.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 py-20 text-blacky-400">
+          <ShoppingCart className="w-12 h-12" />
+          <p className="text-sm">Chưa có đơn hàng nào</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {filteredOrders.map((order) => (
+            <div
+              key={order.OrderID}
+              onClick={() => setSelectedOrderId(order.OrderID)}
+              className="bg-basic-white rounded-xl border border-blacky-200 p-4 cursor-pointer hover:shadow-md hover:border-bluesh-800/30 transition-all"
+            >
+              {/* Top: OrderCode + Status */}
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold text-blacky-700 bg-yellowfish-50 px-2.5 py-1 rounded-lg truncate max-w-[55%]">
+                  {order.OrderCode || `#${order.OrderID}`}
+                </span>
+                {getStatusBadge(order.Status)}
+              </div>
+
+              {/* Middle: Customer */}
+              <div className="flex items-center gap-2 mb-3">
+                <User className="w-4 h-4 text-blacky-900 shrink-0" />
+                <span className="text-sm font-medium text-blacky-900 truncate">
+                  {order.customer?.CustomerName || 'Khách vãng lai'}
+                </span>
+              </div>
+
+              {/* Bottom: Date */}
+              <div className="flex items-center gap-1.5 text-xs text-blacky-700">
+                <Calendar className="w-3.5 h-3.5 shrink-0" />
+                <span>{formatDate(order.OrderDate)}</span>
+              </div>
+
+              {/* Actions for Pending orders */}
+              {order.Status === 'Pending' && (
+                <div
+                  className="flex items-center gap-2 mt-3 pt-3 border-t border-basic-border"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  <FiX className="text-2xl" />
-                </button>
-              </div>
-            </div>
-
-            <form onSubmit={handleSubmitCreate} className="p-6 space-y-6">
-              {/* Customer Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Khách hàng (Để trống nếu khách vãng lai)
-                </label>
-                <div className="relative">
-                  <FiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <select
-                    title="Khách hàng"
-                    value={selectedCustomer}
-                    onChange={(e) => setSelectedCustomer(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  >
-                    <option value="">-- Khách vãng lai --</option>
-                    {customers.map((customer) => (
-                      <option key={customer.CustomerID} value={customer.CustomerID}>
-                        {customer.CustomerName} - {customer.Phone}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Note */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ghi chú
-                </label>
-                <textarea
-                  rows={2}
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="Ghi chú về đơn hàng..."
-                />
-              </div>
-
-              {/* Delivery Method */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phương thức giao hàng
-                </label>
-                <select
-                  title="Phương thức giao hàng"
-                  value={deliveryMethod}
-                  onChange={(e) => setDeliveryMethod(e.target.value as DeliveryMethod)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="Immediate">Giao ngay (Immediate)</option>
-                  <option value="Reserved">Đặt trước (Reserved)</option>
-                </select>
-              </div>
-
-              {/* Items */}
-              <div>
-                <div className="flex justify-between items-center mb-3">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Danh sách sản phẩm <span className="text-red-500">*</span>
-                  </label>
                   <button
-                    type="button"
-                    onClick={handleAddItem}
-                    className="text-primary-600 hover:text-primary-700 text-sm flex items-center gap-1"
+                    onClick={() => handleFulfillOrder(order.OrderID, order.OrderCode || `#${order.OrderID}`)}
+                    className="flex-1 text-xs font-medium text-accent-green border border-accent-green/30 bg-accent-green/5 hover:bg-accent-green/10 rounded-lg py-1.5 flex items-center justify-center gap-1 transition-colors"
                   >
-                    <FiPlus /> Thêm sản phẩm
+                    Hoàn tất
+                  </button>
+                  <button
+                    onClick={() => handleCancelOrder(order.OrderID, order.OrderCode || `#${order.OrderID}`)}
+                    className="flex-1 text-xs font-medium text-accent-red border border-accent-red/30 bg-accent-red/5 hover:bg-accent-red/10 rounded-lg py-1.5 flex items-center justify-center gap-1 transition-colors"
+                  >
+                    Hủy
                   </button>
                 </div>
-
-                <div className="space-y-3">
-                  {items.map((item, index) => {
-                    const selectedProduct = item.productId
-                      ? products.find((p) => p.ProductID === parseInt(item.productId))
-                      : null;
-
-                    const availableUnits = selectedProduct
-                      ? [
-                          {
-                            UnitName: selectedProduct.BaseUnit,
-                            ExchangeValue: 1,
-                            IsDefault: true,
-                          },
-                          ...(selectedProduct.units || []),
-                        ]
-                      : [];
-
-                    return (
-                      <div
-                        key={index}
-                        className="flex gap-2 items-start p-3 bg-gray-50 rounded-lg"
-                      >
-                        <div className="flex-1 grid grid-cols-3 gap-2">
-                          {/* Product */}
-                          <select
-                            required
-                            title="Sản phẩm"
-                            value={item.productId}
-                            onChange={(e) => handleItemChange(index, 'productId', e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                          >
-                            <option value="">-- Chọn sản phẩm --</option>
-                            {products.map((product) => (
-                              <option key={product.ProductID} value={product.ProductID}>
-                                {product.ProductName} ({product.SKU})
-                              </option>
-                            ))}
-                          </select>
-
-                          {/* Unit Name */}
-                          <select
-                            required
-                            title="Đơn vị tính"
-                            disabled={!item.productId}
-                            value={item.unitName}
-                            onChange={(e) => handleItemChange(index, 'unitName', e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-100"
-                          >
-                            <option value="">-- Chọn đơn vị --</option>
-                            {availableUnits.map((unit, idx) => (
-                              <option key={idx} value={unit.UnitName}>
-                                {unit.UnitName}{' '}
-                                {Number(unit.ExchangeValue) > 1 &&
-                                  `(1 = ${unit.ExchangeValue} ${selectedProduct?.BaseUnit || ''})`}
-                              </option>
-                            ))}
-                          </select>
-
-                          {/* Quantity */}
-                          <input
-                            type="number"
-                            required
-                            step="0.01"
-                            min="0.01"
-                            placeholder="Số lượng"
-                            value={item.quantity}
-                            onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                          />
-                        </div>
-
-                        {/* Remove Button */}
-                        {items.length > 1 && (
-                          <button
-                            type="button"
-                            title="Xóa dòng"
-                            onClick={() => handleRemoveItem(index)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          >
-                            <FiX />
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Total (estimated) */}
-              <div className="border-t pt-4">
-                <div className="flex justify-between items-center text-lg font-semibold">
-                  <span>Tổng tiền (ước tính):</span>
-                  <span className="text-primary-600">{formatCurrency(calculateTotal())}</span>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  * Giá cuối cùng sẽ được tính dựa trên bảng giá và số lượng mua
-                </p>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsCreateModalOpen(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-primary-600 text-black rounded-lg hover:bg-primary-700 transition-colors"
-                >
-                  Tạo đơn hàng
-                </button>
-              </div>
-            </form>
-          </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
+
+      {isCreateModalOpen && (
+        <CreateOrderModal
+          open={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onSuccess={loadOrders}
+        />
+      )}
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        open={confirmState.open}
+        title={confirmState.action === 'fulfill' ? 'Hoàn tất đơn hàng?' : 'Hủy đơn hàng?'}
+        message={
+          confirmState.action === 'fulfill'
+            ? `Xác nhận hoàn tất đơn hàng ${confirmState.orderCode}? Thao tác này không thể hoàn tác.`
+            : `Xác nhận hủy đơn hàng ${confirmState.orderCode}? Nếu đã đặt cọc sẽ cần hoàn tiền.`
+        }
+        confirmLabel={confirmState.action === 'fulfill' ? 'Hoàn tất' : 'Xác nhận hủy'}
+        variant={confirmState.action === 'cancel' ? 'danger' : 'default'}
+        onConfirm={handleConfirmAction}
+        onCancel={() => setConfirmState({ open: false, orderId: null, orderCode: null, action: null })}
+      />
 
       {/* Order Detail Modal */}
       {selectedOrderId && (

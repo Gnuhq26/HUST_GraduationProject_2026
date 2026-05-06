@@ -40,4 +40,24 @@ export class ReportsController {
   ) {
     return this.reportsService.getTopProducts(storeId, query);
   }
+
+  @Get('revenue-by-category')
+  @CheckPermission('read', 'Report')
+  @ApiOperation({ summary: 'Doanh thu theo danh mục sản phẩm' })
+  async getRevenueByCategoryReport(
+    @CurrentStore() storeId: number,
+    @Query() query: ReportQueryDto,
+  ) {
+    return this.reportsService.getRevenueByCategoryReport(storeId, query);
+  }
+
+  @Get('virtual-inventory-trend')
+  @CheckPermission('read', 'Report')
+  @ApiOperation({ summary: 'Xu hướng tồn kho ảo theo ngày' })
+  async getVirtualInventoryTrend(
+    @CurrentStore() storeId: number,
+    @Query() query: ReportQueryDto,
+  ) {
+    return this.reportsService.getVirtualInventoryTrend(storeId, query);
+  }
 }

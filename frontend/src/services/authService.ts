@@ -26,6 +26,17 @@ export const authService = {
     return response.data;
   },
 
+  // Cập nhật thông tin cá nhân
+  updateProfile: async (dto: {
+    fullName?: string;
+    phone?: string;
+    currentPassword?: string;
+    newPassword?: string;
+  }): Promise<User> => {
+    const response = await api.patch<User>('/auth/profile', dto);
+    return response.data;
+  },
+
   // Đăng xuất (client-side)
   logout: (): void => {
     localStorage.removeItem('token');

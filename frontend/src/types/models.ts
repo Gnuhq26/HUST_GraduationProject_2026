@@ -228,7 +228,7 @@ export interface InventoryLog {
 export interface Customer {
   CustomerID: number;
   /** Business code, e.g. "KH-20260430-001". Null until assigned. */
-  CustomerCode: string | null;
+  //CustomerCode: string | null;
   StoreID: number;
   CustomerName: string;
   Phone: string | null;
@@ -268,7 +268,7 @@ export interface Order {
   PaidAmount: string;
   Status: OrderStatus;
   Note: string | null;
-  customer?: Pick<Customer, 'CustomerID' | 'CustomerCode' | 'CustomerName' | 'Phone' | 'Address'> | null;
+  customer?: Pick<Customer, 'CustomerID' | /*'CustomerCode'*/  'CustomerName' | 'Phone' | 'Address'> | null;
   user?: Pick<User, 'UserID' | 'FullName' | 'Email'>;
   details?: OrderDetail[];
   linkedReceipt?: Pick<StockReceipt, 'ReceiptID' | 'ReceiptCode'> | null;
@@ -297,4 +297,44 @@ export interface ApiError {
   statusCode: number;
   message: string | string[];
   error?: string;
+}
+
+// ─── Dashboard chart types ────────────────────────────────────────────────────
+
+export interface TopProductItem {
+  productId: number;
+  productName: string;
+  sku: string | null;
+  baseUnit: string;
+  totalQuantity: number;
+  totalRevenue: number;
+}
+
+export interface TopProductsReportResponse {
+  startDate: string;
+  endDate: string;
+  sortBy: string;
+  products: TopProductItem[];
+}
+
+export interface RevenueByCategoryItem {
+  categoryId: number;
+  categoryName: string;
+  totalRevenue: number;
+  percentage: number;
+}
+
+export interface RevenueByCategoryReportResponse {
+  items: RevenueByCategoryItem[];
+  totalRevenue: number;
+}
+
+export interface VirtualInventoryTrendPoint {
+  date: string;
+  inTransitQty: number;
+  reservedQty: number;
+}
+
+export interface VirtualInventoryTrendResponse {
+  points: VirtualInventoryTrendPoint[];
 }

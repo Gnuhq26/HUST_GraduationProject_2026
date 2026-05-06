@@ -505,11 +505,21 @@ export class InventoryService {
       });
 
       // 3. Tạo Order (phần giao thẳng)
+      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const orderCodePrefix = `HD-${dateStr}-`;
+      const lastOrder = await tx.order.findFirst({
+        where: { OrderCode: { startsWith: orderCodePrefix } },
+        orderBy: { OrderCode: 'desc' },
+      });
+      const nextNum = lastOrder ? parseInt(lastOrder.OrderCode!.slice(-3)) + 1 : 1;
+      const orderCode = `${orderCodePrefix}${String(nextNum).padStart(3, '0')}`;
+
       const order = await tx.order.create({
         data: {
           StoreID: storeId,
           UserID: userId,
           CustomerID: dto.customerId ?? null,
+          OrderCode: orderCode,
           DeliveryMethod: 'DirectShip',
           LinkedReceiptID: receipt.ReceiptID,
           TotalAmount: dto.deliverQty * dto.saleUnitPrice,

@@ -1,294 +1,228 @@
-import { useState, useEffect } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiX, FiUsers, FiShield, FiAlertCircle, FiUserPlus } from 'react-icons/fi';
-import { useForm } from 'react-hook-form';
+﻿import { useState, useEffect } from 'react';
+import { Plus, Pencil, Trash2, Users, Shield, UserPlus } from 'lucide-react';
 import storesService from '../services/storesService';
 import rolesService from '../services/rolesService';
+import { useToast } from '../components/ToastProvider';
+import ConfirmModal from '../components/ConfirmModal';
+import AddMemberModal from '../components/members/AddMemberModal';
+import EditMemberModal, { type Member } from '../components/members/EditMemberModal';
 import type { Role } from '@/types';
 
-interface MemberUser {
-  FullName: string | null;
-  Email: string;
-  Phone?: string | null;
-  Address?: string | null;
-}
-
-interface MemberRole {
-  RoleID: number;
-  RoleName: string;
-  Description?: string | null;
-}
-
-interface Member {
-  userId: number;
-  joinedAt: string;
-  user: MemberUser;
-  role: MemberRole;
-}
-
-interface AddMemberForm {
-  email: string;
-  roleId: string;
-}
-
-interface EditMemberForm {
-  roleId: string;
-}
+const formatDate = (dateString: string): string =>
+  new Date(dateString).toLocaleDateString('vi-VN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
 export default function StoreMembers() {
+  const toast = useToast();
   const [members, setMembers] = useState<Member[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [removingMember, setRemovingMember] = useState<Member | null>(null);
 
-  const { register: registerAdd, handleSubmit: handleSubmitAdd, reset: resetAdd, formState: { errors: errorsAdd } } = useForm<AddMemberForm>();
-  const { register: registerEdit, handleSubmit: handleSubmitEdit, setValue: setValueEdit, formState: { errors: errorsEdit } } = useForm<EditMemberForm>();
-
-  // Load members
   const loadMembers = async () => {
     try {
       setLoading(true);
       const data = await storesService.getMembers();
       setMembers(data as unknown as Member[]);
-    } catch (error) {
-      console.error('Error loading members:', error);
+    } catch {
+      toast.error('Không thể tải danh sách thành viên');
     } finally {
       setLoading(false);
     }
   };
 
-  // Load roles
   const loadRoles = async () => {
     try {
       const data = await rolesService.getAll();
       setRoles(data);
-    } catch (error) {
-      console.error('Error loading roles:', error);
+    } catch {
+      // silently ignore
     }
   };
 
   useEffect(() => {
     loadMembers();
     loadRoles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Open add modal
-  const handleOpenAdd = () => {
-    resetAdd({});
-    setShowAddModal(true);
-  };
-
-  // Open edit modal
   const handleOpenEdit = (member: Member) => {
     setEditingMember(member);
-    setValueEdit('roleId', String(member.role?.RoleID));
     setShowEditModal(true);
   };
 
-  // Submit add member
-  const onSubmitAdd = async (data: AddMemberForm) => {
+  const handleConfirmRemove = async () => {
+    if (!removingMember) return;
     try {
-      setSubmitting(true);
-      await storesService.addMember({
-        email: data.email,
-        roleId: parseInt(data.roleId),
-      });
-      setShowAddModal(false);
+      await storesService.removeMember(removingMember.userId);
+      toast.success('Đã xóa thành viên khỏi cửa hàng');
       loadMembers();
-      alert('Thêm thành viên thành công!');
-    } catch (error: unknown) {
-      const e = error as { response?: { data?: { message?: string } } };
-      alert(e.response?.data?.message || 'Có lỗi xảy ra khi thêm thành viên');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg || 'Không thể xóa thành viên');
     } finally {
-      setSubmitting(false);
+      setRemovingMember(null);
     }
   };
 
-  // Submit edit member role
-  const onSubmitEdit = async (data: EditMemberForm) => {
-    if (!editingMember) return;
-    try {
-      setSubmitting(true);
-      await storesService.updateMemberRole(editingMember.userId, parseInt(data.roleId));
-      setShowEditModal(false);
-      loadMembers();
-      alert('Cập nhật vai trò thành công!');
-    } catch (error: unknown) {
-      const e = error as { response?: { data?: { message?: string } } };
-      alert(e.response?.data?.message || 'Có lỗi xảy ra');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const getInitials = (member: Member) =>
+    (member.user.FullName?.[0] ?? member.user.Email[0]).toUpperCase();
 
-  // Remove member
-  const handleRemoveMember = async (member: Member) => {
-    if (!confirm(`Bạn có chắc muốn xóa thành viên "${member.user?.Email || 'N/A'}" khỏi cửa hàng?`)) {
-      return;
-    }
-
-    try {
-      await storesService.removeMember(member.userId);
-      loadMembers();
-      alert('Đã xóa thành viên khỏi cửa hàng');
-    } catch (error: unknown) {
-      const e = error as { response?: { data?: { message?: string } } };
-      alert(e.response?.data?.message || 'Không thể xóa thành viên');
-    }
-  };
-
-  // Format date
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('vi-VN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  const newMembersCount = members.filter((m) => {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    return new Date(m.joinedAt) >= sevenDaysAgo;
+  }).length;
 
   return (
     <div className="max-w-7xl mx-auto">
-      {/* Header */}
+      {/* Page header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Thành viên cửa hàng</h1>
-          <p className="text-gray-500 mt-1">Quản lý thành viên và phân quyền</p>
+          <h1 className="text-3xl font-bold text-blacky-950">Thành viên cửa hàng</h1>
+          <p className="text-blacky-600 text-sm mt-1">Quản lý thành viên và phân quyền vai trò</p>
         </div>
-        <button
-          onClick={handleOpenAdd}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-black rounded-lg hover:bg-primary-700 transition-colors"
-        >
-          <FiPlus />
+        <button onClick={() => setShowAddModal(true)} className="btn btn-primary w-fit! px-4! rounded-lg!">
+          <Plus className="w-4 h-4" />
           Thêm thành viên
         </button>
       </div>
 
-      {/* Stats */}
+      {/* Stat cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <FiUsers className="text-blue-600" size={24} />
-            </div>
+        <div className="bg-basic-white rounded-xl border border-bluesh-600 p-4">
+          <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Tổng thành viên</p>
-              <p className="text-2xl font-bold text-gray-900">{members.length}</p>
+              <p className="text-blacky-900 font-medium">Tổng thành viên</p>
+              <p className="text-3xl font-bold text-bluesh-900">{members.length}</p>
+            </div>
+            <div className="p-3 bg-bluesh-800 rounded-lg">
+              <Users className="w-6 h-6 text-basic-white" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <FiShield className="text-purple-600" size={24} />
-            </div>
+        <div className="bg-basic-white rounded-xl border border-accent-green p-4">
+          <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Số vai trò</p>
-              <p className="text-2xl font-bold text-gray-900">{roles.length}</p>
+              <p className="text-blacky-900 font-medium">Số vai trò</p>
+              <p className="text-3xl font-bold text-accent-green">{roles.length}</p>
+            </div>
+            <div className="p-3 bg-accent-green/20 border border-accent-green rounded-lg">
+              <Shield className="w-6 h-6 text-accent-green" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-green-100 rounded-lg">
-              <FiUserPlus className="text-green-600" size={24} />
-            </div>
+        <div className="bg-basic-white rounded-xl border border-bluesh-800 p-4">
+          <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Thành viên mới</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {members.filter((m) => {
-                  const joinDate = new Date(m.joinedAt);
-                  const sevenDaysAgo = new Date();
-                  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-                  return joinDate >= sevenDaysAgo;
-                }).length}
-              </p>
-              <p className="text-xs text-gray-500">Trong 7 ngày qua</p>
+              <p className="text-blacky-900 font-medium">Thành viên mới</p>
+              <p className="text-3xl font-bold text-bluesh-800">{newMembersCount}</p>
+              <p className="text-xs text-blacky-600">Trong 7 ngày qua</p>
+            </div>
+            <div className="p-3 bg-bluesh-50 border border-bluesh-800 rounded-lg">
+              <UserPlus className="w-6 h-6 text-bluesh-800" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Members Table */}
-      <div className="bg-white rounded-xl border border-gray-200">
+      {/* Members table */}
+      <div className="bg-basic-white rounded-xl border border-basic-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Thành viên</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Liên hệ</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vai trò</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tham gia</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Thao tác</th>
+            <thead>
+              <tr className="bg-bluesh-800">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-basic-white uppercase tracking-wide">
+                  Thành viên
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-basic-white uppercase tracking-wide">
+                  Liên hệ
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-basic-white uppercase tracking-wide">
+                  Vai trò
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-basic-white uppercase tracking-wide">
+                  Ngày tham gia
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-semibold text-basic-white uppercase tracking-wide">
+                  Thao tác
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-basic-border">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-10 text-center text-blacky-400">
                     Đang tải...
                   </td>
                 </tr>
               ) : members.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-10 text-center text-blacky-400">
                     Chưa có thành viên nào
                   </td>
                 </tr>
               ) : (
                 members.map((member) => (
-                  <tr key={member.userId} className="hover:bg-gray-50">
+                  <tr key={member.userId} className="hover:bg-blacky-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                          <span className="text-primary-600 font-semibold">
-                            {member.user?.FullName?.[0]?.toUpperCase() || member.user?.Email?.[0]?.toUpperCase() || '?'}
+                        <div className="w-9 h-9 bg-bluesh-800 rounded-full flex items-center justify-center shrink-0">
+                          <span className="text-sm font-semibold text-basic-white">
+                            {getInitials(member)}
                           </span>
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {member.user?.FullName || 'Chưa cập nhật'}
+                          <div className="text-sm font-medium text-blacky-950">
+                            {member.user.FullName || 'Chưa cập nhật'}
                           </div>
-                          <div className="text-sm text-gray-500">{member.user?.Email}</div>
+                          <div className="text-xs text-blacky-600">{member.user.Email}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">{member.user?.Phone || '-'}</div>
-                      <div className="text-sm text-gray-500">{member.user?.Address || '-'}</div>
+                      <div className="text-sm text-blacky-700">{member.user.Phone || 'Chưa có'}</div>
+                      <div className="text-xs text-blacky-600">{member.user.Address || 'Chưa có'}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-primary-100 text-primary-800">
-                        <FiShield className="mr-1" />
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-medium bg-bluesh-50 text-bluesh-800 border border-bluesh-600">
                         {member.role?.RoleName || 'N/A'}
                       </span>
                       {member.role?.Description && (
-                        <div className="text-xs text-gray-500 mt-1">{member.role.Description}</div>
+                        <div className="text-xs text-blacky-600 mt-1">{member.role.Description}</div>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
+                    <td className="px-6 py-4 text-sm text-blacky-600">
                       {formatDate(member.joinedAt)}
                     </td>
-                    <td className="px-6 py-4 text-right text-sm">
-                      <button
-                        onClick={() => handleOpenEdit(member)}
-                        className="text-blue-600 hover:text-blue-700 mr-3"
-                        title="Đổi vai trò"
-                      >
-                        <FiEdit2 />
-                      </button>
-                      <button
-                        onClick={() => handleRemoveMember(member)}
-                        className="text-red-600 hover:text-red-700"
-                        title="Xóa khỏi cửa hàng"
-                      >
-                        <FiTrash2 />
-                      </button>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => handleOpenEdit(member)}
+                          title="Đổi vai trò"
+                          className="p-1.5 rounded-lg text-bluesh-600 hover:bg-bluesh-50 transition-colors"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setRemovingMember(member)}
+                          title="Xóa khỏi cửa hàng"
+                          className="p-1.5 rounded-lg text-accent-red hover:bg-red-50 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -298,171 +232,31 @@ export default function StoreMembers() {
         </div>
       </div>
 
-      {/* Add Member Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">Thêm thành viên mới</h2>
-              <button onClick={() => setShowAddModal(false)} title="Đóng" className="text-gray-400 hover:text-gray-600">
-                <FiX size={24} />
-              </button>
-            </div>
+      <AddMemberModal
+        open={showAddModal}
+        roles={roles}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={loadMembers}
+      />
 
-            <form onSubmit={handleSubmitAdd(onSubmitAdd)} className="p-6 space-y-4">
-              {/* Info Alert */}
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex gap-2">
-                <FiAlertCircle className="text-blue-600 shrink-0 mt-0.5" />
-                <div className="text-sm text-blue-800">
-                  Nếu email chưa tồn tại trong hệ thống, một tài khoản mới sẽ được tạo với mật khẩu mặc định: <strong>123456</strong>
-                </div>
-              </div>
+      <EditMemberModal
+        open={showEditModal}
+        member={editingMember}
+        roles={roles}
+        onClose={() => setShowEditModal(false)}
+        onSuccess={loadMembers}
+      />
 
-              {/* Email */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email <span className="text-red-500">*</span>
-                </label>
-                <input
-                  {...registerAdd('email', {
-                    required: 'Email là bắt buộc',
-                    pattern: {
-                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: 'Email không hợp lệ',
-                    },
-                  })}
-                  type="email"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="member@example.com"
-                />
-                {errorsAdd.email && (
-                  <p className="mt-1 text-sm text-red-600">{errorsAdd.email.message}</p>
-                )}
-              </div>
-
-              {/* Role */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Vai trò <span className="text-red-500">*</span>
-                </label>
-                <select
-                  {...registerAdd('roleId', { required: 'Vai trò là bắt buộc' })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="">-- Chọn vai trò --</option>
-                  {roles.map((role) => (
-                    <option key={role.RoleID} value={role.RoleID}>
-                      {role.RoleName} {role.Description && `- ${role.Description}`}
-                    </option>
-                  ))}
-                </select>
-                {errorsAdd.roleId && (
-                  <p className="mt-1 text-sm text-red-600">{errorsAdd.roleId.message}</p>
-                )}
-              </div>
-
-              {/* Buttons */}
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
-                >
-                  {submitting ? 'Đang thêm...' : 'Thêm thành viên'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Role Modal */}
-      {showEditModal && editingMember && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">Đổi vai trò</h2>
-              <button onClick={() => setShowEditModal(false)} title="Đóng" className="text-gray-400 hover:text-gray-600">
-                <FiX size={24} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitEdit(onSubmitEdit)} className="p-6 space-y-4">
-              {/* Member Info */}
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                    <span className="text-primary-600 font-semibold">
-                      {editingMember.user.FullName?.[0]?.toUpperCase() || editingMember.user.Email[0].toUpperCase()}
-                    </span>
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">
-                      {editingMember.user.FullName || 'Chưa cập nhật'}
-                    </div>
-                    <div className="text-sm text-gray-500">{editingMember.user.Email}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Current Role */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Vai trò hiện tại
-                </label>
-                <div className="px-4 py-2 bg-gray-100 rounded-lg text-sm text-gray-700">
-                  {editingMember.role.RoleName}
-                </div>
-              </div>
-
-              {/* New Role */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Vai trò mới <span className="text-red-500">*</span>
-                </label>
-                <select
-                  {...registerEdit('roleId', { required: 'Vai trò là bắt buộc' })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  {roles.map((role) => (
-                    <option key={role.RoleID} value={role.RoleID}>
-                      {role.RoleName} {role.Description && `- ${role.Description}`}
-                    </option>
-                  ))}
-                </select>
-                {errorsEdit.roleId && (
-                  <p className="mt-1 text-sm text-red-600">{errorsEdit.roleId.message}</p>
-                )}
-              </div>
-
-              {/* Buttons */}
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
-                >
-                  {submitting ? 'Đang cập nhật...' : 'Cập nhật vai trò'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Confirm remove */}
+      <ConfirmModal
+        open={!!removingMember}
+        title="Xóa thành viên"
+        message={`Bạn có chắc muốn xóa "${removingMember?.user.FullName}" khỏi cửa hàng? Hành động này không thể hoàn tác.`}
+        confirmLabel="Xóa thành viên"
+        variant="danger"
+        onConfirm={handleConfirmRemove}
+        onCancel={() => setRemovingMember(null)}
+      />
     </div>
   );
 }

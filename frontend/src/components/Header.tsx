@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { FiUser, FiLogOut, FiChevronDown, FiShoppingBag } from 'react-icons/fi';
+import { User, LogOut, ChevronDown, ShoppingBag, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 import type { StoreInfo } from '@/types';
 
 export default function Header() {
   const { user, stores, currentStoreId, setCurrentStore, logout } = useAuthStore();
+  const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showStoreMenu, setShowStoreMenu] = useState(false);
   
@@ -43,62 +45,56 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4">
+    <header className="bg-basic-white border-b border-basic-border px-6 py-3.5 shrink-0">
       <div className="flex items-center justify-between">
-        {/* Search - Placeholder */}
-        <div className="flex-1 max-w-xl">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Tìm kiếm..."
-              className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            />
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+        {/* Logo */}
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-bluesh-800 rounded-xl flex items-center justify-center shrink-0">
+            <ShoppingBag className="w-5 h-5 text-white" />
           </div>
+          <span className="text-lg font-bold text-blacky-950">POS System</span>
         </div>
-
+        
         {/* Right Section */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           {/* Store Selector */}
           {stores.length > 1 && (
             <div className="relative" ref={storeMenuRef}>
               <button
                 onClick={() => setShowStoreMenu(!showStoreMenu)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                className="flex items-center gap-2 px-3 py-2 bg-blacky-50 hover:bg-blacky-100 rounded-lg transition-colors"
               >
-                <FiShoppingBag className="text-gray-600" />
-                <span className="text-sm font-medium text-gray-700">
+                <ShoppingBag className="w-4 h-4 text-blacky-600" />
+                <span className="text-sm font-medium text-blacky-700">
                   {currentStore?.storeName || 'Chọn cửa hàng'}
                 </span>
-                <FiChevronDown className="text-gray-400" />
+                <ChevronDown className="w-4 h-4 text-blacky-400" />
               </button>
 
               {showStoreMenu && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                  <div className="px-4 py-2 border-b border-gray-200">
-                    <p className="text-xs font-semibold text-gray-400 uppercase">Chọn cửa hàng</p>
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-basic-border py-1 z-50">
+                  <div className="px-4 py-2 border-b border-basic-border">
+                    <p className="text-xs font-semibold text-blacky-400 uppercase">Chọn cửa hàng</p>
                   </div>
                   {stores.map((store) => (
                     <button
                       key={store.storeId}
                       onClick={() => handleStoreChange(store)}
-                      className={`w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors ${
-                        store.storeId === currentStoreId ? 'bg-primary-50' : ''
+                      className={`w-full text-left px-4 py-2.5 hover:bg-blacky-50 transition-colors ${
+                        store.storeId === currentStoreId ? 'bg-bluesh-50' : ''
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <div>
                           <div className={`font-medium ${
-                            store.storeId === currentStoreId ? 'text-primary-700' : 'text-gray-900'
+                            store.storeId === currentStoreId ? 'text-bluesh-800' : 'text-blacky-950'
                           }`}>
                             {store.storeName}
                           </div>
-                          <div className="text-xs text-gray-500">{store.subdomain}</div>
+                          <div className="text-xs text-blacky-500">{store.subdomain}</div>
                         </div>
                         {store.storeId === currentStoreId && (
-                          <div className="w-2 h-2 bg-primary-600 rounded-full"></div>
+                          <div className="w-2 h-2 bg-bluesh-800 rounded-full"></div>
                         )}
                       </div>
                     </button>
@@ -112,25 +108,33 @@ export default function Header() {
           <div className="relative" ref={userMenuRef}>
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 rounded-lg transition-colors"
+              className="flex items-center gap-2.5 px-3 py-2 hover:bg-blacky-50 rounded-lg transition-colors"
             >
-              <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                <FiUser className="text-primary-600" />
+              <div className="w-8 h-8 bg-bluesh-100 rounded-full flex items-center justify-center">
+                <User className="w-4 h-4 text-bluesh-800" />
               </div>
               <div className="text-left">
-                <div className="text-sm font-medium text-gray-900">{user?.FullName || 'User'}</div>
-                <div className="text-xs text-gray-500">{user?.Email}</div>
+                <div className="text-sm font-medium text-blacky-950">{user?.FullName || 'User'}</div>
+                <div className="text-xs text-blacky-500">{user?.Email}</div>
               </div>
-              <FiChevronDown className="text-gray-400" />
+              <ChevronDown className="w-4 h-4 text-blacky-400" />
             </button>
 
             {showUserMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-basic-border py-1 z-50">
+                <button
+                  onClick={() => { navigate('/profile'); setShowUserMenu(false); }}
+                  className="w-full text-left px-4 py-2 hover:bg-blacky-50 transition-colors flex items-center gap-2 text-blacky-700"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span>Tài khoản</span>
+                </button>
+                <div className="border-t border-basic-border my-1" />
                 <button
                   onClick={handleLogout}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors flex items-center gap-2 text-red-600"
+                  className="w-full text-left px-4 py-2 hover:bg-blacky-50 transition-colors flex items-center gap-2 text-accent-red"
                 >
-                  <FiLogOut />
+                  <LogOut className="w-4 h-4" />
                   <span>Đăng xuất</span>
                 </button>
               </div>

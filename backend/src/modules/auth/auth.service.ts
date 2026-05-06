@@ -2,11 +2,12 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../common/prisma';
 import * as bcrypt from 'bcrypt';
-import { LoginDto, RegisterDto } from './dto';
+import { LoginDto, RegisterDto, UpdateProfileDto } from './dto';
 
 export interface JwtPayload {
   sub: number;
@@ -184,6 +185,52 @@ export class AuthService {
   async getUserById(userId: number) {
     return await this.prisma.user.findUnique({
       where: { UserID: userId },
+      select: {
+        UserID: true,
+        Email: true,
+        FullName: true,
+        Phone: true,
+        Address: true,
+        CreatedAt: true,
+      },
+    });
+  }
+
+  async updateProfile(userId: number, dto: UpdateProfileDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { UserID: userId },
+      select: { UserID: true, PasswordHash: true },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Người dùng không tồn tại');
+    }
+
+    const updateData: { FullName?: string; Phone?: string; PasswordHash?: string } = {};
+
+    if (dto.fullName !== undefined) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      updateData.FullName = dto.fullName;
+    }
+
+    if (dto.phone !== undefined) {
+      updateData.Phone = dto.phone;
+    }
+
+    if (dto.newPassword) {
+      if (!dto.currentPassword) {
+        throw new BadRequestException('Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu');
+      }
+      const isMatch = await bcrypt.compare(dto.currentPassword, user.PasswordHash);
+      if (!isMatch) {
+        throw new BadRequestException('Mật khẩu hiện tại không đúng');
+      }
+      updateData.PasswordHash = await bcrypt.hash(dto.newPassword, 10);
+    }
+
+    return await this.prisma.user.update({
+      where: { UserID: userId },
+      data: updateData,
       select: {
         UserID: true,
         Email: true,

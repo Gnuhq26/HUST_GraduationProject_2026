@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 import { useEffect, useState } from 'react';
-import { FiX, FiUser, FiPhone, FiMapPin, FiCalendar, FiShoppingCart, FiLoader, FiDollarSign, FiCheckCircle, FiClock, FiXCircle } from 'react-icons/fi';
+import { X, User, Phone, MapPin, Calendar, ShoppingCart, Loader2, DollarSign, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { customersService } from '../../services/customersService';
 import type { Customer, Order } from '@/types';
 
@@ -63,59 +63,49 @@ export default function CustomerDetailModal({ customerId, onClose }: Props) {
   const getStatusBadge = (order: Order): StatusBadge => {
     const debt = Number(order.TotalAmount) - Number(order.PaidAmount);
     
-    // Nếu còn nợ, hiển thị trạng thái "Chưa thanh toán" bất kể Status từ backend
     if (debt > 0) {
       return { 
         label: 'Chưa thanh toán', 
-        color: 'bg-orange-100 text-orange-700', 
-        icon: FiDollarSign 
+        color: 'bg-yellowfish-50 text-yellowfish-700', 
+        icon: DollarSign 
       };
     }
     
-    // Nếu đã thanh toán đủ, dựa vào Status từ backend
     const statusConfig: Record<string, StatusBadge> = {
-      Completed: { label: 'Hoàn thành', color: 'bg-green-100 text-green-700', icon: FiCheckCircle },
-      Pending: { label: 'Chờ xử lý', color: 'bg-yellow-100 text-yellow-700', icon: FiClock },
-      Cancelled: { label: 'Đã hủy', color: 'bg-red-100 text-red-700', icon: FiXCircle },
+      Completed: { label: 'Hoàn thành', color: 'bg-accent-green/10 text-accent-green', icon: CheckCircle },
+      Pending: { label: 'Chờ xử lý', color: 'bg-yellowfish-50 text-yellowfish-600', icon: Clock },
+      Cancelled: { label: 'Đã hủy', color: 'bg-accent-red/10 text-accent-red', icon: XCircle },
     };
     
-    return statusConfig[order.Status] || { label: order.Status, color: 'bg-gray-100 text-gray-700', icon: FiClock };
+    return statusConfig[order.Status] || { label: order.Status, color: 'bg-blacky-100 text-blacky-700', icon: Clock };
   };
 
   return (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-60 p-4"
-      onClick={onClose}
-    >
-      <div 
-        className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 backdrop-blur-sm bg-blacky-950/30 flex items-center justify-center z-60 p-4" onClick={onClose}>
+      <div className="bg-basic-white rounded-2xl border border-basic-border max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-lg" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
-          <h2 className="text-xl font-bold text-gray-900">Chi tiết khách hàng</h2>
-          <button
-            onClick={onClose}
-            title="Đóng"
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <FiX size={24} />
+        <div className="px-6 py-5 border-b border-yellowfish-400 flex items-center justify-between shrink-0 bg-basic-white z-10">
+          <h2 className="text-xl font-bold text-blacky-950">Chi tiết khách hàng</h2>
+          <button onClick={onClose} title="Đóng" className="p-2 rounded-lg bg-bluesh-50 text-bluesh-800 hover:text-basic-white hover:bg-bluesh-800 transition-colors">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
+        {/* Scrollable area */}
+        <div className="overflow-y-auto flex-1">
         {/* Content */}
         <div className="p-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <FiLoader className="animate-spin text-primary-600" size={32} />
-              <span className="ml-3 text-gray-600">Đang tải...</span>
+              <Loader2 className="w-8 h-8 animate-spin text-bluesh-800" />
+              <span className="ml-3 text-blacky-500">Đang tải...</span>
             </div>
           ) : error ? (
             <div className="text-center py-12">
-              <p className="text-red-600">{error}</p>
+              <p className="text-accent-red">{error}</p>
               <button
                 onClick={onClose}
-                className="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                className="mt-4 btn btn-secondary"
               >
                 Đóng
               </button>
@@ -123,49 +113,49 @@ export default function CustomerDetailModal({ customerId, onClose }: Props) {
           ) : customer ? (
             <div className="space-y-6">
               {/* Customer Info Card */}
-              <div className="bg-linear-to-br from-primary-50 to-primary-100 rounded-lg p-6">
+              <div className="bg-bluesh-50 border border-bluesh-800/20 rounded-xl p-5">
                 <div className="flex items-start gap-4">
-                  <div className="p-3 bg-white rounded-full shadow-sm">
-                    <FiUser className="text-primary-600" size={32} />
+                  <div className="p-3 bg-bluesh-800 rounded-full shadow-sm">
+                    <User className="w-8 h-8 text-basic-white" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-1">
+                    <h3 className="text-2xl font-bold text-blacky-950 mb-1">
                       {customer.CustomerName}
                     </h3>
-                    <p className="text-sm text-gray-600">
+                    {/* <p className="text-sm text-blacky-500">
                       {customer.CustomerCode && (
-                        <span className="font-mono font-medium text-primary-700 bg-white px-2 py-0.5 rounded mr-2">
+                        <span className="font-mono font-medium text-bluesh-800 bg-basic-white px-2 py-0.5 rounded mr-2">
                           {customer.CustomerCode}
                         </span>
                       )}
                       ID: {customer.CustomerID}
-                    </p>
+                    </p> */}
                   </div>
                 </div>
               </div>
 
               {/* Contact Information */}
               <div>
-                <h4 className="text-sm font-semibold text-gray-500 uppercase mb-3">
+                <h4 className="text-sm font-semibold text-blacky-700 uppercase mb-3">
                   Thông tin liên hệ
                 </h4>
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <FiPhone className="text-gray-400 shrink-0" size={20} />
+                  <div className="flex items-center gap-3 p-3 bg-bluesh-50 rounded-lg">
+                    <Phone className="w-5 h-5 text-bluesh-800 mr-2 shrink-0" />
                     <div>
-                      <p className="text-xs text-gray-500">Số điện thoại</p>
-                      <p className="text-sm font-medium text-gray-900">
-                        {customer.Phone || <span className="text-gray-400 italic">Chưa có</span>}
+                      <p className="text-xs text-blacky-700">Số điện thoại</p>
+                      <p className="text-sm font-medium text-blacky-950">
+                        {customer.Phone || <span className="text-blacky-400 italic">Chưa có</span>}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                    <FiMapPin className="text-gray-400 shrink-0 mt-0.5" size={20} />
+                  <div className="flex items-start gap-3 p-3 bg-bluesh-50 rounded-lg">
+                    <MapPin className="w-5 h-5 text-bluesh-800 mr-2 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-xs text-gray-500">Địa chỉ</p>
-                      <p className="text-sm font-medium text-gray-900">
-                        {customer.Address || <span className="text-gray-400 italic">Chưa có</span>}
+                      <p className="text-xs text-blacky-700">Địa chỉ</p>
+                      <p className="text-sm font-medium text-blacky-950">
+                        {customer.Address || <span className="text-blacky-400 italic">Chưa có</span>}
                       </p>
                     </div>
                   </div>
@@ -175,21 +165,21 @@ export default function CustomerDetailModal({ customerId, onClose }: Props) {
               {/* Recent Orders Summary */}
               {customer.orders && customer.orders.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-500 uppercase mb-3">
+                  <h4 className="text-sm font-semibold text-blacky-700 uppercase mb-3">
                     Lịch sử mua hàng
                   </h4>
-                  <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="p-3 bg-green-100 rounded-lg">
-                      <FiShoppingCart className="text-green-600" size={24} />
+                  <div className="flex items-center gap-3 p-4 bg-accent-green/10 border border-accent-green/20 rounded-xl">
+                    <div className="p-3 bg-accent-green/10 border border-accent-green/30 rounded-lg">
+                      <ShoppingCart className="w-6 h-6 text-accent-green" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Đơn hàng gần đây</p>
-                      <p className="text-2xl font-bold text-green-700">
+                      <p className="text-sm text-blacky-700">Đơn hàng gần đây</p>
+                      <p className="text-2xl font-bold text-accent-green">
                         {customer.orders.length} đơn
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">
+                      {/* <p className="text-xs text-blacky-400 mt-1">
                         (10 đơn hàng gần nhất)
-                      </p>
+                      </p> */}
                     </div>
                   </div>
                 </div>
@@ -198,55 +188,54 @@ export default function CustomerDetailModal({ customerId, onClose }: Props) {
               {/* Recent Orders List */}
               {customer.orders && customer.orders.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-500 uppercase mb-3">
+                  <h4 className="text-sm font-semibold text-blacky-700 uppercase mb-3">
                     Chi tiết đơn hàng
                   </h4>
                   <div className="space-y-3">
                     {customer.orders.map((order) => {
                       const status = getStatusBadge(order);
-                      const StatusIcon = status.icon;
                       const debt = Number(order.TotalAmount) - Number(order.PaidAmount);
                       
                       return (
                         <div 
                           key={order.OrderID}
-                          className="p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
+                          className="p-4 bg-basic-white border border-basic-border rounded-xl hover:shadow-sm transition-shadow"
                         >
                           <div className="flex items-start justify-between mb-2">
                             <div>
-                              <p className="text-sm font-semibold text-gray-900">
-                                Đơn hàng #{order.OrderID}
+                              <p className="text-sm font-semibold text-blacky-950">
+                                Đơn hàng {order.OrderCode}
                               </p>
-                              <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                                <FiCalendar size={12} />
+                              <p className="text-xs text-blacky-600 flex items-center gap-1 mt-1">
+                                <Calendar className="w-3 h-3" />
                                 {formatDate(order.OrderDate)}
                               </p>
                             </div>
                             <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${status.color}`}>
-                              <StatusIcon size={12} />
+                              {/* <StatusIcon className="w-3 h-3" /> */}
                               {status.label}
                             </span>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-gray-100">
+                          <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-basic-border">
                             <div>
-                              <p className="text-xs text-gray-500">Tổng tiền</p>
-                              <p className="text-sm font-bold text-gray-900">
+                              <p className="text-xs text-blacky-700">Tổng tiền</p>
+                              <p className="text-sm font-bold text-blacky-950">
                                 {formatCurrency(order.TotalAmount)}
                               </p>
                             </div>
                             <div>
-                              <p className="text-xs text-gray-500">Đã trả</p>
-                              <p className="text-sm font-semibold text-green-600">
+                              <p className="text-xs text-blacky-700">Đã trả</p>
+                              <p className="text-sm font-semibold text-accent-green">
                                 {formatCurrency(order.PaidAmount)}
                               </p>
                             </div>
                           </div>
 
                           {debt > 0 && (
-                            <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded flex items-center gap-2">
-                              <FiDollarSign className="text-orange-600" size={14} />
-                              <span className="text-xs text-orange-700">
+                            <div className="mt-2 p-2 bg-yellowfish-50 border border-yellowfish-400/30 rounded-lg flex items-center gap-2">
+                              <DollarSign className="w-3.5 h-3.5 text-yellowfish-600" />
+                              <span className="text-xs text-yellowfish-700">
                                 Còn nợ: <strong>{formatCurrency(debt)}</strong>
                               </span>
                             </div>
@@ -266,21 +255,21 @@ export default function CustomerDetailModal({ customerId, onClose }: Props) {
 
               {/* Timestamps */}
               <div>
-                <h4 className="text-sm font-semibold text-gray-500 uppercase mb-3">
+                <h4 className="text-sm font-semibold text-blacky-700 uppercase mb-3">
                   Thông tin hệ thống
                 </h4>
                 <div className="space-y-2">
                   <div className="flex items-center gap-3 text-sm">
-                    <FiCalendar className="text-gray-400" size={16} />
-                    <span className="text-gray-600">Ngày tạo:</span>
-                    <span className="font-medium text-gray-900">
+                    <Calendar className="w-4 h-4 text-bluesh-800" />
+                    <span className="text-blacky-700">Ngày tạo:</span>
+                    <span className="font-medium text-blacky-950">
                       {formatDate(customer.CreatedAt)}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 text-sm">
-                    <FiCalendar className="text-gray-400" size={16} />
-                    <span className="text-gray-600">Cập nhật lần cuối:</span>
-                    <span className="font-medium text-gray-900">
+                    <Calendar className="w-4 h-4 text-bluesh-800" />
+                    <span className="text-blacky-700">Cập nhật lần cuối:</span>
+                    <span className="font-medium text-blacky-950">
                       {formatDate(customer.UpdatedAt)}
                     </span>
                   </div>
@@ -292,15 +281,13 @@ export default function CustomerDetailModal({ customerId, onClose }: Props) {
 
         {/* Footer */}
         {!loading && !error && (
-          <div className="p-6 border-t border-gray-200 flex justify-end">
-            <button
-              onClick={onClose}
-              className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-            >
+          <div className="px-6 py-4 border-t border-basic-border flex justify-end">
+            <button onClick={onClose} className="btn btn-secondary">
               Đóng
             </button>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

@@ -205,4 +205,112 @@ export class ReportsService {
       products,
     };
   }
+
+  /**
+   * Doanh thu theo danh mục sản phẩm
+   * Dùng cho PieChart trên Dashboard
+   */
+  async getRevenueByCategoryReport(storeId: number, query: ReportQueryDto) {
+    const { startDate, endDate } = query;
+
+    type RawCategoryRow = {
+      categoryId: number;
+      categoryName: string;
+      totalRevenue: string | number;
+    };
+
+    const rows = await this.prisma.$queryRaw<RawCategoryRow[]>`
+      SELECT
+        p.CategoryID AS categoryId,
+        c.CategoryName AS categoryName,
+        SUM(od.Quantity * od.UnitPrice) AS totalRevenue
+      FROM OrderDetail od
+      JOIN \`Order\` o ON od.OrderID = o.OrderID
+      JOIN Product p ON od.ProductID = p.ProductID
+      JOIN Category c ON p.CategoryID = c.CategoryID
+      WHERE o.StoreID = ${storeId}
+        AND o.Status != 'Cancelled'
+        AND DATE(o.OrderDate) BETWEEN ${startDate} AND ${endDate}
+      GROUP BY p.CategoryID, c.CategoryName
+      ORDER BY totalRevenue DESC
+    `;
+
+    const total = rows.reduce((sum, r) => sum + Number(r.totalRevenue), 0);
+
+    const items = rows.map((r) => ({
+      categoryId: Number(r.categoryId),
+      categoryName: r.categoryName,
+      totalRevenue: Number(r.totalRevenue),
+      percentage: total > 0 ? (Number(r.totalRevenue) / total) * 100 : 0,
+    }));
+
+    return { items, totalRevenue: total };
+  }
+
+  /**
+   * Xu hướng tồn kho ảo theo ngày
+   * - inTransitQty: Tổng SL StockReceipt Pending gom theo ngày
+   * - reservedQty: Tổng SL Order Pending gom theo ngày
+   */
+  async getVirtualInventoryTrend(storeId: number, query: ReportQueryDto) {
+    const { startDate, endDate } = query;
+
+    type RawInTransit = { date: Date | string; inTransitQty: string | number };
+    type RawReserved = { date: Date | string; reservedQty: string | number };
+
+    const [inTransitRows, reservedRows] = await Promise.all([
+      this.prisma.$queryRaw<RawInTransit[]>`
+        SELECT
+          DATE(sr.ImportDate) AS date,
+          SUM(sd.Quantity) AS inTransitQty
+        FROM StockReceipt sr
+        JOIN StockReceiptDetail sd ON sr.ReceiptID = sd.ReceiptID
+        WHERE sr.StoreID = ${storeId}
+          AND sr.Status = 'Pending'
+          AND DATE(sr.ImportDate) BETWEEN ${startDate} AND ${endDate}
+        GROUP BY DATE(sr.ImportDate)
+        ORDER BY date
+      `,
+      this.prisma.$queryRaw<RawReserved[]>`
+        SELECT
+          DATE(o.OrderDate) AS date,
+          SUM(od.Quantity) AS reservedQty
+        FROM \`Order\` o
+        JOIN OrderDetail od ON o.OrderID = od.OrderID
+        WHERE o.StoreID = ${storeId}
+          AND o.Status = 'Pending'
+          AND DATE(o.OrderDate) BETWEEN ${startDate} AND ${endDate}
+        GROUP BY DATE(o.OrderDate)
+        ORDER BY date
+      `,
+    ]);
+
+    // Normalize date keys to YYYY-MM-DD strings
+    const toDateKey = (d: Date | string): string => {
+      if (typeof d === 'string') return d.substring(0, 10);
+      return d.toISOString().substring(0, 10);
+    };
+
+    const mergedMap = new Map<string, { inTransitQty: number; reservedQty: number }>();
+
+    for (const r of inTransitRows) {
+      const key = toDateKey(r.date);
+      mergedMap.set(key, { inTransitQty: Number(r.inTransitQty), reservedQty: 0 });
+    }
+    for (const r of reservedRows) {
+      const key = toDateKey(r.date);
+      const existing = mergedMap.get(key);
+      if (existing) {
+        existing.reservedQty = Number(r.reservedQty);
+      } else {
+        mergedMap.set(key, { inTransitQty: 0, reservedQty: Number(r.reservedQty) });
+      }
+    }
+
+    const points = Array.from(mergedMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, v]) => ({ date, ...v }));
+
+    return { startDate, endDate, points };
+  }
 }

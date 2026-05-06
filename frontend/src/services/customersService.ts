@@ -5,12 +5,13 @@ import type {
   UpdateCustomerDto,
   ImportPreviewResponse,
   ImportCommitResponse,
+  PaginatedResult,
 } from '@/types';
 
 export const customersService = {
   // Lấy danh sách customers
-  getAll: async (): Promise<Customer[]> => {
-    const response = await api.get<Customer[]>('/customers');
+  getAll: async (): Promise<PaginatedResult<Customer>> => {
+    const response = await api.get<PaginatedResult<Customer>>('/customers');
     return response.data;
   },
 

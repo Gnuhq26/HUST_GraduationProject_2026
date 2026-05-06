@@ -1,10 +1,15 @@
 import { NavLink } from 'react-router-dom';
-import { FiShoppingBag } from 'react-icons/fi';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCanPerform } from '../hooks/usePermission';
 import { protectedRoutes } from '../routes/protectedRoutes';
 import type { RouteConfig } from '../routes/protectedRoutes';
 
-export default function Sidebar() {
+interface SidebarProps {
+  collapsed: boolean;
+  onToggle: () => void;
+}
+
+export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { canPerform, loading } = useCanPerform();
 
   const canAccessRoute = (route: RouteConfig): boolean => {
@@ -24,42 +29,48 @@ export default function Sidebar() {
     .filter(canAccessRoute);
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 h-screen sticky top-0 flex flex-col">
-      {/* Logo */}
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
-            <FiShoppingBag className="text-white text-xl" />
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold text-blue-900">POS System</h1>
-          </div>
-        </div>
+    <aside className={`${collapsed ? 'w-16' : 'w-64'} bg-white border border-basic-border rounded-2xl m-2 flex flex-col transition-all duration-300 shrink-0`}>
+      {/* Toggle Button */}
+      <div className={`flex ${collapsed ? 'justify-center' : 'justify-end'} px-3 pt-3`}>
+        <button
+          onClick={onToggle}
+          className="p-1.5 rounded-lg hover:bg-blacky-50 text-blacky-400 hover:text-bluesh-800 transition-colors"
+          title={collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'}
+        >
+          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+        </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 overflow-y-auto">
+      <nav className="flex-1 p-3 overflow-y-auto">
         {/* Main Menu */}
         <div className="mb-6">
-          <h3 className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-            Quản lý
-          </h3>
-          <ul className="space-y-1">
+          {!collapsed && (
+            <h3 className="px-4 text-xs font-semibold text-blacky-400 uppercase tracking-wider mb-2">
+              Quản lý
+            </h3>
+          )}
+          <ul className="space-y-0.5">
             {visibleMenuItems.map((item) => (
               <li key={item.path}>
                 <NavLink
                   to={item.path}
                   end={item.path === '/'}
+                  title={collapsed ? item.menu.label : undefined}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-primary-50 text-primary-700 font-medium'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    `flex items-center ${collapsed ? 'justify-center px-2' : 'gap-3 px-4'} py-3 rounded-lg transition-colors ${
+                      isActive ? 'bg-bluesh-800' : 'hover:bg-bluesh-100'
                     }`
                   }
                 >
-                  <item.menu.icon className="text-xl" />
-                  <span>{item.menu.label}</span>
+                  {({ isActive }) => (
+                    <>
+                      <item.menu.icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'text-bluesh-800'}`} />
+                      {!collapsed && (
+                        <span className={`${isActive ? 'text-white' : 'text-blacky-700'}`}>{item.menu.label}</span>
+                      )}
+                    </>
+                  )}
                 </NavLink>
               </li>
             ))}
@@ -68,24 +79,31 @@ export default function Sidebar() {
 
         {/* Store Management Menu */}
         <div>
-          <h3 className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-            Cửa hàng
-          </h3>
-          <ul className="space-y-1">
+          {!collapsed && (
+            <h3 className="px-4 text-xs font-semibold text-blacky-400 uppercase tracking-wider mb-2">
+              Cửa hàng
+            </h3>
+          )}
+          <ul className="space-y-0.5">
             {visibleStoreItems.map((item) => (
               <li key={item.path}>
                 <NavLink
                   to={item.path}
+                  title={collapsed ? item.menu.label : undefined}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-primary-50 text-primary-700 font-medium'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    `flex items-center ${collapsed ? 'justify-center px-2' : 'gap-3 px-4'} py-3 rounded-lg transition-colors ${
+                      isActive ? 'bg-bluesh-800' : 'hover:bg-blacky-50'
                     }`
                   }
                 >
-                  <item.menu.icon className="text-xl" />
-                  <span>{item.menu.label}</span>
+                  {({ isActive }) => (
+                    <>
+                      <item.menu.icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'text-bluesh-800'}`} />
+                      {!collapsed && (
+                        <span className={`${isActive ? 'text-white' : 'text-blacky-700'}`}>{item.menu.label}</span>
+                      )}
+                    </>
+                  )}
                 </NavLink>
               </li>
             ))}
@@ -93,12 +111,7 @@ export default function Sidebar() {
         </div>
       </nav>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-200">
-        <div className="text-xs text-gray-500 text-center">
-          © 2026 POS System
-        </div>
-      </div>
+      
     </aside>
   );
 }

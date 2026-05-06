@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { FiHome, FiShoppingBag, FiGrid, FiPackage, FiShoppingCart, FiUsers, FiTruck, FiBarChart2, FiSettings, FiShield, FiDollarSign } from 'react-icons/fi';
+import { Home, ShoppingBag, LayoutGrid, Package, ShoppingCart, Users, Truck, BarChart2, Settings, Shield, DollarSign } from 'lucide-react';
 import Dashboard from '../pages/Dashboard';
 import Products from '../pages/Products';
 import Categories from '../pages/Categories';
@@ -43,7 +43,7 @@ export const protectedRoutes: RouteConfig[] = [
     menu: {
       group: 'main',
       label: 'Dashboard',
-      icon: FiHome,
+      icon: Home,
     },
   },
   {
@@ -53,7 +53,7 @@ export const protectedRoutes: RouteConfig[] = [
     menu: {
       group: 'main',
       label: 'Sản phẩm',
-      icon: FiShoppingBag,
+      icon: ShoppingBag,
     },
   },
   {
@@ -63,7 +63,7 @@ export const protectedRoutes: RouteConfig[] = [
     menu: {
       group: 'main',
       label: 'Danh mục',
-      icon: FiGrid,
+      icon: LayoutGrid,
     },
   },
   {
@@ -73,7 +73,7 @@ export const protectedRoutes: RouteConfig[] = [
     menu: {
       group: 'main',
       label: 'Nhập kho',
-      icon: FiPackage,
+      icon: Package,
     },
   },
   {
@@ -83,7 +83,7 @@ export const protectedRoutes: RouteConfig[] = [
     menu: {
       group: 'main',
       label: 'Đơn hàng',
-      icon: FiShoppingCart,
+      icon: ShoppingCart,
     },
   },
   {
@@ -93,7 +93,7 @@ export const protectedRoutes: RouteConfig[] = [
     menu: {
       group: 'main',
       label: 'Khách hàng',
-      icon: FiUsers,
+      icon: Users,
     },
   },
   {
@@ -103,7 +103,7 @@ export const protectedRoutes: RouteConfig[] = [
     menu: {
       group: 'main',
       label: 'Nhà cung cấp',
-      icon: FiTruck,
+      icon: Truck,
     },
   },
   {
@@ -113,7 +113,7 @@ export const protectedRoutes: RouteConfig[] = [
     menu: {
       group: 'main',
       label: 'Báo cáo',
-      icon: FiBarChart2,
+      icon: BarChart2,
     },
   },
   {
@@ -123,7 +123,7 @@ export const protectedRoutes: RouteConfig[] = [
     menu: {
       group: 'main',
       label: 'Công nợ',
-      icon: FiDollarSign,
+      icon: DollarSign,
     },
   },
   {
@@ -133,7 +133,7 @@ export const protectedRoutes: RouteConfig[] = [
     menu: {
       group: 'store',
       label: 'Cài đặt',
-      icon: FiSettings,
+      icon: Settings,
     },
   },
   {
@@ -143,7 +143,7 @@ export const protectedRoutes: RouteConfig[] = [
     menu: {
       group: 'store',
       label: 'Thành viên',
-      icon: FiShield,
+      icon: Users,
     },
   },
   {
@@ -153,7 +153,7 @@ export const protectedRoutes: RouteConfig[] = [
     menu: {
       group: 'store',
       label: 'Vai trò',
-      icon: FiShield,
+      icon: Shield,
     },
   },
 ];
