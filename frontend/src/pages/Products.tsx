@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiX, FiUpload, FiDownload } from 'react-icons/fi';
-import { useForm, SubmitHandler } from 'react-hook-form';
+import { Plus, Upload, Download, Edit2, Trash2, X } from 'lucide-react';
+import { useForm, SubmitHandler, Controller } from 'react-hook-form';
 import { productsService } from '../services/productsService';
 import ProtectedAction from '../components/ProtectedAction';
 import ImportProductModal from '../components/products/ImportProductModal';
+import CustomSelect from '../components/CustomSelect';
+import ConfirmModal from '../components/ConfirmModal';
+import { useToast } from '../components/ToastProvider';
 import type { Product } from '@/types';
 
 interface ProductFormData {
@@ -21,8 +24,10 @@ export default function Products() {
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
 
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<ProductFormData>();
+  const toast = useToast();
+  const { register, handleSubmit, reset, setValue, control, formState: { errors } } = useForm<ProductFormData>();
 
   // Load products
   const loadProducts = async () => {
@@ -65,29 +70,36 @@ export default function Products() {
     try {
       if (editingProduct) {
         await productsService.update(editingProduct.ProductID, data);
+        toast.success('Cập nhật sản phẩm thành công');
       } else {
         await productsService.create(data);
+        toast.success('Thêm sản phẩm thành công');
       }
       setShowModal(false);
       loadProducts();
     } catch (error: unknown) {
       const e = error as { response?: { data?: { message?: string } } };
       console.error('Lỗi:', error);
-      alert(e.response?.data?.message || 'Có lỗi xảy ra');
+      toast.error(e.response?.data?.message || 'Có lỗi xảy ra');
     }
   };
 
   // Delete product
-  const handleDelete = async (id: number) => {
-    if (!confirm('Bạn có chắc muốn xóa sản phẩm này?')) return;
+  const handleDelete = (id: number) => {
+    setConfirmDelete(id);
+  };
 
+  const doDelete = async () => {
+    if (confirmDelete === null) return;
+    setConfirmDelete(null);
     try {
-      await productsService.delete(id);
+      await productsService.delete(confirmDelete);
+      toast.success('Xóa sản phẩm thành công');
       loadProducts();
     } catch (error: unknown) {
       const e = error as { response?: { data?: { message?: string } } };
       console.error('Lỗi xóa:', error);
-      alert(e.response?.data?.message || 'Không thể xóa sản phẩm');
+      toast.error(e.response?.data?.message || 'Không thể xóa sản phẩm');
     }
   };
 
@@ -95,9 +107,10 @@ export default function Products() {
   const handleExport = async () => {
     try {
       await productsService.exportProducts();
+      toast.success('Xuất file Excel thành công');
     } catch (error) {
       console.error('Lỗi export:', error);
-      alert('Không thể xuất file Excel');
+      toast.error('Không thể xuất file Excel');
     }
   };
 
@@ -106,74 +119,59 @@ export default function Products() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Sản phẩm</h1>
-          <p className="text-gray-500 mt-1">Quản lý danh sách sản phẩm</p>
+          <h1 className="text-3xl font-bold text-blacky-850">Sản phẩm</h1>
+          <p className="text-blacky-500 mt-1">Quản lý danh sách sản phẩm</p>
         </div>
         <div className="flex items-center gap-3">
           <ProtectedAction action="read" subject="Product">
-            <button
-              onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-2 border border-green-600 text-green-600 rounded-lg hover:bg-green-50 transition-colors"
-            >
-              <FiDownload />
-              Export Excel
+            <button onClick={handleExport} className="btn btn-secondary w-fit! px-4! rounded-lg!">
+              <Download className="w-4 h-4" />Export Excel
             </button>
           </ProtectedAction>
           <ProtectedAction action="create" subject="Product">
-            <button
-              onClick={() => setShowImportModal(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-primary-600 text-primary-600 rounded-lg hover:bg-primary-50 transition-colors"
-            >
-              <FiUpload />
-              Import Excel
+            <button onClick={() => setShowImportModal(true)} className="btn btn-secondary w-fit! px-4! rounded-lg!">
+              <Upload className="w-4 h-4" />Import Excel
             </button>
           </ProtectedAction>
           <ProtectedAction action="create" subject="Product">
-            <button
-              onClick={handleCreate}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-black rounded-lg hover:bg-primary-700 transition-colors"
-            >
-              <FiPlus />
-              Thêm sản phẩm
+            <button onClick={handleCreate} className="btn btn-primary w-fit! px-4! rounded-lg!">
+              <Plus className="w-4 h-4" />Thêm sản phẩm
             </button>
           </ProtectedAction>
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200">
+      <div className="bg-basic-white rounded-xl border-2 border-basic-border overflow-hidden">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-4">
+            <p className="text-blacky-400 font-medium">Đang tải...</p>
+          </div>
+        ) : products.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-4">
+            <img src="/src/assets/product.png" alt="Không có sản phẩm" className="w-50 h-50 object-contain opacity-80" />
+            <p className="text-blacky-500">Chưa có sản phẩm nào</p>
+          </div>
+        ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-bluesh-800 border-b border-basic-border">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mã SKU</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tên sản phẩm</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Đơn vị</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Trạng thái</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Thao tác</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">Mã SKU</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">Tên sản phẩm</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">Đơn vị</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-basic-white uppercase">Trạng thái</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-basic-white uppercase">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {loading ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                    Đang tải...
-                  </td>
-                </tr>
-              ) : products.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                    Chưa có sản phẩm nào
-                  </td>
-                </tr>
-              ) : (
-                products.map((product) => (
+              {products.map((product) => (
                   <tr key={product.ProductID} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{product.SKU}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{product.ProductName}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{product.BaseUnit}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-blacky-900">{product.SKU}</td>
+                    <td className="px-6 py-4 text-sm text-blacky-900">{product.ProductName}</td>
+                    <td className="px-6 py-4 text-sm text-blacky-900">{product.BaseUnit}</td>
                     <td className="px-6 py-4 text-center text-sm">
-                      <span className={`px-2 py-1 rounded-full text-xs ${product.IsActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                      <span className={`px-2 py-1 rounded-full text-xs ${product.IsActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}`}>
                         {product.IsActive ? 'Hoạt động' : 'Ngưng'}
                       </span>
                     </td>
@@ -182,111 +180,120 @@ export default function Products() {
                         <button
                           onClick={() => handleEdit(product)}
                           title="Chỉnh sửa"
-                          className="text-primary-600 hover:text-primary-700 mr-3"
+                          className="text-bluesh-800 hover:text-bluesh-900 mr-3"
                         >
-                          <FiEdit2 />
+                          <Edit2 className="w-4 h-4" />
                         </button>
                       </ProtectedAction>
                       <ProtectedAction action="delete" subject="Product">
                         <button
                           onClick={() => handleDelete(product.ProductID)}
                           title="Xóa"
-                          className="text-red-600 hover:text-red-700"
+                          className="text-accent-red hover:text-red-700"
                         >
-                          <FiTrash2 />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </ProtectedAction>
                     </td>
                   </tr>
                 ))
-              )}
+              }
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">
+        <div className="fixed inset-0 backdrop-blur-sm bg-blacky-950/30 flex items-center justify-center z-50 p-4">
+          <div className="bg-basic-white rounded-2xl border border-basic-border max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-lg">
+            <div className="px-6 py-4 border-b border-yellowfish-300 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-blacky-950">
                 {editingProduct ? 'Cập nhật sản phẩm' : 'Thêm sản phẩm mới'}
               </h2>
-              <button onClick={() => setShowModal(false)} title="Đóng" className="text-gray-400 hover:text-gray-600">
-                <FiX size={24} />
+              <button onClick={() => setShowModal(false)} title="Đóng" className="p-1.5 rounded-lg text-bluesh-800 hover:text-blacky-600 hover:bg-blacky-50 transition-colors">
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tên sản phẩm <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-blacky-700 mb-1.5">
+                  Tên sản phẩm <span className="text-accent-red">*</span>
                 </label>
                 <input
                   {...register('ProductName', { required: 'Tên sản phẩm là bắt buộc' })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="input-field"
                   placeholder="Nhập tên sản phẩm"
                 />
-                {errors.ProductName && <p className="mt-1 text-sm text-red-600">{errors.ProductName.message}</p>}
+                {errors.ProductName && <p className="mt-1 text-sm text-accent-red">{errors.ProductName.message}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
+                <label className="block text-sm font-medium text-blacky-700 mb-1.5">Mô tả</label>
                 <textarea
                   {...register('Description')}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="input-field resize-none"
                   placeholder="Nhập mô tả sản phẩm"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Mã SKU <span className="text-red-500">*</span>
+                  <label className="block text-sm font-medium text-blacky-700 mb-1.5">
+                    Mã SKU <span className="text-accent-red">*</span>
                   </label>
                   <input
                     {...register('SKU', { required: 'Mã SKU là bắt buộc' })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="input-field"
                     placeholder="SKU-001"
                   />
-                  {errors.SKU && <p className="mt-1 text-sm text-red-600">{errors.SKU.message}</p>}
+                  {errors.SKU && <p className="mt-1 text-sm text-accent-red">{errors.SKU.message}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Đơn vị gốc <span className="text-red-500">*</span>
+                  <label className="block text-sm font-medium text-blacky-700 mb-1.5">
+                    Đơn vị gốc <span className="text-accent-red">*</span>
                   </label>
                   <input
                     {...register('BaseUnit', { required: 'Đơn vị gốc là bắt buộc' })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="input-field"
                     placeholder="Viên, Kg, Bao..."
                   />
-                  {errors.BaseUnit && <p className="mt-1 text-sm text-red-600">{errors.BaseUnit.message}</p>}
+                  {errors.BaseUnit && <p className="mt-1 text-sm text-accent-red">{errors.BaseUnit.message}</p>}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">ID Danh mục</label>
+                  <label className="block text-sm font-medium text-blacky-700 mb-1.5">ID Danh mục</label>
                   <input
                     type="number"
                     {...register('CategoryID')}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="input-field"
                     placeholder="1"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
-                  <select
-                    {...register('IsActive')}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  >
-                    <option value="true">Hoạt động</option>
-                    <option value="false">Ngưng hoạt động</option>
-                  </select>
+                  <label className="block text-sm font-medium text-blacky-700 mb-1.5">Trạng thái</label>
+                  <Controller
+                    name="IsActive"
+                    control={control}
+                    defaultValue="true"
+                    render={({ field }) => (
+                      <CustomSelect
+                        value={field.value ?? 'true'}
+                        onChange={field.onChange}
+                        options={[
+                          { value: 'true', label: 'Hoạt động' },
+                          { value: 'false', label: 'Ngưng hoạt động' },
+                        ]}
+                      />
+                    )}
+                  />
                 </div>
               </div>
 
@@ -294,13 +301,13 @@ export default function Products() {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="btn btn-secondary flex-1"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-primary-600 text-black rounded-lg hover:bg-primary-700 transition-colors"
+                  className="btn btn-primary flex-1"
                 >
                   {editingProduct ? 'Cập nhật' : 'Thêm mới'}
                 </button>
@@ -316,6 +323,17 @@ export default function Products() {
           onSuccess={loadProducts}
         />
       )}
+
+      {/* Confirm Delete Modal */}
+      <ConfirmModal
+        open={confirmDelete !== null}
+        title="Xóa sản phẩm"
+        message="Bạn có chắc muốn xóa sản phẩm này? Hành động này không thể hoàn tác."
+        confirmLabel="Xóa"
+        variant="danger"
+        onConfirm={doDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }

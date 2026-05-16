@@ -1,9 +1,11 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from '../pages/Login';
+import Register from '../pages/Register';
 import NoStore from '../pages/NoStore';
 import CreateStore from '../pages/CreateStore';
 import SelectStore from '../pages/SelectStore';
 import Forbidden from '../pages/Forbidden';
+import Profile from '../pages/Profile';
 import MainLayout from '../layouts/MainLayout';
 import PermissionRoute from '../components/PermissionRoute';
 import { protectedRoutes } from './protectedRoutes';
@@ -35,6 +37,7 @@ export default function AppRoutes() {
     <Routes>
       {/* Public Routes */}
       <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
+      <Route path="/register" element={isAuthenticated ? <Navigate to="/" replace /> : <Register />} />
 
       {/* Multi-store Management (Auth Required) */}
       <Route path="/no-store" element={isAuthenticated ? <NoStore /> : <Navigate to="/login" replace />} />
@@ -44,6 +47,7 @@ export default function AppRoutes() {
 
       {/* Protected Routes with Layout */}
       <Route element={isAuthenticated ? <MainLayout /> : <Navigate to="/login" replace />}>
+        <Route path="/profile" element={<Profile />} />
         {protectedRoutes.map((route) => (
           <Route
             key={route.path}

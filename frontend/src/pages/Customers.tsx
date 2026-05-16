@@ -1,20 +1,17 @@
 import { useState, useEffect } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiX, FiUser, FiPhone, FiMapPin, FiShoppingCart, FiUpload, FiDownload } from 'react-icons/fi';
-import { useForm, SubmitHandler } from 'react-hook-form';
+import { Plus, Edit2, Trash2, User, Phone, MapPin, ShoppingCart, Upload, Download } from 'lucide-react';
 import { customersService } from '../services/customersService';
 import CustomerDetailModal from '../components/customer/CustomerDetailModal';
+import CustomerFormModal from '../components/customer/CustomerFormModal';
 import ImportCustomerModal from '../components/customer/ImportCustomerModal';
 import ProtectedAction from '../components/ProtectedAction';
+import ConfirmModal from '../components/ConfirmModal';
+import { useToast } from '../components/ToastProvider';
 import type { Customer } from '@/types';
+import React from 'react';
 
 interface CustomerWithCount extends Customer {
   _count?: { orders: number };
-}
-
-interface CustomerFormData {
-  CustomerName: string;
-  Phone?: string;
-  Address?: string;
 }
 
 export default function Customers() {
@@ -25,8 +22,9 @@ export default function Customers() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
 
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<CustomerFormData>();
+  const toast = useToast();
 
   // Load customers
   const loadCustomers = async () => {
@@ -48,47 +46,31 @@ export default function Customers() {
   // Open modal for create
   const handleCreate = () => {
     setEditingCustomer(null);
-    reset({});
     setShowModal(true);
   };
 
   // Open modal for edit
   const handleEdit = (customer: CustomerWithCount) => {
     setEditingCustomer(customer);
-    setValue('CustomerName', customer.CustomerName);
-    setValue('Phone', customer.Phone ?? '');
-    setValue('Address', customer.Address ?? '');
     setShowModal(true);
   };
 
-  // Submit form
-  const onSubmit: SubmitHandler<CustomerFormData> = async (data) => {
-    try {
-      if (editingCustomer) {
-        await customersService.update(editingCustomer.CustomerID, data);
-      } else {
-        await customersService.create(data);
-      }
-      setShowModal(false);
-      loadCustomers();
-    } catch (error: unknown) {
-      const e = error as { response?: { data?: { message?: string } } };
-      console.error('Lỗi:', error);
-      alert(e.response?.data?.message || 'Có lỗi xảy ra');
-    }
+  // Delete customer
+  const handleDelete = (id: number) => {
+    setConfirmDelete(id);
   };
 
-  // Delete customer
-  const handleDelete = async (id: number, customerName: string) => {
-    if (!confirm(`Bạn có chắc muốn xóa khách hàng "${customerName}"?`)) return;
-
+  const doDelete = async () => {
+    if (confirmDelete === null) return;
+    setConfirmDelete(null);
     try {
-      await customersService.delete(id);
+      await customersService.delete(confirmDelete);
+      toast.success('Xóa khách hàng thành công');
       loadCustomers();
     } catch (error: unknown) {
       const e = error as { response?: { data?: { message?: string } } };
       console.error('Lỗi xóa:', error);
-      alert(e.response?.data?.message || 'Không thể xóa khách hàng (có thể đã có đơn hàng)');
+      toast.error(e.response?.data?.message || 'Không thể xóa khách hàng (có thể đã có đơn hàng)');
     }
   };
 
@@ -99,7 +81,7 @@ export default function Customers() {
       await customersService.exportCustomers();
     } catch (error) {
       console.error('Lỗi export:', error);
-      alert('Không thể xuất file Excel');
+      toast.error('Không thể xuất file Excel');
     } finally {
       setExporting(false);
     }
@@ -110,33 +92,33 @@ export default function Customers() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Khách hàng</h1>
-          <p className="text-gray-500 mt-1">Quản lý thông tin khách hàng</p>
+          <h1 className="text-3xl font-bold text-blacky-950">Khách hàng</h1>
+          <p className="text-blacky-500 mt-1">Quản lý thông tin khách hàng</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <ProtectedAction action="read" subject="Customer">
             <button
               onClick={handleExport}
               disabled={exporting}
-              className="flex items-center gap-2 px-4 py-2 border border-green-500 text-green-600 rounded-lg hover:bg-green-50 transition-colors disabled:opacity-50"
+              className="btn btn-secondary w-fit! px-4! rounded-lg! disabled:opacity-50"
             >
-              <FiDownload />
+              <Download className="w-4 h-4" />
               {exporting ? 'Đang xuất...' : 'Export Excel'}
             </button>
           </ProtectedAction>
           <ProtectedAction action="manage" subject="Customer">
             <button
               onClick={() => setShowImportModal(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+              className="btn btn-secondary w-fit! px-4! rounded-lg!"
             >
-              <FiUpload />
+              <Upload className="w-4 h-4" />
               Import Excel
             </button>
             <button
               onClick={handleCreate}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-black rounded-lg hover:bg-blue-600 transition-colors"
+              className="btn btn-primary w-fit! px-4! rounded-lg!"
             >
-              <FiPlus />
+              <Plus className="w-4 h-4" />
               Thêm khách hàng
             </button>
           </ProtectedAction>
@@ -145,43 +127,43 @@ export default function Customers() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="bg-bluesh-50 rounded-xl border border-bluesh-600 p-4">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-primary-100 rounded-lg">
-              <FiUser className="text-primary-600" size={24} />
+            <div className="p-3 bg-bluesh-800 rounded-lg">
+              <User className="w-6 h-6 text-basic-white" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Tổng khách hàng</p>
-              <p className="text-2xl font-bold text-gray-900">{customers.length}</p>
+              <p className="text-sm text-blacky-700">Tổng khách hàng</p>
+              <p className="text-2xl font-bold text-blacky-950">{customers.length}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200">
+      <div className="bg-basic-white rounded-xl border-2 border-basic-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-bluesh-800 border-b border-basic-border">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mã KH</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tên khách hàng</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Số điện thoại</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Địa chỉ</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Đơn hàng</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Thao tác</th>
+                {/* <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">Mã KH</th> */}
+                <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">Tên khách hàng</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">Số điện thoại</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">Địa chỉ</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-basic-white uppercase">Đơn hàng</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-basic-white uppercase">Thao tác</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-basic-border">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-8 text-center text-blacky-400 font-medium">
                     Đang tải...
                   </td>
                 </tr>
               ) : customers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-8 text-center text-blacky-500">
                     Chưa có khách hàng nào
                   </td>
                 </tr>
@@ -189,7 +171,7 @@ export default function Customers() {
                 customers.map((customer) => (
                   <tr
                     key={customer.CustomerID}
-                    className="hover:bg-gray-50 cursor-pointer"
+                    className="hover:bg-blacky-50 cursor-pointer"
                     onClick={(e: React.MouseEvent<HTMLTableRowElement>) => {
                       // Không mở detail modal khi click vào button
                       if (!(e.target as Element).closest('button')) {
@@ -197,44 +179,44 @@ export default function Customers() {
                       }
                     }}
                   >
-                    <td className="px-6 py-4 text-sm">
-                      <span className="font-mono text-xs font-medium text-primary-700 bg-primary-50 px-2 py-1 rounded">
+                    {/* <td className="px-6 py-4 text-sm">
+                      <span className="font-mono text-xs font-medium text-bluesh-800 bg-bluesh-50 px-2 py-1 rounded">
                         {customer.CustomerCode || '-'}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                    </td> */}
+                    <td className="px-6 py-4 text-sm font-medium text-blacky-950">
                       <div className="flex items-center gap-2">
-                        <FiUser className="text-gray-400" />
+                        <User className="w-4 h-4 text-bluesh-800" />
                         {customer.CustomerName}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-700">
+                    <td className="px-6 py-4 text-sm text-blacky-700">
                       {customer.Phone ? (
                         <div className="flex items-center gap-2">
-                          <FiPhone className="text-gray-400" size={14} />
+                          <Phone className="w-3.5 h-3.5 text-bluesh-800" />
                           {customer.Phone}
                         </div>
                       ) : (
-                        <span className="text-gray-400">-</span>
+                        <span className="text-blacky-500">-</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                    <td className="px-6 py-4 text-sm text-blacky-700 max-w-xs truncate">
                       {customer.Address ? (
                         <div className="flex items-center gap-2">
-                          <FiMapPin className="text-gray-400 shrink-0" size={14} />
+                          <MapPin className="w-3.5 h-3.5 text-bluesh-800 shrink-0" />
                           <span className="truncate">{customer.Address}</span>
                         </div>
                       ) : (
-                        <span className="text-gray-400">-</span>
+                        <span className="text-blacky-500">-</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-center text-sm">
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
                         (customer._count?.orders ?? 0) > 0
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-500'
+                          ? 'bg-accent-green/10 text-accent-green'
+                          : 'bg-blacky-100 text-blacky-500'
                       }`}>
-                        <FiShoppingCart size={12} />
+                        <ShoppingCart className="w-3 h-3" />
                         {customer._count?.orders || 0}
                       </span>
                     </td>
@@ -245,22 +227,22 @@ export default function Customers() {
                             e.stopPropagation();
                             handleEdit(customer);
                           }}
-                          className="text-primary-600 hover:text-primary-700 mr-3"
+                          className="text-bluesh-800 hover:text-bluesh-900 mr-3"
                           title="Chỉnh sửa"
                         >
-                          <FiEdit2 />
+                          <Edit2 className="w-4 h-4" />
                         </button>
                       </ProtectedAction>
                       <ProtectedAction action="delete" subject="Customer">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDelete(customer.CustomerID, customer.CustomerName);
+                            handleDelete(customer.CustomerID);
                           }}
-                          className="text-red-600 hover:text-red-700"
+                          className="text-accent-red hover:text-accent-red/80"
                           title="Xóa"
                         >
-                          <FiTrash2 />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </ProtectedAction>
                     </td>
@@ -272,84 +254,13 @@ export default function Customers() {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Customer Form Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-xl w-full">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">
-                {editingCustomer ? 'Cập nhật khách hàng' : 'Thêm khách hàng mới'}
-              </h2>
-              <button onClick={() => setShowModal(false)} title="Đóng" className="text-gray-400 hover:text-gray-600">
-                <FiX size={24} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tên khách hàng <span className="text-red-500">*</span>
-                </label>
-                <input
-                  {...register('CustomerName', {
-                    required: 'Tên khách hàng là bắt buộc',
-                    maxLength: { value: 100, message: 'Tên khách hàng không được quá 100 ký tự' },
-                  })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Nhập tên khách hàng"
-                />
-                {errors.CustomerName && (
-                  <p className="mt-1 text-sm text-red-600">{errors.CustomerName.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
-                <input
-                  {...register('Phone', {
-                    maxLength: { value: 20, message: 'Số điện thoại không được quá 20 ký tự' },
-                  })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="0912345678"
-                />
-                {errors.Phone && (
-                  <p className="mt-1 text-sm text-red-600">{errors.Phone.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ</label>
-                <textarea
-                  {...register('Address', {
-                    maxLength: { value: 255, message: 'Địa chỉ không được quá 255 ký tự' },
-                  })}
-                  rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Nhập địa chỉ khách hàng"
-                />
-                {errors.Address && (
-                  <p className="mt-1 text-sm text-red-600">{errors.Address.message}</p>
-                )}
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-primary-600 text-black rounded-lg hover:bg-primary-700 transition-colors"
-                >
-                  {editingCustomer ? 'Cập nhật' : 'Thêm mới'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <CustomerFormModal
+          customer={editingCustomer}
+          onClose={() => setShowModal(false)}
+          onSuccess={loadCustomers}
+        />
       )}
 
       {/* Customer Detail Modal */}
@@ -367,6 +278,17 @@ export default function Customers() {
           onSuccess={loadCustomers}
         />
       )}
+
+      {/* Confirm Delete */}
+      <ConfirmModal
+        open={confirmDelete !== null}
+        title="Xóa khách hàng"
+        message="Bạn có chắc muốn xóa khách hàng này? Hành động này không thể hoàn tác."
+        confirmLabel="Xóa"
+        variant="danger"
+        onConfirm={doDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }

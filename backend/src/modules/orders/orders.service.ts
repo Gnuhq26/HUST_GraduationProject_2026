@@ -144,9 +144,42 @@ export class OrdersService {
         // 2.5. Xác định đơn giá từ PriceList (theo UnitName và tier MinQuantity)
         let unitPrice = new Prisma.Decimal(0);
 
-        const matchingPrices = product.prices.filter(
+        let matchingPrices = product.prices.filter(
           (p) => p.UnitName === item.UnitName,
         );
+
+        // Nếu không có giá trực tiếp cho đơn vị này, thử suy giá từ đơn vị khác
+        if (matchingPrices.length === 0) {
+          if (item.UnitName === product.BaseUnit) {
+            // Bán theo BaseUnit nhưng chỉ có giá cho đơn vị đóng gói
+            // → suy giá: pricePerBase = pricePerUnit / exchangeValue
+            for (const unit of product.units) {
+              const unitPrices = product.prices.filter((p) => p.UnitName === unit.UnitName);
+              if (unitPrices.length > 0) {
+                matchingPrices = unitPrices.map((p) => ({
+                  ...p,
+                  UnitPrice: p.UnitPrice.div(unit.ExchangeValue),
+                }));
+                break;
+              }
+            }
+          } else {
+            // Bán theo đơn vị đóng gói nhưng chỉ có giá cho BaseUnit
+            // → suy giá: pricePerUnit = pricePerBase * exchangeValue
+            const baseUnitPrices = product.prices.filter(
+              (p) => p.UnitName === product.BaseUnit,
+            );
+            if (baseUnitPrices.length > 0) {
+              const saleUnit = product.units.find((u) => u.UnitName === item.UnitName);
+              if (saleUnit) {
+                matchingPrices = baseUnitPrices.map((p) => ({
+                  ...p,
+                  UnitPrice: p.UnitPrice.mul(saleUnit.ExchangeValue),
+                }));
+              }
+            }
+          }
+        }
 
         if (matchingPrices.length === 0) {
           throw new BadRequestException(

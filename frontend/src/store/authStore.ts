@@ -26,6 +26,7 @@ interface AuthActions {
   refreshAuth: () => Promise<void>;
   clearError: () => void;
   loadProfile: () => Promise<void>;
+  updateUser: (updates: Partial<User>) => void;
 }
 
 const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
@@ -156,6 +157,15 @@ const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
 
   clearError: () => {
     set({ error: null });
+  },
+
+  updateUser: (updates: Partial<User>) => {
+    set((state) => {
+      if (!state.user) return {};
+      const updated = { ...state.user, ...updates };
+      localStorage.setItem('user', JSON.stringify(updated));
+      return { user: updated };
+    });
   },
 
   // Load user profile from token

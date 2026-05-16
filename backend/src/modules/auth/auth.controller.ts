@@ -2,8 +2,8 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
-  Request,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -14,9 +14,9 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { LoginDto, RegisterDto } from './dto';
+import { LoginDto, RegisterDto, UpdateProfileDto } from './dto';
 import { Public } from '../../common/decorators/public.decorator';
-import { CurrentStore, StoreInfo } from '../../common/decorators';
+import { CurrentStore, StoreInfo, CurrentUser } from '../../common/decorators';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -48,7 +48,6 @@ export class AuthController {
   @ApiResponse({ status: 409, description: 'Email already exists' })
   @ApiResponse({ status: 400, description: 'Bad request - validation failed' })
   async register(@Body() registerDto: RegisterDto) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
     return await this.authService.register(registerDto);
   }
 
@@ -85,7 +84,6 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   @ApiResponse({ status: 400, description: 'Bad request - validation failed' })
   async login(@Body() loginDto: LoginDto) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
     return await this.authService.login(loginDto);
   }
 
@@ -116,9 +114,35 @@ export class AuthController {
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing JWT token' })
-  getProfile(@Request() req) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
-    return req.user;
+  async getProfile(@CurrentUser() userId: number) {
+    return await this.authService.getUserById(userId);
+  }
+
+  @Patch('profile')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Cập nhật hồ sơ cá nhân' })
+  @ApiResponse({
+    status: 200,
+    description: 'Cập nhật thành công',
+    schema: {
+      example: {
+        UserID: 1,
+        Email: 'admin@app.com',
+        FullName: 'Admin User',
+        Phone: '0912345678',
+        Address: null,
+        CreatedAt: '2026-01-01T00:00:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Mật khẩu hiện tại không đúng hoặc thiếu thông tin' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async updateProfile(
+    @CurrentUser() userId: number,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
+    return await this.authService.updateProfile(userId, dto);
   }
 
   @Get('permissions')

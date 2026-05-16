@@ -143,7 +143,7 @@ export class StoresService {
    * If user doesn't exist, create a new user with default password (123456)
    */
   async addMember(storeId: number, addMemberDto: AddMemberDto) {
-    const { email, roleId, note } = addMemberDto;
+    const { email, roleId } = addMemberDto;
 
     return await this.prisma.$transaction(async (tx) => {
       // Find or create user by email

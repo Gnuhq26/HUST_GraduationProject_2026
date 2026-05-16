@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiX, FiSearch, FiPackage } from 'react-icons/fi';
+import { useState, useEffect, type FormEvent } from 'react';
+import { Plus, Edit2, Trash2, X, Search, Package } from 'lucide-react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { categoriesService } from '../services/categoriesService';
 import ProtectedAction from '../components/ProtectedAction';
+import ConfirmModal from '../components/ConfirmModal';
+import { useToast } from '../components/ToastProvider';
 import type { Category } from '@/types';
 
 interface CategoryWithCount extends Category {
@@ -22,6 +24,9 @@ export default function Categories() {
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState<{ id: number; name: string } | null>(null);
+
+  const toast = useToast();
 
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<CategoryFormData>();
 
@@ -43,7 +48,7 @@ export default function Categories() {
   }, []);
 
   // Search handler
-  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSearch = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     loadCategories(searchTerm);
   };
@@ -68,29 +73,36 @@ export default function Categories() {
     try {
       if (editingCategory) {
         await categoriesService.update(editingCategory.CategoryID, data);
+        toast.success('Cập nhật danh mục thành công');
       } else {
         await categoriesService.create(data);
+        toast.success('Thêm danh mục thành công');
       }
       setShowModal(false);
       loadCategories(searchTerm);
     } catch (err: unknown) {
       console.error('Lỗi:', err);
       const e = err as { response?: { data?: { message?: string } } };
-      alert(e.response?.data?.message || 'Có lỗi xảy ra');
+      toast.error(e.response?.data?.message || 'Có lỗi xảy ra');
     }
   };
 
   // Delete category
-  const handleDelete = async (id: number, categoryName: string) => {
-    if (!confirm(`Bạn có chắc muốn xóa danh mục "${categoryName}"?`)) return;
-    
+  const handleDelete = (id: number, categoryName: string) => {
+    setConfirmDelete({ id, name: categoryName });
+  };
+
+  const doDelete = async () => {
+    if (!confirmDelete) return;
+    setConfirmDelete(null);
     try {
-      await categoriesService.delete(id);
+      await categoriesService.delete(confirmDelete.id);
+      toast.success('Xóa danh mục thành công');
       loadCategories(searchTerm);
     } catch (err: unknown) {
       console.error('Lỗi xóa:', err);
       const e = err as { response?: { data?: { message?: string } } };
-      alert(e.response?.data?.message || 'Không thể xóa danh mục (có thể đang có sản phẩm)');
+      toast.error(e.response?.data?.message || 'Không thể xóa danh mục (có thể đang có sản phẩm)');
     }
   };
 
@@ -99,16 +111,12 @@ export default function Categories() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Danh mục</h1>
-          <p className="text-gray-500 mt-1">Quản lý danh mục sản phẩm</p>
+          <h1 className="text-3xl font-bold text-blacky-950">Danh mục</h1>
+          <p className="text-blacky-500 mt-1">Quản lý danh mục sản phẩm</p>
         </div>
         <ProtectedAction action="create" subject="Category">
-          <button
-            onClick={handleCreate}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-black rounded-lg hover:bg-primary-700 transition-colors"
-          >
-            <FiPlus />
-            Thêm danh mục
+          <button onClick={handleCreate} className="btn btn-primary w-fit! px-4! rounded-lg!">
+            <Plus className="w-4 h-4" />Thêm danh mục
           </button>
         </ProtectedAction>
       </div>
@@ -117,29 +125,23 @@ export default function Categories() {
       <div className="mb-4">
         <form onSubmit={handleSearch} className="flex gap-2">
           <div className="relative flex-1 max-w-md">
-            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blacky-700 pointer-events-none" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Tìm kiếm danh mục..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="input-field pl-11! h-12.5!"
             />
           </div>
-          <button
-            type="submit"
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-          >
+          <button type="submit" className="btn btn-secondary w-fit! px-4! rounded-lg!">
             Tìm kiếm
           </button>
           {searchTerm && (
             <button
               type="button"
-              onClick={() => {
-                setSearchTerm('');
-                loadCategories();
-              }}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              onClick={() => { setSearchTerm(''); loadCategories(); }}
+              className="btn btn-secondary w-fit! px-4! rounded-lg!"
             >
               Xóa lọc
             </button>
@@ -148,42 +150,41 @@ export default function Categories() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tên danh mục</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mô tả</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Số sản phẩm</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {loading ? (
+      <div className="bg-basic-white rounded-xl border-2 border-basic-border overflow-hidden">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-4">
+            <p className="text-blacky-400 font-medium">Đang tải...</p>
+          </div>
+        ) : categories.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <Package className="w-12 h-12 text-blacky-200" />
+            <p className="text-blacky-500">
+              {searchTerm ? 'Không tìm thấy danh mục nào' : 'Chưa có danh mục nào'}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-bluesh-800">
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
-                    Đang tải...
-                  </td>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">Tên danh mục</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">Mô tả</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-basic-white uppercase">Số sản phẩm</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-basic-white uppercase">Thao tác</th>
                 </tr>
-              ) : categories.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
-                    {searchTerm ? 'Không tìm thấy danh mục nào' : 'Chưa có danh mục nào'}
-                  </td>
-                </tr>
-              ) : (
-                categories.map((category) => (
-                  <tr key={category.CategoryID} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
+              </thead>
+              <tbody className="divide-y divide-basic-border">
+                {categories.map((category) => (
+                  <tr key={category.CategoryID} className="hover:bg-blacky-50">
+                    <td className="px-6 py-4 text-sm font-medium text-blacky-900">
                       {category.CategoryName}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {category.Description || '-'}
+                    <td className="px-6 py-4 text-sm text-blacky-700">
+                      {category.Description || '—'}
                     </td>
-                    <td className="px-6 py-4 text-center text-sm text-gray-700">
-                      <div className="flex items-center justify-center gap-1">
-                        <FiPackage className="text-gray-400" size={14} />
+                    <td className="px-6 py-4 text-center text-sm text-blacky-700">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <Package className="w-4 h-4 text-yellowfish-300" />
                         {category._count?.products || 0}
                       </div>
                     </td>
@@ -191,84 +192,81 @@ export default function Categories() {
                       <ProtectedAction action="update" subject="Category">
                         <button
                           onClick={() => handleEdit(category)}
-                          className="text-primary-600 hover:text-primary-700 mr-3"
                           title="Chỉnh sửa"
+                          className="text-bluesh-800 hover:text-bluesh-900 mr-3"
                         >
-                          <FiEdit2 />
+                          <Edit2 className="w-4 h-4" />
                         </button>
                       </ProtectedAction>
                       <ProtectedAction action="delete" subject="Category">
                         <button
                           onClick={() => handleDelete(category.CategoryID, category.CategoryName)}
-                          className="text-red-600 hover:text-red-700"
                           title="Xóa"
+                          className="text-accent-red hover:text-red-700"
                         >
-                          <FiTrash2 />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </ProtectedAction>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-xl w-full">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">
+        <div className="fixed inset-0 backdrop-blur-sm bg-blacky-950/30 flex items-center justify-center z-50 p-4">
+          <div className="bg-basic-white rounded-2xl border border-basic-border max-w-xl w-full shadow-lg">
+            <div className="px-6 py-4 border-b border-yellowfish-400 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-blacky-950">
                 {editingCategory ? 'Cập nhật danh mục' : 'Thêm danh mục mới'}
               </h2>
-              <button onClick={() => setShowModal(false)} title="Đóng" className="text-gray-400 hover:text-gray-600">
-                <FiX size={24} />
+              <button
+                onClick={() => setShowModal(false)}
+                title="Đóng"
+                className="p-1.5 rounded-lg bg-bluesh-50 text-bluesh-800 hover:text-basic-white hover:bg-bluesh-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tên danh mục <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-blacky-700 mb-1.5">
+                  Tên danh mục <span className="text-accent-red">*</span>
                 </label>
                 <input
-                  {...register('CategoryName', { 
+                  {...register('CategoryName', {
                     required: 'Tên danh mục là bắt buộc',
                     minLength: { value: 1, message: 'Tên danh mục quá ngắn' },
-                    maxLength: { value: 255, message: 'Tên danh mục quá dài' }
+                    maxLength: { value: 255, message: 'Tên danh mục quá dài' },
                   })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="input-field"
                   placeholder="Nhập tên danh mục"
                 />
                 {errors.CategoryName && (
-                  <p className="mt-1 text-sm text-red-600">{errors.CategoryName.message}</p>
+                  <p className="mt-1 text-sm text-accent-red">{errors.CategoryName.message}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
+                <label className="block text-sm font-medium text-blacky-700 mb-1.5">Mô tả</label>
                 <textarea
                   {...register('Description')}
                   rows={4}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="input-field resize-none"
                   placeholder="Nhập mô tả danh mục (không bắt buộc)"
                 />
               </div>
 
               <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
+                <button type="button" onClick={() => setShowModal(false)} className="btn btn-secondary flex-1">
                   Hủy
                 </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-primary-600 text-black rounded-lg hover:bg-primary-700 transition-colors"
-                >
+                <button type="submit" className="btn btn-primary flex-1">
                   {editingCategory ? 'Cập nhật' : 'Thêm mới'}
                 </button>
               </div>
@@ -276,6 +274,17 @@ export default function Categories() {
           </div>
         </div>
       )}
+
+      {/* Confirm Delete Modal */}
+      <ConfirmModal
+        open={confirmDelete !== null}
+        title="Xóa danh mục"
+        message={`Bạn có chắc muốn xóa danh mục "${confirmDelete?.name}"? Hành động này không thể hoàn tác.`}
+        confirmLabel="Xóa"
+        variant="danger"
+        onConfirm={doDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }
