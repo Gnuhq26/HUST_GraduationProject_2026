@@ -27,6 +27,7 @@ interface AuthActions {
   clearError: () => void;
   loadProfile: () => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
+  loginWithToken: (token: string) => Promise<void>;
 }
 
 const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
@@ -166,6 +167,36 @@ const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
       localStorage.setItem('user', JSON.stringify(updated));
       return { user: updated };
     });
+  },
+
+  loginWithToken: async (token: string) => {
+    localStorage.setItem('token', token);
+    set({ token, isAuthenticated: true, isLoading: true });
+    try {
+      const data = await authService.getProfile();
+      const { stores, ...userData } = data;
+      const safeStores: StoreInfo[] = stores ?? [];
+
+      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('stores', JSON.stringify(safeStores));
+
+      let nextCurrentStoreId: number | null = null;
+      if (safeStores.length > 0) {
+        nextCurrentStoreId = safeStores[0].storeId;
+        localStorage.setItem('currentStoreId', String(nextCurrentStoreId));
+      }
+
+      set({
+        user: userData,
+        stores: safeStores,
+        currentStoreId: nextCurrentStoreId,
+        isLoading: false,
+      });
+    } catch {
+      // Token invalid — undo
+      localStorage.removeItem('token');
+      set({ token: null, isAuthenticated: false, isLoading: false });
+    }
   },
 
   // Load user profile from token
