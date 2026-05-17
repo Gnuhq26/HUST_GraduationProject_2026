@@ -6,6 +6,7 @@ import CreateStore from '../pages/CreateStore';
 import SelectStore from '../pages/SelectStore';
 import Forbidden from '../pages/Forbidden';
 import Profile from '../pages/Profile';
+import AuthCallback from '../pages/AuthCallback';
 import MainLayout from '../layouts/MainLayout';
 import PermissionRoute from '../components/PermissionRoute';
 import { protectedRoutes } from './protectedRoutes';
@@ -38,6 +39,9 @@ export default function AppRoutes() {
       {/* Public Routes */}
       <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
       <Route path="/register" element={isAuthenticated ? <Navigate to="/" replace /> : <Register />} />
+
+      {/* OAuth callback — always public, never redirect to login */}
+      <Route path="/auth/callback" element={<AuthCallback />} />
 
       {/* Multi-store Management (Auth Required) */}
       <Route path="/no-store" element={isAuthenticated ? <NoStore /> : <Navigate to="/login" replace />} />

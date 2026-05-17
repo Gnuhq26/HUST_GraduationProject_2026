@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { FiShoppingBag } from 'react-icons/fi';
 import useAuthStore from '../store/authStore';
@@ -12,8 +12,10 @@ type LoginFormData = {
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, isLoading, error, isAuthenticated, refreshAuth } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
+  const oauthError = searchParams.get('oauthError');
 
   const {
     register,
@@ -109,9 +111,9 @@ export default function Login() {
           </div>
 
           {/* Error Message */}
-          {error && (
+          {(error || oauthError) && (
             <div className="mb-5 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{error}</p>
+              <p className="text-sm text-red-600">{oauthError ?? error}</p>
             </div>
           )}
 
@@ -229,6 +231,7 @@ export default function Login() {
             <button
               type="button"
               title="Đăng nhập bằng Google"
+              onClick={() => { window.location.href = 'http://localhost:3000/auth/google'; }}
               className="flex-1 h-12 rounded-lg border bg-white border-gray-200 flex items-center justify-center hover:border-[#1B4A6B] transition-colors"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">

@@ -51,6 +51,7 @@ export class AuthService {
         FullName: fullName,
         Phone: phone,
         Address: address,
+        Provider: 'LOCAL',
       },
       select: {
         UserID: true,
@@ -58,6 +59,7 @@ export class AuthService {
         FullName: true,
         Phone: true,
         Address: true,
+        Provider: true,
         CreatedAt: true,
       },
     });
@@ -93,6 +95,7 @@ export class AuthService {
         FullName: user.FullName,
         Phone: user.Phone,
         Address: user.Address,
+        Provider: user.Provider,
         CreatedAt: user.CreatedAt,
       },
       stores,
@@ -115,6 +118,13 @@ export class AuthService {
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // Guard: block social login users from using email/password login
+    if (user.Provider !== 'LOCAL' || !user.PasswordHash) {
+      throw new UnauthorizedException(
+        'Tài khoản đã đăng ký bằng phương thức khác. Vui lòng đăng nhập bằng Google.',
+      );
     }
 
     // Verify password
@@ -191,6 +201,7 @@ export class AuthService {
         FullName: true,
         Phone: true,
         Address: true,
+        Provider: true,
         CreatedAt: true,
       },
     });
@@ -221,6 +232,12 @@ export class AuthService {
       if (!dto.currentPassword) {
         throw new BadRequestException('Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu');
       }
+      // Guard: social login users don't have a password
+      if (!user.PasswordHash) {
+        throw new BadRequestException(
+          'Tài khoản này không có mật khẩu. Vui lòng đăng nhập bằng Google.',
+        );
+      }
       const isMatch = await bcrypt.compare(dto.currentPassword, user.PasswordHash);
       if (!isMatch) {
         throw new BadRequestException('Mật khẩu hiện tại không đúng');
@@ -237,9 +254,90 @@ export class AuthService {
         FullName: true,
         Phone: true,
         Address: true,
+        Provider: true,
         CreatedAt: true,
       },
     });
+  }
+
+  /**
+   * Handle social login (Google, Facebook).
+   * Creates a new user if not found, or logs in existing social user.
+   * Returns { error: 'ACCOUNT_EXISTS_LOCAL' } if email is already registered with email/password.
+   */
+  async socialLogin(profile: {
+    email: string;
+    fullName: string;
+    providerID: string;
+    provider: 'GOOGLE' | 'FACEBOOK';
+  }) {
+    const { email, fullName, providerID, provider } = profile;
+
+    // Check if user with this email already exists
+    const existingUser = await this.prisma.user.findUnique({
+      where: { Email: email },
+      select: {
+        UserID: true,
+        Email: true,
+        FullName: true,
+        Phone: true,
+        Address: true,
+        Provider: true,
+        ProviderID: true,
+        CreatedAt: true,
+      },
+    });
+
+    if (existingUser) {
+      // Email registered with email/password — block to prevent account confusion
+      if (existingUser.Provider === 'LOCAL') {
+        return { error: 'ACCOUNT_EXISTS_LOCAL' as const };
+      }
+
+      // Existing social user — issue token
+      const stores = await this.getUserStores(existingUser.UserID);
+      const token = this.generateToken(existingUser.UserID, existingUser.Email, stores);
+      return {
+        access_token: token,
+        user: {
+          UserID: existingUser.UserID,
+          Email: existingUser.Email,
+          FullName: existingUser.FullName,
+          Phone: existingUser.Phone,
+          Address: existingUser.Address,
+          Provider: existingUser.Provider,
+          CreatedAt: existingUser.CreatedAt,
+        },
+        stores,
+      };
+    }
+
+    // New user — register with social provider
+    const newUser = await this.prisma.user.create({
+      data: {
+        Email: email,
+        FullName: fullName,
+        Provider: provider,
+        ProviderID: providerID,
+      },
+      select: {
+        UserID: true,
+        Email: true,
+        FullName: true,
+        Phone: true,
+        Address: true,
+        Provider: true,
+        CreatedAt: true,
+      },
+    });
+
+    const stores = await this.getUserStores(newUser.UserID);
+    const token = this.generateToken(newUser.UserID, newUser.Email, stores);
+    return {
+      access_token: token,
+      user: newUser,
+      stores,
+    };
   }
 
   /**

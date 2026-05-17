@@ -6,13 +6,18 @@ import {
   Body,
   HttpCode,
   HttpStatus,
+  UseGuards,
+  Req,
+  Res,
 } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto, UpdateProfileDto } from './dto';
 import { Public } from '../../common/decorators/public.decorator';
@@ -141,7 +146,6 @@ export class AuthController {
     @CurrentUser() userId: number,
     @Body() dto: UpdateProfileDto,
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
     return await this.authService.updateProfile(userId, dto);
   }
 
@@ -164,6 +168,42 @@ export class AuthController {
     }
 
     return await this.authService.getRolePermissions(currentStore.roleId);
+  }
+
+  //Google OAuth
+  @Public()
+  @UseGuards(AuthGuard('google'))
+  @Get('google')
+  @ApiOperation({ summary: 'Redirect to Google login page' })
+  googleLogin() {
+    // Passport redirects to Google — no body needed
+  }
+
+  @Public()
+  @UseGuards(AuthGuard('google'))
+  @Get('google/callback')
+  @ApiOperation({ summary: 'Google OAuth callback' })
+  googleCallback(@Req() req: Request, @Res() res: Response) {
+    const user = req.user as
+      | { error: 'ACCOUNT_EXISTS_LOCAL' }
+      | { access_token: string };
+
+    const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173';
+
+    if ('error' in user && user.error === 'ACCOUNT_EXISTS_LOCAL') {
+      return res.redirect(
+        `${frontendUrl}/auth/callback?error=account_exists_local`,
+      );
+    }
+
+    if ('access_token' in user) {
+      return res.redirect(
+        `${frontendUrl}/auth/callback?token=${user.access_token}`,
+      );
+    }
+
+    // Unexpected state
+    return res.redirect(`${frontendUrl}/auth/callback?error=unknown`);
   }
 
 }

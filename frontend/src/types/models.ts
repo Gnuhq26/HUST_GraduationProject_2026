@@ -33,12 +33,15 @@ export type StoreStatus = 'Active' | 'Inactive';
 // AUTH & STORE
 // ─────────────────────────────────────────────────────────────────────────────
 
+export type AuthProvider = 'LOCAL' | 'GOOGLE' | 'FACEBOOK';
+
 export interface User {
   UserID: number;
   Email: string;
   FullName: string | null;
   Phone: string | null;
   Address: string | null;
+  Provider: AuthProvider;
   CreatedAt: string;
 }
 
