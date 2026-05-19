@@ -6,6 +6,7 @@ import type {
   UpdateProductDto,
   ImportPreviewResponse,
   ImportCommitResponse,
+  SuggestedPriceResponse,
 } from '@/types';
 
 export const productsService = {
@@ -87,5 +88,13 @@ export const productsService = {
     a.download = `products-export-${timestamp}.xlsx`;
     a.click();
     window.URL.revokeObjectURL(url);
+  },
+
+  // Lấy giá bán gợi ý theo biên lợi nhuận của sản phẩm
+  getSuggestedPrice: async (productId: number, unitName?: string): Promise<SuggestedPriceResponse> => {
+    const response = await api.get<SuggestedPriceResponse>(`/products/${productId}/suggested-price`, {
+      params: unitName ? { unitName } : undefined,
+    });
+    return response.data;
   },
 };

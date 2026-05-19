@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ConflictException, BadRequestException }
 import { PrismaService } from '../../common/prisma';
 import { AddMemberDto, UpdateMemberRoleDto, CreateStoreDto } from './dto';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class StoresService {
@@ -151,10 +152,11 @@ export class StoresService {
         where: { Email: email },
       });
 
-      // If user doesn't exist, create new user with default password
+      // If user doesn't exist, create new user with random temporary password
+      let temporaryPassword: string | undefined;
       if (!user) {
-        const defaultPassword = '123456';
-        const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+        temporaryPassword = crypto.randomBytes(6).toString('base64url').slice(0, 10);
+        const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
 
         user = await tx.user.create({
           data: {
@@ -229,6 +231,7 @@ export class StoresService {
           role: storeUser.role,
           joinedAt: storeUser.CreatedAt,
         },
+        ...(temporaryPassword !== undefined && { temporaryPassword }),
       };
     });
   }

@@ -53,7 +53,6 @@ export class OrdersService {
           },
           include: {
             units: true,
-            prices: { orderBy: { MinQuantity: 'desc' } },
           },
         })).map((p) => [p.ProductID, p]),
       );
@@ -141,72 +140,7 @@ export class OrdersService {
           }
         }
 
-        // 2.5. Xác định đơn giá từ PriceList (theo UnitName và tier MinQuantity)
-        let unitPrice = new Prisma.Decimal(0);
-
-        let matchingPrices = product.prices.filter(
-          (p) => p.UnitName === item.UnitName,
-        );
-
-        // Nếu không có giá trực tiếp cho đơn vị này, thử suy giá từ đơn vị khác
-        if (matchingPrices.length === 0) {
-          if (item.UnitName === product.BaseUnit) {
-            // Bán theo BaseUnit nhưng chỉ có giá cho đơn vị đóng gói
-            // → suy giá: pricePerBase = pricePerUnit / exchangeValue
-            for (const unit of product.units) {
-              const unitPrices = product.prices.filter((p) => p.UnitName === unit.UnitName);
-              if (unitPrices.length > 0) {
-                matchingPrices = unitPrices.map((p) => ({
-                  ...p,
-                  UnitPrice: p.UnitPrice.div(unit.ExchangeValue),
-                }));
-                break;
-              }
-            }
-          } else {
-            // Bán theo đơn vị đóng gói nhưng chỉ có giá cho BaseUnit
-            // → suy giá: pricePerUnit = pricePerBase * exchangeValue
-            const baseUnitPrices = product.prices.filter(
-              (p) => p.UnitName === product.BaseUnit,
-            );
-            if (baseUnitPrices.length > 0) {
-              const saleUnit = product.units.find((u) => u.UnitName === item.UnitName);
-              if (saleUnit) {
-                matchingPrices = baseUnitPrices.map((p) => ({
-                  ...p,
-                  UnitPrice: p.UnitPrice.mul(saleUnit.ExchangeValue),
-                }));
-              }
-            }
-          }
-        }
-
-        if (matchingPrices.length === 0) {
-          throw new BadRequestException(
-            `Sản phẩm ${product.ProductName} chưa có giá bán cho đơn vị ${item.UnitName}`,
-          );
-        }
-
-        const sortedPrices = matchingPrices.sort(
-          (a, b) => b.MinQuantity - a.MinQuantity,
-        );
-
-        for (const price of sortedPrices) {
-          if (item.Quantity >= price.MinQuantity) {
-            unitPrice = price.UnitPrice;
-            break;
-          }
-        }
-
-        if (unitPrice.isZero()) {
-          unitPrice = sortedPrices[sortedPrices.length - 1].UnitPrice;
-        }
-
-        // 2.6. Xác định giá vốn (CostPrice) từ lần nhập kho gần nhất
-        // Công thức: costPerBase = receiptUnitPrice / receiptExchangeValue
-        //            CostPrice   = costPerBase * saleExchangeValue
-        let costPrice = new Prisma.Decimal(0);
-
+        // 2.5. Xác định giá vốn và đơn giá bán
         const latestReceiptDetail = await tx.stockReceiptDetail.findFirst({
           where: {
             ProductID: item.ProductID,
@@ -214,6 +148,8 @@ export class OrdersService {
           },
           orderBy: { receipt: { ImportDate: 'desc' } },
         });
+
+        let costPrice = new Prisma.Decimal(0);
 
         if (latestReceiptDetail) {
           let receiptExchangeValue = new Prisma.Decimal(1);
@@ -225,10 +161,20 @@ export class OrdersService {
               receiptExchangeValue = receiptUnit.ExchangeValue;
             }
           }
-          const costPerBase = new Prisma.Decimal(latestReceiptDetail.UnitPrice).div(
+          const costPerBase = new Prisma.Decimal(latestReceiptDetail.CostPrice).div(
             receiptExchangeValue,
           );
           costPrice = costPerBase.mul(exchangeValue);
+        }
+
+        // Đơn giá: từ client nếu có, ngược lại tính từ MarginRate
+        let unitPrice: Prisma.Decimal;
+        if (item.UnitPrice != null && item.UnitPrice > 0) {
+          unitPrice = new Prisma.Decimal(item.UnitPrice);
+        } else {
+          unitPrice = costPrice.mul(
+            new Prisma.Decimal(1).add(product.MarginRate),
+          );
         }
 
         // 2.7. Tính thành tiền
@@ -275,6 +221,12 @@ export class OrdersService {
       }
 
       // 3. Tạo Order (sau khi validate xong toàn bộ, để có OrderID cho log)
+      // PaidAmount: Immediate → tự động bằng TotalAmount; Reserved → dùng tiền cọc từ client (mặc định 0)
+      const paidAmount =
+        deliveryMethod === 'Immediate'
+          ? totalAmount
+          : new Prisma.Decimal(createOrderDto.PaidAmount ?? 0);
+
       const orderCode = await this.generateOrderCode(tx);
       const order = await tx.order.create({
         data: {
@@ -289,6 +241,7 @@ export class OrdersService {
           },
           OrderCode: orderCode,
           TotalAmount: totalAmount,
+          PaidAmount: paidAmount,
           Status: deliveryMethod === 'Reserved' ? 'Pending' : 'Completed',
           DeliveryMethod: deliveryMethod,
           Note: createOrderDto.Note || null,
@@ -348,11 +301,12 @@ export class OrdersService {
   /**
    * Lấy danh sách đơn hàng có phân trang
    */
-  async findAll(storeId: number, pagination: PaginationParams): Promise<PaginatedResult<any>> {
+  async findAll(storeId: number, pagination: PaginationParams, status?: string): Promise<PaginatedResult<any>> {
     const { page, limit } = pagination;
     const skip = (page - 1) * limit;
 
-    const where = { StoreID: storeId };
+    const where: { StoreID: number; Status?: string } = { StoreID: storeId };
+    if (status) where.Status = status;
 
     const [data, total] = await Promise.all([
       this.prisma.order.findMany({

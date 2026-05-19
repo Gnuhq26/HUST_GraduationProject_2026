@@ -116,19 +116,6 @@ export interface ProductUnit {
   IsDefault: boolean;
 }
 
-/**
- * A price tier for a product.
- * UnitPrice is Prisma Decimal → string.
- */
-export interface PriceList {
-  PriceID: number;
-  ProductID: number;
-  PriceName: string;
-  UnitName: string;
-  UnitPrice: string;
-  MinQuantity: number;
-}
-
 export interface Product {
   ProductID: number;
   StoreID: number;
@@ -138,12 +125,13 @@ export interface Product {
   BaseUnit: string;
   Description: string | null;
   IsActive: boolean;
+  /** Prisma Decimal → string (e.g. "0.15" = 15% margin) */
+  MarginRate?: string;
   CreatedAt: string;
   UpdatedAt: string;
   // Eagerly loaded relations (present when backend includes them)
   category?: Pick<Category, 'CategoryID' | 'CategoryName'>;
   units?: ProductUnit[];
-  prices?: PriceList[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -188,6 +176,10 @@ export interface StockReceiptDetail {
   UnitName: string;
   Quantity: string;
   UnitPrice: string;
+  /** Discount rate applied at receipt time (Decimal → string, e.g. "0.10" = 10%) */
+  DiscountRate?: string;
+  /** Net cost price after discount (Decimal → string) */
+  CostPrice?: string;
   product?: Pick<Product, 'ProductID' | 'ProductName' | 'SKU' | 'BaseUnit'>;
 }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Upload, Download, Edit2, Trash2, X } from 'lucide-react';
 import { useForm, SubmitHandler, Controller } from 'react-hook-form';
 import { productsService } from '../services/productsService';
@@ -16,6 +16,8 @@ interface ProductFormData {
   BaseUnit: string;
   CategoryID?: number;
   IsActive?: string;
+  /** Displayed as percentage (e.g. 15 = 15%). Converted to decimal on submit. */
+  marginRate?: number;
 }
 
 export default function Products() {
@@ -25,26 +27,27 @@ export default function Products() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+  const [showInactive, setShowInactive] = useState(false);
 
   const toast = useToast();
   const { register, handleSubmit, reset, setValue, control, formState: { errors } } = useForm<ProductFormData>();
 
   // Load products
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await productsService.getAll();
+      const data = await productsService.getAll(showInactive ? {} : { isActive: true });
       setProducts(data ?? []);
     } catch (error) {
       console.error('Lỗi tải sản phẩm:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [showInactive]);
 
   useEffect(() => {
     loadProducts();
-  }, []);
+  }, [loadProducts]);
 
   // Open modal for create
   const handleCreate = () => {
@@ -62,17 +65,27 @@ export default function Products() {
     setValue('BaseUnit', product.BaseUnit);
     setValue('CategoryID', product.CategoryID);
     setValue('IsActive', String(product.IsActive));
+    setValue('marginRate', product.MarginRate ? parseFloat(product.MarginRate) * 100 : 10);
     setShowModal(true);
   };
 
   // Submit form
   const onSubmit: SubmitHandler<ProductFormData> = async (data) => {
+    const payload = {
+      productName: data.ProductName,
+      categoryId: data.CategoryID ? Number(data.CategoryID) : undefined,
+      sku: data.SKU || undefined,
+      baseUnit: data.BaseUnit,
+      description: data.Description || undefined,
+      isActive: data.IsActive !== undefined ? data.IsActive === 'true' : undefined,
+      marginRate: data.marginRate != null ? data.marginRate / 100 : 0.10,
+    };
     try {
       if (editingProduct) {
-        await productsService.update(editingProduct.ProductID, data);
+        await productsService.update(editingProduct.ProductID, payload);
         toast.success('Cập nhật sản phẩm thành công');
       } else {
-        await productsService.create(data);
+        await productsService.create(payload);
         toast.success('Thêm sản phẩm thành công');
       }
       setShowModal(false);
@@ -123,6 +136,15 @@ export default function Products() {
           <p className="text-blacky-500 mt-1">Quản lý danh sách sản phẩm</p>
         </div>
         <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-sm text-blacky-600 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showInactive}
+              onChange={(e) => setShowInactive(e.target.checked)}
+              className="rounded"
+            />
+            Hiển thị đã ngưng
+          </label>
           <ProtectedAction action="read" subject="Product">
             <button onClick={handleExport} className="btn btn-secondary w-fit! px-4! rounded-lg!">
               <Download className="w-4 h-4" />Export Excel
@@ -160,6 +182,7 @@ export default function Products() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">Mã SKU</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">Tên sản phẩm</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">Đơn vị</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-basic-white uppercase">Biên LN</th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-basic-white uppercase">Trạng thái</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-basic-white uppercase">Thao tác</th>
               </tr>
@@ -170,6 +193,9 @@ export default function Products() {
                     <td className="px-6 py-4 text-sm font-medium text-blacky-900">{product.SKU}</td>
                     <td className="px-6 py-4 text-sm text-blacky-900">{product.ProductName}</td>
                     <td className="px-6 py-4 text-sm text-blacky-900">{product.BaseUnit}</td>
+                    <td className="px-6 py-4 text-sm text-right text-blacky-700">
+                      {product.MarginRate != null ? (parseFloat(product.MarginRate) * 100).toFixed(0) + '%' : '—'}
+                    </td>
                     <td className="px-6 py-4 text-center text-sm">
                       <span className={`px-2 py-1 rounded-full text-xs ${product.IsActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}`}>
                         {product.IsActive ? 'Hoạt động' : 'Ngưng'}
@@ -275,6 +301,23 @@ export default function Products() {
                     className="input-field"
                     placeholder="1"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-blacky-700 mb-1.5">
+                    Biên lợi nhuận (%)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    {...register('marginRate', { min: 0, max: 100 })}
+                    className="input-field"
+                    placeholder="10"
+                  />
+                  <p className="mt-1 text-xs text-blacky-400">Ví dụ: 15 = 15% — dùng để tính giá bán gợi ý</p>
+                  {errors.marginRate && <p className="mt-1 text-sm text-accent-red">Giá trị từ 0 đến 100</p>}
                 </div>
 
                 <div>

@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../../generated/prisma/client';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 
 const adapter = new PrismaMariaDb(process.env.DATABASE_URL!);
@@ -49,28 +49,24 @@ async function main() {
   const inv = await prisma.inventory.deleteMany({ where: { StoreID } });
   console.log(`  Inventory: ${inv.count} deleted`);
 
-  // 7. PriceList (qua Product.StoreID)
+  // 7. ProductUnit
   const productIds = (await prisma.product.findMany({ where: { StoreID }, select: { ProductID: true } })).map(p => p.ProductID);
-  const pl = await prisma.priceList.deleteMany({ where: { ProductID: { in: productIds } } });
-  console.log(`  PriceList: ${pl.count} deleted`);
-
-  // 8. ProductUnit
   const pu = await prisma.productUnit.deleteMany({ where: { ProductID: { in: productIds } } });
   console.log(`  ProductUnit: ${pu.count} deleted`);
 
-  // 9. Product
+  // 8. Product
   const products = await prisma.product.deleteMany({ where: { StoreID } });
   console.log(`  Product: ${products.count} deleted`);
 
-  // 10. Customer
+  // 9. Customer
   const customers = await prisma.customer.deleteMany({ where: { StoreID } });
   console.log(`  Customer: ${customers.count} deleted`);
 
-  // 11. Supplier
+  // 10. Supplier
   const suppliers = await prisma.supplier.deleteMany({ where: { StoreID } });
   console.log(`  Supplier: ${suppliers.count} deleted`);
 
-  // 12. Category
+  // 11. Category
   const categories = await prisma.category.deleteMany({ where: { StoreID } });
   console.log(`  Category: ${categories.count} deleted`);
 

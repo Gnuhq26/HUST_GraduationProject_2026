@@ -8,18 +8,20 @@ const ordersService = {
       CustomerID: data.customerId || null,
       Note: data.note || '',
       DeliveryMethod: data.deliveryMethod || 'Immediate',
+      ...(data.paidAmount !== undefined && { PaidAmount: data.paidAmount }),
       items: data.items.map(item => ({
         ProductID: item.productId,
         UnitName: item.unitName,
         Quantity: parseFloat(item.quantity),
+        ...(item.unitPrice !== undefined && { UnitPrice: item.unitPrice }),
       })),
     });
     return response.data;
   },
 
   // Lấy danh sách đơn hàng
-  async getAll(): Promise<PaginatedResult<Order>> {
-    const response = await apiClient.get<PaginatedResult<Order>>('/orders');
+  async getAll(params?: { status?: string; limit?: number }): Promise<PaginatedResult<Order>> {
+    const response = await apiClient.get<PaginatedResult<Order>>('/orders', { params });
     return response.data;
   },
 
@@ -36,8 +38,8 @@ const ordersService = {
   },
 
   // Hủy đơn hàng (Pending → Cancelled)
-  async cancelOrder(orderId: number): Promise<Order> {
-    const response = await apiClient.patch<Order>(`/orders/${orderId}/cancel`);
+  async cancelOrder(orderId: number): Promise<Order & { refundAmount?: number }> {
+    const response = await apiClient.patch<Order & { refundAmount?: number }>(`/orders/${orderId}/cancel`);
     return response.data;
   },
 

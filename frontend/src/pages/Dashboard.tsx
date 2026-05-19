@@ -4,6 +4,7 @@ import type { ComponentType } from 'react';
 import { productsService } from '../services/productsService';
 import { customersService } from '../services/customersService';
 import ordersService from '../services/ordersService';
+import reportsService from '../services/reportsService';
 import AiInsightsWidget from '../components/ai-analyst/AiInsightsWidget';
 import TopProductsChart from '../components/dashboard/TopProductsChart';
 import RevenueByCategoryChart from '../components/dashboard/RevenueByCategoryChart';
@@ -65,18 +66,16 @@ export default function Dashboard() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [productsRes, customersRes, ordersRes] = await Promise.all([
-          productsService.getAll().catch((): Product[] => []),
+        const today = new Date().toISOString().split('T')[0];
+        const [productsRes, customersRes, ordersRes, revenueRes] = await Promise.all([
+          productsService.getAll({ isActive: true }).catch((): Product[] => []),
           customersService.getAll().catch((): PaginatedResult<Customer> => ({ data: [], meta: { total: 0, page: 1, limit: 10, totalPages: 0 } })),
           ordersService.getAll().catch((): PaginatedResult<Order> => ({ data: [], meta: { total: 0, page: 1, limit: 10, totalPages: 0 } })),
+          reportsService.getRevenueReport('2020-01-01', today).catch(() => ({ totalRevenue: 0 })),
         ]);
 
         const orders = ordersRes.data;
-
-        const revenue = orders.reduce(
-          (sum, order) => sum + parseFloat(order.TotalAmount || '0'),
-          0,
-        );
+        const revenue = (revenueRes as { totalRevenue: number }).totalRevenue;
 
         setStats({
           products: productsRes.length,

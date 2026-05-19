@@ -30,6 +30,9 @@ const inventoryService = {
         unitName: item.unitName,
         quantity: parseFloat(item.quantity),
         unitPrice: parseFloat(item.unitPrice),
+        ...(item.discountRate && parseFloat(item.discountRate) > 0
+          ? { discountRate: parseFloat(item.discountRate) / 100 }
+          : {}),
       })),
     });
     return response.data;

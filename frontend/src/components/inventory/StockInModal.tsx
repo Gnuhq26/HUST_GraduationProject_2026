@@ -7,6 +7,7 @@ export interface StockInFormItem {
   unitName: string;
   quantity: string;
   unitPrice: string;
+  discountRate: string;
 }
 
 interface Props {
@@ -158,7 +159,7 @@ function StockInModal({
 
                 return (
                   <div key={index} className="flex gap-2 items-start p-3 bg-bluesh-50 rounded-lg">
-                    <div className="flex-1 grid grid-cols-4 gap-2">
+                    <div className="flex-1 grid grid-cols-5 gap-2">
                       <select
                         required
                         title="Sản phẩm"
@@ -209,6 +210,18 @@ function StockInModal({
                         placeholder="Đơn giá"
                         value={item.unitPrice}
                         onChange={(e) => onItemChange(index, 'unitPrice', e.target.value)}
+                        className="px-3 py-2 border border-blacky-300 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50"
+                      />
+
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        placeholder="CK (%) 0-100"
+                        title="Chiết khấu từ nhà cung cấp (%)"
+                        value={item.discountRate}
+                        onChange={(e) => onItemChange(index, 'discountRate', e.target.value)}
                         className="px-3 py-2 border border-blacky-300 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50"
                       />
                     </div>

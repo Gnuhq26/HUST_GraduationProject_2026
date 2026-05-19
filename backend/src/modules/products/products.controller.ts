@@ -196,102 +196,17 @@ export class ProductsController {
     return await this.productsService.deleteProductUnit(storeId, productId, unitId);
   }
 
-  // ========== PRICE LIST MANAGEMENT ==========
+  // ========== MARGIN-BASED PRICING ==========
 
-  @Post(':id/prices')
-  @CheckPermission('create', 'Product')
-  @ApiOperation({ summary: 'Thêm bảng giá mới cho sản phẩm (cần quyền create:Product)' })
-  @ApiResponse({ status: 201, description: 'Bảng giá đã được thêm' })
-  @ApiResponse({ status: 404, description: 'Không tìm thấy sản phẩm' })
-  async addPrice(
-    @CurrentStore() storeId: number,
-    @Param('id', ParseIntPipe) productId: number,
-    @Body() body: { priceName: string; unitName: string; unitPrice: number; minQuantity?: number },
-  ) {
-    return await this.productsService.addPriceList(
-      storeId,
-      productId,
-      body.priceName,
-      body.unitName,
-      body.unitPrice,
-      body.minQuantity ?? 0,
-    );
-  }
-
-  @Patch(':id/prices/:priceId')
-  @CheckPermission('update', 'Product')
-  @ApiOperation({ summary: 'Cập nhật bảng giá (cần quyền update:Product)' })
-  @ApiResponse({ status: 200, description: 'Bảng giá đã được cập nhật' })
-  @ApiResponse({ status: 404, description: 'Không tìm thấy sản phẩm hoặc bảng giá' })
-  async updatePrice(
-    @CurrentStore() storeId: number,
-    @Param('id', ParseIntPipe) productId: number,
-    @Param('priceId', ParseIntPipe) priceId: number,
-    @Body() body: { priceName?: string; unitName?: string; unitPrice?: number; minQuantity?: number },
-  ) {
-    return await this.productsService.updatePriceList(
-      storeId,
-      productId,
-      priceId,
-      body.priceName,
-      body.unitName,
-      body.unitPrice,
-      body.minQuantity,
-    );
-  }
-
-  @Delete(':id/prices/:priceId')
-  @CheckPermission('delete', 'Product')
-  @ApiOperation({ summary: 'Xóa bảng giá (cần quyền delete:Product)' })
-  @ApiResponse({ status: 200, description: 'Bảng giá đã được xóa' })
-  @ApiResponse({ status: 404, description: 'Không tìm thấy sản phẩm hoặc bảng giá' })
-  async deletePrice(
-    @CurrentStore() storeId: number,
-    @Param('id', ParseIntPipe) productId: number,
-    @Param('priceId', ParseIntPipe) priceId: number,
-  ) {
-    return await this.productsService.deletePriceList(storeId, productId, priceId);
-  }
-
-  @Get(':id/prices/applicable')
+  @Get(':id/suggested-price')
   @CheckPermission('read', 'Product')
-  @ApiOperation({
-    summary: 'Lấy giá phù hợp dựa trên đơn vị và số lượng mua (cần quyền read:Product)',
-    description:
-      'Logic: 1) Filter giá theo unitName. 2) Tìm giá có MinQuantity <= quantity. 3) Chọn giá có MinQuantity cao nhất. Ví dụ: Mua 10 Pallet -> Tìm giá của "Pallet", rồi chọn giá phù hợp với MinQuantity <= 10',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Giá phù hợp và tổng tiền',
-    schema: {
-      example: {
-        product: {
-          ProductID: 1,
-          ProductName: 'Gạch xây dựng',
-          SKU: 'GACH-001',
-          BaseUnit: 'Viên',
-        },
-        unitName: 'Pallet',
-        quantity: 10,
-        appliedPrice: {
-          PriceID: 3,
-          PriceName: 'Giá đại lý',
-          UnitName: 'Pallet',
-          UnitPrice: 400000,
-          MinQuantity: 5,
-        },
-        totalAmount: 4000000,
-        allAvailablePrices: [],
-      },
-    },
-  })
-  @ApiResponse({ status: 404, description: 'Không tìm thấy sản phẩm hoặc không có bảng giá phù hợp cho đơn vị này' })
-  async getApplicablePrice(
+  @ApiOperation({ summary: 'Lấy giá bán gợi ý theo biên lợi nhuận (cần quyền read:Product)' })
+  @ApiResponse({ status: 200, description: 'Giá vốn và giá bán gợi ý' })
+  async getSuggestedPrice(
     @CurrentStore() storeId: number,
     @Param('id', ParseIntPipe) productId: number,
-    @Query('unitName') unitName: string,
-    @Query('quantity', ParseIntPipe) quantity: number,
+    @Query('unitName') unitName?: string,
   ) {
-    return await this.productsService.getApplicablePrice(storeId, productId, unitName, quantity);
+    return await this.productsService.getSuggestedPrice(storeId, productId, unitName);
   }
 }

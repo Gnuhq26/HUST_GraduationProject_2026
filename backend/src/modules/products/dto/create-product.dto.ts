@@ -6,8 +6,8 @@ import {
   IsArray,
   ValidateNested,
   IsNumber,
-  IsDecimal,
   Min,
+  Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -33,28 +33,6 @@ export class ProductUnitDto {
   @IsBoolean()
   @IsOptional()
   isDefault?: boolean;
-}
-
-// DTO cho bảng giá
-export class PriceListDto {
-  @ApiProperty({ example: 'Giá thợ', description: 'Tên bảng giá' })
-  @IsString()
-  priceName!: string;
-
-  @ApiProperty({ example: 'Viên', description: 'Đơn vị tính cho giá này' })
-  @IsString()
-  unitName!: string;
-
-  @ApiProperty({ example: 1000000, description: 'Đơn giá theo unitName' })
-  @IsNumber()
-  @Min(0)
-  unitPrice!: number;
-
-  @ApiPropertyOptional({ example: 0, description: 'Số lượng tối thiểu' })
-  @IsInt()
-  @Min(0)
-  @IsOptional()
-  minQuantity?: number;
 }
 
 export class CreateProductDto {
@@ -103,12 +81,12 @@ export class CreateProductDto {
   units?: ProductUnitDto[];
 
   @ApiPropertyOptional({
-    type: [PriceListDto],
-    description: 'Danh sách bảng giá',
+    example: 0.15,
+    description: 'Biên lợi nhuận mục tiêu (0.15 = 15%). Mặc định 10%',
   })
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => PriceListDto)
+  @IsNumber()
+  @Min(0)
+  @Max(1)
   @IsOptional()
-  prices?: PriceListDto[];
+  marginRate?: number;
 }

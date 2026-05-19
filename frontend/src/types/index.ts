@@ -20,7 +20,6 @@ export type {
   // Catalogue
   Category,
   ProductUnit,
-  PriceList,
   Product,
   // Supplier & Inventory
   Supplier,
@@ -67,8 +66,7 @@ export type {
   ReportDateParams,
   TopProductsParams,
   AiInsightsResponse,
-  PermissionGroup,
-  ImportPreviewRow,
+  PermissionGroup,  SuggestedPriceResponse,  ImportPreviewRow,
   ImportPreviewResponse,
   ImportCommitResponse,
 } from './dto';

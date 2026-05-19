@@ -17,7 +17,7 @@ export class OrdersController {
   @ApiOperation({
     summary: 'Tạo đơn hàng mới (Bán hàng)',
     description:
-      'Tự động kiểm tra tồn kho, áp giá từ PriceList, tạo đơn và trừ kho',
+      'Tự động kiểm tra tồn kho, tính giá từ biên lợi nhuận, tạo đơn và trừ kho',
   })
   @ApiResponse({
     status: 201,
@@ -48,8 +48,9 @@ export class OrdersController {
     @CurrentStore() storeId: number,
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+    @Query('status') status?: string,
   ) {
-    return this.ordersService.findAll(storeId, parsePagination(page, limit));
+    return this.ordersService.findAll(storeId, parsePagination(page, limit, 1000), status);
   }
 
   @Get(':id')
