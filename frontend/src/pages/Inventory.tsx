@@ -52,7 +52,7 @@ function Inventory() {
   const [selectedSupplier, setSelectedSupplier] = useState('');
   const [stockInStatus, setStockInStatus] = useState<StockReceiptStatus>('Pending');
   const [note, setNote] = useState('');
-  const [items, setItems] = useState<StockInFormItem[]>([{ productId: '', unitName: '', quantity: '', unitPrice: '' }]);
+  const [items, setItems] = useState<StockInFormItem[]>([{ productId: '', unitName: '', quantity: '', unitPrice: '', discountRate: '' }]);
 
   // Direct Ship Form States
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -117,13 +117,13 @@ function Inventory() {
     setSelectedSupplier('');
     setStockInStatus('Pending');
     setNote('');
-    setItems([{ productId: '', unitName: '', quantity: '', unitPrice: '' }]);
+    setItems([{ productId: '', unitName: '', quantity: '', unitPrice: '', discountRate: '' }]);
     setIsStockInModalOpen(true);
   };
 
   // Thêm dòng item
   const handleAddItem = () => {
-    setItems([...items, { productId: '', unitName: '', quantity: '', unitPrice: '' }]);
+    setItems([...items, { productId: '', unitName: '', quantity: '', unitPrice: '', discountRate: '' }]);
   };
 
   // Xóa dòng item
@@ -178,6 +178,7 @@ function Inventory() {
           unitName: item.unitName,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
+          discountRate: item.discountRate,
         })),
       });
 
@@ -195,12 +196,14 @@ function Inventory() {
     }
   };
 
-  // Tính tổng tiền
+  // Tính tổng tiền (áp dụng chiết khấu → giá vốn thực tế)
   const calculateTotal = (): number => {
     return items.reduce((sum, item) => {
       const quantity = parseFloat(item.quantity) || 0;
       const price = parseFloat(item.unitPrice) || 0;
-      return sum + quantity * price;
+      const discount = parseFloat(item.discountRate) || 0;
+      const costPrice = price * (1 - discount / 100);
+      return sum + quantity * costPrice;
     }, 0);
   };
 

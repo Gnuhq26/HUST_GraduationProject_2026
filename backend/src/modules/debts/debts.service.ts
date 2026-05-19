@@ -120,6 +120,7 @@ export class DebtsService {
     const receipts = await this.prisma.stockReceipt.findMany({
       where: {
         StoreID: storeId,
+        Status: 'Received', // Chỉ tính phiếu đã nhận hàng thực sự
         // Chỉ lấy phiếu chưa thanh toán đủ
         PaidAmount: {
           lt: this.prisma.stockReceipt.fields.TotalAmount,

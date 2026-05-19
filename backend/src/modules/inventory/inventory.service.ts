@@ -28,6 +28,7 @@ interface ValidatedItem {
     unitName: string;
     quantity: number;
     unitPrice: number;
+    discountRate?: number;
   };
   exchangeValue: number;
   quantityInBaseUnit: number;
@@ -38,7 +39,7 @@ export class InventoryService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * Task 22: API Nhập kho với Transaction
+   * API Nhập kho với Transaction
    * Logic:
    * 1. Tạo StockReceipt và StockReceiptDetail
    * 2. Với mỗi item, tìm ExchangeValue từ ProductUnit
@@ -101,7 +102,8 @@ export class InventoryService {
         }
 
         const quantityInBaseUnit = item.quantity * exchangeValue;
-        const itemTotal = item.quantity * item.unitPrice;
+        const discountedUnitPrice = item.unitPrice * (1 - (item.discountRate ?? 0));
+        const itemTotal = item.quantity * discountedUnitPrice;
         totalAmount += itemTotal;
 
         validatedItems.push({
@@ -130,6 +132,7 @@ export class InventoryService {
 
       for (const validated of validatedItems) {
         // Tạo chi tiết phiếu nhập
+        const costPrice = validated.item.unitPrice * (1 - (validated.item.discountRate ?? 0));
         const detail = await tx.stockReceiptDetail.create({
           data: {
             ReceiptID: receipt.ReceiptID,
@@ -137,6 +140,8 @@ export class InventoryService {
             UnitName: validated.item.unitName,
             Quantity: validated.item.quantity,
             UnitPrice: validated.item.unitPrice,
+            DiscountRate: validated.item.discountRate ?? 0,
+            CostPrice: costPrice,
           },
           include: {
             product: {
@@ -235,7 +240,7 @@ export class InventoryService {
   }
 
   /**
-   * Task 23: Lấy danh sách tồn kho với filtering có phân trang
+   * Lấy danh sách tồn kho với filtering có phân trang
    */
   async getInventory(
     storeId: number,
@@ -314,7 +319,7 @@ export class InventoryService {
   }
 
   /**
-   * Task 23: Lấy lịch sử nhập hàng của một sản phẩm
+   * Lấy lịch sử nhập hàng của một sản phẩm
    */
   async getProductStockHistory(storeId: number, productId: number) {
     // Kiểm tra product có thuộc store này không
@@ -374,14 +379,16 @@ export class InventoryService {
         UnitName: item.UnitName,
         Quantity: item.Quantity,
         UnitPrice: item.UnitPrice,
-        TotalPrice: Number(item.Quantity) * Number(item.UnitPrice),
+        DiscountRate: item.DiscountRate,
+        CostPrice: item.CostPrice,
+        TotalPrice: Number(item.Quantity) * Number(item.CostPrice),
         Note: item.receipt.Note,
       })),
     };
   }
 
   /**
-   * Task 23: Lấy danh sách phiếu nhập kho có phân trang
+   * Lấy danh sách phiếu nhập kho có phân trang
    */
   async getStockReceipts(storeId: number, supplierId?: number, pagination?: PaginationParams): Promise<PaginatedResult<any>> {
     const { page, limit } = pagination ?? { page: 1, limit: 20 };
@@ -421,7 +428,7 @@ export class InventoryService {
   }
 
   /**
-   * Task 23: Lấy chi tiết phiếu nhập kho
+   * Lấy chi tiết phiếu nhập kho
    */
   async getStockReceiptDetail(storeId: number, receiptId: number) {
     const receipt = await this.prisma.stockReceipt.findFirst({
@@ -453,6 +460,9 @@ export class InventoryService {
     return receipt;
   }
 
+  /**
+   * Thực hiện giao dịch trực tiếp (Direct Ship)
+   */
   async directShipTransaction(storeId: number, userId: number, dto: DirectShipDto) {
     return await this.prisma.$transaction(async (tx) => {
       if (dto.totalQty <= 0 || dto.deliverQty < 0) {
@@ -490,7 +500,7 @@ export class InventoryService {
           SupplierID: dto.supplierId,
           Status: 'Received',
           ReceiptCode: receiptCode,
-          TotalAmount: dto.totalQty * dto.importUnitPrice,
+          TotalAmount: dto.totalQty * dto.importUnitPrice * (1 - Number(dto.importDiscountRate ?? 0)),
           PaidAmount: 0,
           Note: dto.note,
           details: {
@@ -499,6 +509,8 @@ export class InventoryService {
               UnitName: dto.unitName,
               Quantity: dto.totalQty,
               UnitPrice: dto.importUnitPrice,
+              DiscountRate: Number(dto.importDiscountRate ?? 0),
+              CostPrice: dto.importUnitPrice * (1 - Number(dto.importDiscountRate ?? 0)),
             },
           },
         },
@@ -532,7 +544,7 @@ export class InventoryService {
               UnitName: dto.unitName,
               Quantity: dto.deliverQty,
               UnitPrice: dto.saleUnitPrice,
-              CostPrice: dto.importUnitPrice,
+              CostPrice: dto.importUnitPrice * (1 - (dto.importDiscountRate ?? 0)),
             },
           },
         },

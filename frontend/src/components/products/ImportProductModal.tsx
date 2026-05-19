@@ -215,7 +215,7 @@ export default function ImportProductModal({ onClose, onSuccess }: Props) {
                         <th className="px-3 py-2 text-left text-xs font-medium text-basic-white">Danh mục</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-basic-white">ĐV gốc</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-basic-white">ĐV quy đổi</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-basic-white">Giá</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-basic-white">Biên LN (%)</th>
                         <th className="px-3 py-2 text-center text-xs font-medium text-basic-white">Trạng thái</th>
                       </tr>
                     </thead>
@@ -231,7 +231,7 @@ export default function ImportProductModal({ onClose, onSuccess }: Props) {
                           <td className="px-3 py-2 text-blacky-800">{row.categoryName}</td>
                           <td className="px-3 py-2 text-blacky-800">{row.baseUnit}</td>
                           <td className="px-3 py-2 text-blacky-800">{row.unitName || '—'}</td>
-                          <td className="px-3 py-2 text-blacky-800">{row.unitPrice != null ? Number(row.unitPrice).toLocaleString() : '—'}</td>
+                          <td className="px-3 py-2 text-blacky-800">{row.marginRate != null ? (Number(row.marginRate) * 100).toFixed(2) + '%' : '—'}</td>
                           <td className="px-3 py-2 text-center">
                             {row.errors?.length > 0 ? (
                               <span className="inline-flex items-center gap-1 text-xs text-accent-red" title={row.errors.join('; ')}>

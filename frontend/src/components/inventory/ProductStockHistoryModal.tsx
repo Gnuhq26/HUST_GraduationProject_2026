@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { X, Package, Truck, Calendar, DollarSign, FileText } from 'lucide-react';
+import { X, Package, Truck, Calendar, FileText } from 'lucide-react';
 import inventoryService from '../../services/inventoryService';
 
 interface StockHistoryItem {
   DetailID: number;
   Quantity: number;
   UnitPrice: number;
+  DiscountRate: number;
+  CostPrice: number;
   TotalPrice: number;
   UnitName: string;
   Note?: string;
@@ -144,7 +146,7 @@ function ProductStockHistoryModal({ productId, onClose }: Props) {
                         Đơn vị
                       </th>
                       <th className="px-4 py-3 text-right text-xs font-medium text-basic-white uppercase tracking-wider">
-                        Đơn giá
+                        Giá vốn
                       </th>
                       <th className="px-4 py-3 text-right text-xs font-medium text-basic-white uppercase tracking-wider">
                         Thành tiền
@@ -186,10 +188,14 @@ function ProductStockHistoryModal({ productId, onClose }: Props) {
                           </span>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-right">
-                          <div className="flex items-center justify-end gap-1 text-sm text-blacky-700">
-                            <DollarSign className="w-3.5 h-3.5 text-blacky-400" />
-                            {formatCurrency(item.UnitPrice)}
+                          <div className="text-sm font-medium text-blacky-950">
+                            {formatCurrency(item.CostPrice)}
                           </div>
+                          {Number(item.DiscountRate) > 0 && (
+                            <div className="text-xs text-blacky-400">
+                              {formatCurrency(item.UnitPrice)} &minus; {(Number(item.DiscountRate) * 100).toFixed(0)}%
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-right">
                           <span className="text-sm font-semibold text-accent-green">

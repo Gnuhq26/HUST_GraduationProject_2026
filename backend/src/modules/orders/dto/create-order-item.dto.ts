@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsInt, IsString, IsDecimal, Min } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsNotEmpty, IsInt, IsString, IsNumber, IsOptional, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateOrderItemDto {
@@ -28,4 +28,14 @@ export class CreateOrderItemDto {
   @Type(() => Number)
   @Min(0.01, { message: 'Quantity phải lớn hơn 0' })
   Quantity!: number;
+
+  @ApiPropertyOptional({
+    description: 'Đơn giá bán (nếu không truyền, hệ thống tự tính từ biên LN)',
+    example: 150000,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  UnitPrice?: number;
 }

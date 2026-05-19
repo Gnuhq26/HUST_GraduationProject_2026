@@ -1,4 +1,4 @@
-import { IsInt, IsNumber, IsString, IsOptional, IsArray, ValidateNested, Min, IsIn } from 'class-validator';
+import { IsInt, IsNumber, IsString, IsOptional, IsArray, ValidateNested, Min, Max, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -21,6 +21,13 @@ export class StockReceiptItemDto {
   @IsNumber()
   @Min(0)
   unitPrice!: number;
+
+  @ApiPropertyOptional({ example: 0.05, description: 'Chiết khấu từ NCC (0.05 = 5%). Mặc định 0' })
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  @IsOptional()
+  discountRate?: number;
 }
 
 // DTO tạo phiếu nhập kho

@@ -43,7 +43,7 @@ export class ProductsService {
       }
     }
 
-    // Tạo sản phẩm cùng với units và prices
+    // Tạo sản phẩm cùng với units
     const product = await this.prisma.product.create({
       data: {
         StoreID: storeId,
@@ -53,6 +53,7 @@ export class ProductsService {
         BaseUnit: dto.baseUnit,
         Description: dto.description,
         IsActive: dto.isActive ?? true,
+        MarginRate: dto.marginRate ?? 0.10,
         // Nested create cho units
         units: dto.units
           ? {
@@ -60,17 +61,6 @@ export class ProductsService {
                 UnitName: unit.unitName,
                 ExchangeValue: unit.exchangeValue,
                 IsDefault: unit.isDefault ?? false,
-              })),
-            }
-          : undefined,
-        // Nested create cho prices
-        prices: dto.prices
-          ? {
-              create: dto.prices.map((price) => ({
-                PriceName: price.priceName,
-                UnitName: price.unitName,
-                UnitPrice: price.unitPrice,
-                MinQuantity: price.minQuantity ?? 0,
               })),
             }
           : undefined,
@@ -83,7 +73,6 @@ export class ProductsService {
           },
         },
         units: true,
-        prices: true,
       },
     });
 
@@ -126,7 +115,6 @@ export class ProductsService {
           },
         },
         units: true,
-        prices: true,
       },
       orderBy: {
         CreatedAt: 'desc',
@@ -152,7 +140,6 @@ export class ProductsService {
           },
         },
         units: true,
-        prices: true,
       },
     });
 
@@ -210,14 +197,7 @@ export class ProductsService {
         });
       }
 
-      // 2. Xóa toàn bộ prices cũ (nếu có prices mới)
-      if (dto.prices !== undefined) {
-        await tx.priceList.deleteMany({
-          where: { ProductID: productId },
-        });
-      }
-
-      // 3. Cập nhật thông tin sản phẩm và tạo mới units/prices
+      // 2. Cập nhật thông tin sản phẩm và tạo mới units
       return await tx.product.update({
         where: { ProductID: productId },
         data: {
@@ -227,6 +207,7 @@ export class ProductsService {
           BaseUnit: dto.baseUnit,
           Description: dto.description,
           IsActive: dto.isActive,
+          MarginRate: dto.marginRate,
           // Tạo mới units (nếu có)
           units: dto.units
             ? {
@@ -234,17 +215,6 @@ export class ProductsService {
                   UnitName: unit.unitName,
                   ExchangeValue: unit.exchangeValue,
                   IsDefault: unit.isDefault ?? false,
-                })),
-              }
-            : undefined,
-          // Tạo mới prices (nếu có)
-          prices: dto.prices
-            ? {
-                create: dto.prices.map((price) => ({
-                  PriceName: price.priceName,
-                  UnitName: price.unitName,
-                  UnitPrice: price.unitPrice,
-                  MinQuantity: price.minQuantity ?? 0,
                 })),
               }
             : undefined,
@@ -257,7 +227,6 @@ export class ProductsService {
             },
           },
           units: true,
-          prices: true,
         },
       });
     });
@@ -461,151 +430,74 @@ export class ProductsService {
   }
 
   /**
-   * Thêm bảng giá mới cho sản phẩm
+   * Lấy giá bán gợi ý dựa trên biên lợi nhuận và giá vốn mới nhất
+   * Formula: suggestedPrice = costPerSaleUnit × (1 + MarginRate)
+   * CostPrice source: StockReceiptDetail.CostPrice (giá vốn sau chiết khấu NCC)
    */
-  async addPriceList(
+  async getSuggestedPrice(
     storeId: number,
     productId: number,
-    priceName: string,
-    unitName: string,
-    unitPrice: number,
-    minQuantity: number = 0,
-  ) {
-    // Kiểm tra sản phẩm có tồn tại và thuộc về store này không
-    await this.findOne(storeId, productId);
-
-    return await this.prisma.priceList.create({
-      data: {
-        ProductID: productId,
-        PriceName: priceName,
-        UnitName: unitName,
-        UnitPrice: unitPrice,
-        MinQuantity: minQuantity,
-      },
-    });
-  }
-
-  /**
-   * Cập nhật bảng giá
-   */
-  async updatePriceList(
-    storeId: number,
-    productId: number,
-    priceId: number,
-    priceName?: string,
     unitName?: string,
-    unitPrice?: number,
-    minQuantity?: number,
   ) {
-    // Kiểm tra sản phẩm có tồn tại không
-    await this.findOne(storeId, productId);
-
-    // Kiểm tra price có thuộc product này không
-    const existingPrice = await this.prisma.priceList.findFirst({
-      where: {
-        PriceID: priceId,
-        ProductID: productId,
-      },
-    });
-
-    if (!existingPrice) {
-      throw new NotFoundException('Price not found for this product');
-    }
-
-    return await this.prisma.priceList.update({
-      where: { PriceID: priceId },
-      data: {
-        ...(priceName && { PriceName: priceName }),
-        ...(unitName && { UnitName: unitName }),
-        ...(unitPrice !== undefined && { UnitPrice: unitPrice }),
-        ...(minQuantity !== undefined && { MinQuantity: minQuantity }),
-      },
-    });
-  }
-
-  /**
-   * Xóa bảng giá
-   */
-  async deletePriceList(
-    storeId: number,
-    productId: number,
-    priceId: number,
-  ) {
-    // Kiểm tra sản phẩm có tồn tại không
-    await this.findOne(storeId, productId);
-
-    // Kiểm tra price có thuộc product này không
-    const existingPrice = await this.prisma.priceList.findFirst({
-      where: {
-        PriceID: priceId,
-        ProductID: productId,
-      },
-    });
-
-    if (!existingPrice) {
-      throw new NotFoundException('Price not found for this product');
-    }
-
-    return await this.prisma.priceList.delete({
-      where: { PriceID: priceId },
-    });
-  }
-
-  /**
-   * Lấy giá phù hợp dựa trên đơn vị và số lượng mua
-   * Logic: 
-   * 1. Filter giá theo UnitName trước
-   * 2. Tìm giá có MinQuantity <= quantity
-   * 3. Chọn giá có MinQuantity cao nhất
-   * Ví dụ: Mua 10 Pallet -> Tìm giá của "Pallet", rồi chọn giá phù hợp với quantity >= 5
-   */
-  async getApplicablePrice(
-    storeId: number,
-    productId: number,
-    unitName: string,
-    quantity: number,
-  ) {
-    // Kiểm tra sản phẩm có tồn tại không
     const product = await this.findOne(storeId, productId);
+    const saleUnit = unitName ?? product.BaseUnit;
 
-    // Lấy tất cả bảng giá của sản phẩm theo đơn vị
-    const allPrices = await this.prisma.priceList.findMany({
+    // Lấy exchange value của đơn vị bán
+    let saleExchangeValue = 1;
+    if (saleUnit !== product.BaseUnit) {
+      const unit = await this.prisma.productUnit.findFirst({
+        where: { ProductID: productId, UnitName: saleUnit },
+      });
+      if (!unit) {
+        throw new NotFoundException(
+          `Đơn vị "${saleUnit}" không tồn tại cho sản phẩm này`,
+        );
+      }
+      saleExchangeValue = Number(unit.ExchangeValue);
+    }
+
+    // Lấy giá vốn từ lần nhập gần nhất
+    const latestDetail = await this.prisma.stockReceiptDetail.findFirst({
       where: {
         ProductID: productId,
-        UnitName: unitName,             // Filter theo đơn vị trước
-        MinQuantity: { lte: quantity }, // Chỉ lấy giá có MinQuantity <= quantity
+        receipt: { StoreID: storeId, Status: 'Received' },
       },
-      orderBy: {
-        MinQuantity: 'desc', // Sắp xếp giảm dần để lấy MinQuantity cao nhất
+      orderBy: { receipt: { ImportDate: 'desc' } },
+      include: {
+        product: { include: { units: true } },
       },
     });
 
-    if (allPrices.length === 0) {
-      throw new NotFoundException(
-        `No applicable price found for unit "${unitName}" with quantity ${quantity}. Please add a price for this unit.`,
-      );
+    if (!latestDetail || Number(latestDetail.CostPrice) === 0) {
+      return {
+        productId,
+        unitName: saleUnit,
+        costPrice: 0,
+        marginRate: Number(product.MarginRate),
+        suggestedPrice: 0,
+        note: 'Chưa có giá vốn. Vui lòng nhập kho trước.',
+      };
     }
 
-    const applicablePrice = allPrices[0]; // Lấy giá đầu tiên (MinQuantity cao nhất)
+    // Quy đổi CostPrice về BaseUnit, rồi quy sang saleUnit
+    let receiptExchangeValue = 1;
+    if (latestDetail.UnitName !== product.BaseUnit) {
+      const receiptUnit = latestDetail.product.units.find(
+        (u) => u.UnitName === latestDetail.UnitName,
+      );
+      if (receiptUnit) receiptExchangeValue = Number(receiptUnit.ExchangeValue);
+    }
+
+    const costPerBase = Number(latestDetail.CostPrice) / receiptExchangeValue;
+    const costPerSaleUnit = costPerBase * saleExchangeValue;
+    const suggestedPrice = costPerSaleUnit * (1 + Number(product.MarginRate));
 
     return {
-      product: {
-        ProductID: product.ProductID,
-        ProductName: product.ProductName,
-        SKU: product.SKU,
-        BaseUnit: product.BaseUnit,
-      },
-      unitName,
-      quantity,
-      appliedPrice: {
-        PriceID: applicablePrice.PriceID,
-        PriceName: applicablePrice.PriceName,
-        UnitName: applicablePrice.UnitName,
-        UnitPrice: applicablePrice.UnitPrice,
-        MinQuantity: applicablePrice.MinQuantity,
-      },
-      totalAmount: Number(applicablePrice.UnitPrice) * quantity,
-      allAvailablePrices: allPrices,
+      productId,
+      unitName: saleUnit,
+      costPrice: Math.round(costPerSaleUnit * 100) / 100,
+      marginRate: Number(product.MarginRate),
+      suggestedPrice: Math.round(suggestedPrice),
     };
   }
 }

@@ -29,6 +29,12 @@ export class DirectShipDto {
   @Min(0)
   importUnitPrice!: number;
 
+  @ApiPropertyOptional({ example: 0.05, description: 'Chiết khấu NCC khi nhập (0.05 = 5%). Mặc định 0' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  importDiscountRate?: number;
+
   @ApiProperty({ example: 140000, description: 'Giá bán theo đơn vị' })
   @IsNumber()
   @Min(0)

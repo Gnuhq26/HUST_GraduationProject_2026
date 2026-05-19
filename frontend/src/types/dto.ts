@@ -46,6 +46,7 @@ export type UpdateCategoryDto = Partial<CreateCategoryDto>;
 export interface ProductFilterParams {
   search?: string;
   categoryId?: number;
+  isActive?: boolean;
   page?: number;
   limit?: number;
 }
@@ -59,9 +60,14 @@ export interface ProductUnitDto {
 }
 
 export interface CreateProductDto {
-  ProductName: string;
-  CategoryID?: number | null;
-  Description?: string | null;
+  productName: string;
+  categoryId?: number;
+  sku?: string;
+  baseUnit: string;
+  description?: string | null;
+  isActive?: boolean;
+  /** Margin rate 0–1 (e.g. 0.15 = 15%). Defaults to 0.10 on backend if not provided. */
+  marginRate?: number;
   units?: ProductUnitDto[];
 }
 export type UpdateProductDto = Partial<CreateProductDto>;
@@ -91,12 +97,16 @@ export interface CreateOrderItemDto {
   unitName: string;
   /** String from form input — service calls parseFloat() before sending */
   quantity: string;
+  /** Override unit price; if omitted, backend computes from MarginRate */
+  unitPrice?: number;
 }
 
 export interface CreateOrderDto {
   customerId?: number | null;
   note?: string;
   deliveryMethod?: DeliveryMethod;
+  /** Số tiền đặt cọc (chỉ dùng cho Reserved). Immediate tự động bằng TotalAmount phía backend. */
+  paidAmount?: number;
   items: CreateOrderItemDto[];
 }
 
@@ -114,6 +124,8 @@ export interface StockInItemDto {
   quantity: string;
   /** String from form input — service calls parseFloat() before sending */
   unitPrice: string;
+  /** Optional discount % from supplier, e.g. '10' = 10%. Service divides by 100. */
+  discountRate?: string;
 }
 
 export interface StockInDto {
@@ -221,8 +233,21 @@ export interface ImportPreviewRow {
   categoryName?: string;
   baseUnit?: string;
   unitName?: string;
-  unitPrice?: number | null;
+  /** Margin rate 0–1 (e.g. 0.15 = 15%). Replaces old unitPrice column. */
+  marginRate?: number | null;
   [key: string]: unknown;
+}
+
+// ===== SUGGESTED PRICE =====
+
+export interface SuggestedPriceResponse {
+  productId: number;
+  unitName: string;
+  costPrice: number;
+  marginRate: number;
+  suggestedPrice: number;
+  /** Present when no cost price exists yet (no receipts). */
+  note?: string;
 }
 
 export interface ImportPreviewResponse {

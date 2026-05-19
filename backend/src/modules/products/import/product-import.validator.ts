@@ -78,17 +78,9 @@ export async function validateRows(
       }
     }
 
-    // Validate price nếu có
-    if (row.priceName) {
-      if (row.unitPrice == null) {
-        errors.push(`Giá "${row.priceName}" thiếu giá bán`);
-      } else if (row.unitPrice < 0) {
-        errors.push('Giá bán không được âm');
-      }
-    }
-
-    if (row.minQuantity != null && row.minQuantity < 0) {
-      errors.push('Số lượng tối thiểu không được âm');
+    // Validate marginRate nếu có
+    if (row.marginRate != null && (row.marginRate < 0 || row.marginRate > 1)) {
+      errors.push('Biên lợi nhuận phải từ 0.00 đến 1.00 (ví dụ: 0.15 = 15%)');
     }
 
     // ── Lớp 2: Logic DB Validation ────────────────────────

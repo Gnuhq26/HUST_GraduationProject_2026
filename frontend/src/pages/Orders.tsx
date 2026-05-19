@@ -31,11 +31,11 @@ function Orders() {
   const [activeTab, setActiveTab] = useState<StatusTab>('All');
   const [confirmState, setConfirmState] = useState<ConfirmState>({ open: false, orderId: null, orderCode: null, action: null });
 
-  // Load orders
+  // Load orders — limit=1000 đảm bảo tải đủ đơn để tab counts chính xác
   const loadOrders = async () => {
     try {
       setLoading(true);
-      const res = await ordersService.getAll();
+      const res = await ordersService.getAll({ limit: 1000 });
       setOrders((Array.isArray(res) ? res : (res as { data?: OrderWithCount[] })?.data ?? []) as OrderWithCount[]);
     } catch (err) {
       console.error('Error loading orders:', err);
@@ -47,6 +47,9 @@ function Orders() {
   useEffect(() => {
     loadOrders();
   }, []);
+
+  // Alias — dùng sau các mutation để reload
+  const reloadOrders = loadOrders;
 
   // Export Excel
   const handleExport = async () => {
@@ -86,21 +89,21 @@ function Orders() {
       try {
         await ordersService.fulfillOrder(orderId);
         toast.success('Hoàn tất đơn hàng thành công!');
-        loadOrders();
+        reloadOrders();
       } catch (err: unknown) {
         const e = err as { response?: { data?: { message?: string } } };
         toast.error(e.response?.data?.message || 'Có lỗi xảy ra khi hoàn tất đơn hàng');
       }
     } else {
       try {
-        const res = await ordersService.cancelOrder(orderId) as unknown as { data?: { refundAmount?: number }; refundAmount?: number };
-        const refund = Number(res.data?.refundAmount || res.refundAmount || 0);
+        const res = await ordersService.cancelOrder(orderId);
+        const refund = Number(res.refundAmount || 0);
         if (refund > 0) {
           toast.info(`Đã hủy đơn hàng. Cần hoàn tiền cọc: ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(refund)}`);
         } else {
           toast.success('Đã hủy đơn hàng thành công!');
         }
-        loadOrders();
+        reloadOrders();
       } catch (err: unknown) {
         const e = err as { response?: { data?: { message?: string } } };
         toast.error(e.response?.data?.message || 'Có lỗi xảy ra khi hủy đơn hàng');
@@ -288,7 +291,7 @@ function Orders() {
         <CreateOrderModal
           open={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
-          onSuccess={loadOrders}
+          onSuccess={reloadOrders}
         />
       )}
 

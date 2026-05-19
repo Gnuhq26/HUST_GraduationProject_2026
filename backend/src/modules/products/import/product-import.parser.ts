@@ -8,19 +8,16 @@ export interface RawProductRow {
   categoryName: string;
   baseUnit: string;
   description: string;
+  marginRate: number | null;
   unitName: string;
   exchangeValue: number | null;
-  priceName: string;
-  unitPrice: number | null;
-  minQuantity: number | null;
 }
 
 /**
  * Đọc file Excel (.xlsx) từ buffer, bỏ dòng header, map thành mảng RawProductRow.
  * Cột thứ tự:
  *   A: SKU | B: Tên sản phẩm | C: Danh mục | D: Đơn vị gốc
- *   E: Mô tả | F: Đơn vị quy đổi | G: Hệ số quy đổi
- *   H: Tên giá | I: Giá bán | J: Số lượng tối thiểu
+ *   E: Mô tả | F: Biên lợi nhuận (0.10=10%) | G: Đơn vị quy đổi | H: Hệ số quy đổi
  */
 export async function parseExcel(buffer: Buffer): Promise<RawProductRow[]> {
   const workbook = new ExcelJS.Workbook();
@@ -55,11 +52,9 @@ export async function parseExcel(buffer: Buffer): Promise<RawProductRow[]> {
       categoryName: getString(3),
       baseUnit: getString(4),
       description: getString(5),
-      unitName: getString(6),
-      exchangeValue: getNumber(7),
-      priceName: getString(8),
-      unitPrice: getNumber(9),
-      minQuantity: getNumber(10),
+      marginRate: getNumber(6),
+      unitName: getString(7),
+      exchangeValue: getNumber(8),
     });
   });
 

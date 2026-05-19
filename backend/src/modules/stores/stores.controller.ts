@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, ParseIntPipe, HttpCode, HttpStatus, Req } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { StoresService } from './stores.service';
 import { AddMemberDto, UpdateMemberRoleDto, CreateStoreDto } from './dto';
 import { CurrentStore } from '../../common/decorators/current-store.decorator';
 import { CheckPermission } from '../../common/decorators/check-permission.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('Store Members Management')
 @ApiBearerAuth('JWT-auth')
@@ -35,9 +36,9 @@ export class StoresController {
   @ApiResponse({ status: 409, description: 'Subdomain already exists' })
   async createStore(
     @Body() createStoreDto: CreateStoreDto,
-    @Req() req: any,
+    @CurrentUser() userId: number,
   ) {
-    return await this.storesService.createStore(req.user.UserID, createStoreDto);
+    return await this.storesService.createStore(userId, createStoreDto);
   }
 
   @Get('details')
@@ -106,7 +107,7 @@ export class StoresController {
   @ApiOperation({ summary: 'Add a member to the store (auto-creates user if email not found)' })
   @ApiResponse({
     status: 201,
-    description: 'Member added successfully. If user email did not exist, a new user was created with default password (123456).',
+    description: 'Member added successfully. If user email did not exist, a new user was created with a random temporary password returned in the response.',
     schema: {
       example: {
         message: 'User "staff@example.com" added to store successfully',

@@ -59,6 +59,7 @@ export class ProductImportService {
         productName: r.productName,
         categoryName: r.categoryName,
         baseUnit: r.baseUnit,
+        marginRate: r.marginRate,
         action: existingSkuSet.has(r.sku.toLowerCase()) ? 'UPDATE' : 'CREATE',
       })),
       invalidRows: invalidRows.map((r) => ({
@@ -106,10 +107,7 @@ export class ProductImportService {
           // Gom units (bỏ trùng, bỏ dòng không có unitName)
           const units = this.collectUnits(group);
 
-          // Gom prices (bỏ trùng, bỏ dòng không có priceName)  
-          const prices = this.collectPrices(group);
-
-          // Xóa units/prices cũ trước khi upsert (replace all strategy)
+          // Xóa units cũ trước khi upsert (replace all strategy)
           const existing = await tx.product.findUnique({
             where: { StoreID_SKU: { StoreID: storeId, SKU: sku } },
             select: { ProductID: true },
@@ -117,9 +115,6 @@ export class ProductImportService {
 
           if (existing) {
             await tx.productUnit.deleteMany({
-              where: { ProductID: existing.ProductID },
-            });
-            await tx.priceList.deleteMany({
               where: { ProductID: existing.ProductID },
             });
           }
@@ -132,11 +127,9 @@ export class ProductImportService {
               BaseUnit: primary.baseUnit,
               Description: primary.description || null,
               IsActive: true,
+              MarginRate: primary.marginRate ?? 0.10,
               units: units.length > 0
                 ? { create: units }
-                : undefined,
-              prices: prices.length > 0
-                ? { create: prices }
                 : undefined,
             },
             create: {
@@ -147,11 +140,9 @@ export class ProductImportService {
               BaseUnit: primary.baseUnit,
               Description: primary.description || null,
               IsActive: true,
+              MarginRate: primary.marginRate ?? 0.10,
               units: units.length > 0
                 ? { create: units }
-                : undefined,
-              prices: prices.length > 0
-                ? { create: prices }
                 : undefined,
             },
           });
@@ -194,11 +185,9 @@ export class ProductImportService {
       { header: 'Tên danh mục (*)', key: 'categoryName', width: 20 },
       { header: 'Đơn vị gốc (*)', key: 'baseUnit', width: 14 },
       { header: 'Mô tả', key: 'description', width: 30 },
+      { header: 'Biên LN (0.15=15%)', key: 'marginRate', width: 20 },
       { header: 'Đơn vị quy đổi', key: 'unitName', width: 16 },
       { header: 'Hệ số quy đổi', key: 'exchangeValue', width: 16 },
-      { header: 'Tên giá', key: 'priceName', width: 16 },
-      { header: 'Giá bán', key: 'unitPrice', width: 16 },
-      { header: 'SL tối thiểu', key: 'minQuantity', width: 14 },
     ];
 
     sheet.columns = headers;
@@ -221,23 +210,19 @@ export class ProductImportService {
       categoryName: 'Xi măng',
       baseUnit: 'Bao',
       description: 'Xi măng Portland hỗn hợp',
+      marginRate: 0.15,
       unitName: 'Tấn',
       exchangeValue: 20,
-      priceName: 'Giá lẻ',
-      unitPrice: 95000,
-      minQuantity: 0,
     });
     sheet.addRow({
-      sku: 'XM-HT-PCB40',
-      productName: 'Xi măng Hoàng Thạch PCB40',
-      categoryName: 'Xi măng',
-      baseUnit: 'Bao',
+      sku: 'GACH-TL-200',
+      productName: 'Gạch tuynel 200',
+      categoryName: 'Gạch',
+      baseUnit: 'Viên',
       description: '',
-      unitName: '',
-      exchangeValue: null,
-      priceName: 'Giá sỉ',
-      unitPrice: 88000,
-      minQuantity: 50,
+      marginRate: 0.12,
+      unitName: 'Pallet',
+      exchangeValue: 500,
     });
 
     const buffer = await workbook.xlsx.writeBuffer();
@@ -277,34 +262,5 @@ export class ProductImportService {
       });
     }
     return units;
-  }
-
-  private collectPrices(
-    group: ValidatedRow[],
-  ): Array<{
-    PriceName: string;
-    UnitName: string;
-    UnitPrice: number;
-    MinQuantity: number;
-  }> {
-    const seen = new Set<string>();
-    const prices: Array<{
-      PriceName: string;
-      UnitName: string;
-      UnitPrice: number;
-      MinQuantity: number;
-    }> = [];
-
-    for (const row of group) {
-      if (!row.priceName || seen.has(row.priceName)) continue;
-      seen.add(row.priceName);
-      prices.push({
-        PriceName: row.priceName,
-        UnitName: row.unitName || row.baseUnit,
-        UnitPrice: row.unitPrice!,
-        MinQuantity: row.minQuantity ?? 0,
-      });
-    }
-    return prices;
   }
 }

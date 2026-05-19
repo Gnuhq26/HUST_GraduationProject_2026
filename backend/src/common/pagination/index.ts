@@ -13,9 +13,9 @@ export interface PaginationParams {
   limit: number;
 }
 
-export function parsePagination(page?: number, limit?: number): PaginationParams {
+export function parsePagination(page?: number, limit?: number, maxLimit = 100): PaginationParams {
   const p = Math.max(1, page ?? 1);
-  const l = Math.min(100, Math.max(1, limit ?? 20));
+  const l = Math.min(maxLimit, Math.max(1, limit ?? 20));
   return { page: p, limit: l };
 }
 

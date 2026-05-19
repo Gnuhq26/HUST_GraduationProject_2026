@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../../generated/prisma/client';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 
 const adapter = new PrismaMariaDb(process.env.DATABASE_URL!);
@@ -8,7 +8,7 @@ const prisma = new PrismaClient({ adapter } as any);
 /**
  * Demo seed: Tạo dữ liệu nghiệp vụ để demo frontend.
  * Chạy SAU seed.ts gốc (cần có Store, User, Role).
- *
+ * Cách chạy:
  * npx ts-node prisma/seeds/seed-demo.ts
  */
 async function main() {
@@ -58,8 +58,8 @@ async function main() {
     CategoryName: string;
     SKU: string;
     BaseUnit: string;
+    marginRate: number;
     units: { UnitName: string; ExchangeValue: number; IsDefault: boolean }[];
-    prices: { PriceName: string; UnitName: string; UnitPrice: number; MinQuantity: number }[];
   }
 
   const productData: ProductSeed[] = [
@@ -69,14 +69,10 @@ async function main() {
       CategoryName: 'Xi măng',
       SKU: 'XM-HT-PCB40',
       BaseUnit: 'Bao',
+      marginRate: 0.12,
       units: [
         { UnitName: 'Bao', ExchangeValue: 1, IsDefault: true },
         { UnitName: 'Tấn', ExchangeValue: 20, IsDefault: false },
-      ],
-      prices: [
-        { PriceName: 'Giá lẻ', UnitName: 'Bao', UnitPrice: 95000, MinQuantity: 0 },
-        { PriceName: 'Giá sỉ', UnitName: 'Bao', UnitPrice: 88000, MinQuantity: 50 },
-        { PriceName: 'Giá thợ', UnitName: 'Bao', UnitPrice: 90000, MinQuantity: 20 },
       ],
     },
     {
@@ -84,11 +80,8 @@ async function main() {
       CategoryName: 'Xi măng',
       SKU: 'XM-NS-PC50',
       BaseUnit: 'Bao',
+      marginRate: 0.10,
       units: [{ UnitName: 'Bao', ExchangeValue: 1, IsDefault: true }],
-      prices: [
-        { PriceName: 'Giá lẻ', UnitName: 'Bao', UnitPrice: 105000, MinQuantity: 0 },
-        { PriceName: 'Giá sỉ', UnitName: 'Bao', UnitPrice: 97000, MinQuantity: 50 },
-      ],
     },
     // ── Sắt thép ──
     {
@@ -96,13 +89,10 @@ async function main() {
       CategoryName: 'Sắt thép',
       SKU: 'TT-HP-D10',
       BaseUnit: 'Cây',
+      marginRate: 0.12,
       units: [
         { UnitName: 'Cây', ExchangeValue: 1, IsDefault: true },
         { UnitName: 'Bó', ExchangeValue: 20, IsDefault: false },
-      ],
-      prices: [
-        { PriceName: 'Giá lẻ', UnitName: 'Cây', UnitPrice: 75000, MinQuantity: 0 },
-        { PriceName: 'Giá sỉ', UnitName: 'Cây', UnitPrice: 68000, MinQuantity: 100 },
       ],
     },
     {
@@ -110,13 +100,10 @@ async function main() {
       CategoryName: 'Sắt thép',
       SKU: 'TC-PM-D6',
       BaseUnit: 'Kg',
+      marginRate: 0.10,
       units: [
         { UnitName: 'Kg', ExchangeValue: 1, IsDefault: true },
         { UnitName: 'Cuộn', ExchangeValue: 500, IsDefault: false },
-      ],
-      prices: [
-        { PriceName: 'Giá lẻ', UnitName: 'Kg', UnitPrice: 18500, MinQuantity: 0 },
-        { PriceName: 'Giá sỉ', UnitName: 'Kg', UnitPrice: 17000, MinQuantity: 1000 },
       ],
     },
     // ── Gạch ──
@@ -125,13 +112,10 @@ async function main() {
       CategoryName: 'Gạch',
       SKU: 'GO-4L',
       BaseUnit: 'Viên',
+      marginRate: 0.15,
       units: [
         { UnitName: 'Viên', ExchangeValue: 1, IsDefault: true },
         { UnitName: 'Pallet', ExchangeValue: 500, IsDefault: false },
-      ],
-      prices: [
-        { PriceName: 'Giá lẻ', UnitName: 'Viên', UnitPrice: 1200, MinQuantity: 0 },
-        { PriceName: 'Giá sỉ', UnitName: 'Pallet', UnitPrice: 500000, MinQuantity: 1 },
       ],
     },
     {
@@ -139,13 +123,10 @@ async function main() {
       CategoryName: 'Gạch',
       SKU: 'GC-30-PR',
       BaseUnit: 'Viên',
+      marginRate: 0.20,
       units: [
         { UnitName: 'Viên', ExchangeValue: 1, IsDefault: true },
         { UnitName: 'Thùng', ExchangeValue: 12, IsDefault: false },
-      ],
-      prices: [
-        { PriceName: 'Giá lẻ', UnitName: 'Viên', UnitPrice: 28000, MinQuantity: 0 },
-        { PriceName: 'Giá sỉ', UnitName: 'Thùng', UnitPrice: 300000, MinQuantity: 5 },
       ],
     },
     // ── Cát sỏi ──
@@ -154,13 +135,10 @@ async function main() {
       CategoryName: 'Cát sỏi',
       SKU: 'CV-XD',
       BaseUnit: 'Khối',
+      marginRate: 0.15,
       units: [
         { UnitName: 'Khối', ExchangeValue: 1, IsDefault: true },
         { UnitName: 'Xe', ExchangeValue: 8, IsDefault: false },
-      ],
-      prices: [
-        { PriceName: 'Giá lẻ', UnitName: 'Khối', UnitPrice: 350000, MinQuantity: 0 },
-        { PriceName: 'Giá xe', UnitName: 'Xe', UnitPrice: 2500000, MinQuantity: 1 },
       ],
     },
     {
@@ -168,10 +146,8 @@ async function main() {
       CategoryName: 'Cát sỏi',
       SKU: 'DD-1X2',
       BaseUnit: 'Khối',
+      marginRate: 0.12,
       units: [{ UnitName: 'Khối', ExchangeValue: 1, IsDefault: true }],
-      prices: [
-        { PriceName: 'Giá lẻ', UnitName: 'Khối', UnitPrice: 320000, MinQuantity: 0 },
-      ],
     },
     // ── Sơn ──
     {
@@ -179,21 +155,16 @@ async function main() {
       CategoryName: 'Sơn',
       SKU: 'SON-DLX-NT5',
       BaseUnit: 'Thùng',
+      marginRate: 0.20,
       units: [{ UnitName: 'Thùng', ExchangeValue: 1, IsDefault: true }],
-      prices: [
-        { PriceName: 'Giá lẻ', UnitName: 'Thùng', UnitPrice: 850000, MinQuantity: 0 },
-        { PriceName: 'Giá sỉ', UnitName: 'Thùng', UnitPrice: 780000, MinQuantity: 10 },
-      ],
     },
     {
       ProductName: 'Sơn chống thấm Kova CT-11A',
       CategoryName: 'Sơn',
       SKU: 'SON-KV-CT11',
       BaseUnit: 'Thùng',
+      marginRate: 0.18,
       units: [{ UnitName: 'Thùng', ExchangeValue: 1, IsDefault: true }],
-      prices: [
-        { PriceName: 'Giá lẻ', UnitName: 'Thùng', UnitPrice: 650000, MinQuantity: 0 },
-      ],
     },
     // ── Ống nước ──
     {
@@ -201,13 +172,10 @@ async function main() {
       CategoryName: 'Ống nước',
       SKU: 'ONG-BM-D21',
       BaseUnit: 'Cây',
+      marginRate: 0.15,
       units: [
         { UnitName: 'Cây', ExchangeValue: 1, IsDefault: true },
         { UnitName: 'Bó', ExchangeValue: 10, IsDefault: false },
-      ],
-      prices: [
-        { PriceName: 'Giá lẻ', UnitName: 'Cây', UnitPrice: 32000, MinQuantity: 0 },
-        { PriceName: 'Giá sỉ', UnitName: 'Cây', UnitPrice: 28000, MinQuantity: 50 },
       ],
     },
     // ── Điện ──
@@ -216,13 +184,10 @@ async function main() {
       CategoryName: 'Điện',
       SKU: 'DD-CDV-25',
       BaseUnit: 'Mét',
+      marginRate: 0.15,
       units: [
         { UnitName: 'Mét', ExchangeValue: 1, IsDefault: true },
         { UnitName: 'Cuộn', ExchangeValue: 100, IsDefault: false },
-      ],
-      prices: [
-        { PriceName: 'Giá lẻ', UnitName: 'Mét', UnitPrice: 12000, MinQuantity: 0 },
-        { PriceName: 'Giá cuộn', UnitName: 'Cuộn', UnitPrice: 1050000, MinQuantity: 1 },
       ],
     },
     {
@@ -230,10 +195,8 @@ async function main() {
       CategoryName: 'Điện',
       SKU: 'OC-PNS-02',
       BaseUnit: 'Cái',
+      marginRate: 0.25,
       units: [{ UnitName: 'Cái', ExchangeValue: 1, IsDefault: true }],
-      prices: [
-        { PriceName: 'Giá lẻ', UnitName: 'Cái', UnitPrice: 85000, MinQuantity: 0 },
-      ],
     },
   ];
 
@@ -256,6 +219,7 @@ async function main() {
           ProductName: p.ProductName,
           SKU: p.SKU,
           BaseUnit: p.BaseUnit,
+          MarginRate: p.marginRate,
         },
       });
       productId = created.ProductID;
@@ -264,13 +228,6 @@ async function main() {
       for (const u of p.units) {
         await prisma.productUnit.create({
           data: { ProductID: productId, ...u },
-        });
-      }
-
-      // Prices
-      for (const pr of p.prices) {
-        await prisma.priceList.create({
-          data: { ProductID: productId, ...pr },
         });
       }
     }
@@ -384,7 +341,7 @@ async function main() {
     PaidAmount: number;
     Note?: string;
     ImportDate?: Date;
-    details: { SKU: string; UnitName: string; Quantity: number; UnitPrice: number }[];
+    details: { SKU: string; UnitName: string; Quantity: number; UnitPrice: number; discountRate?: number }[];
   }) {
     const receipt = await prisma.stockReceipt.create({
       data: {
@@ -396,12 +353,17 @@ async function main() {
         Note: data.Note,
         ImportDate: data.ImportDate ?? new Date(),
         details: {
-          create: data.details.map((d) => ({
-            ProductID: products[d.SKU],
-            UnitName: d.UnitName,
-            Quantity: d.Quantity,
-            UnitPrice: d.UnitPrice,
-          })),
+          create: data.details.map((d) => {
+            const discountRate = d.discountRate ?? 0;
+            return {
+              ProductID: products[d.SKU],
+              UnitName: d.UnitName,
+              Quantity: d.Quantity,
+              UnitPrice: d.UnitPrice,
+              DiscountRate: discountRate,
+              CostPrice: d.UnitPrice * (1 - discountRate),
+            };
+          }),
         },
       },
     });
@@ -414,8 +376,8 @@ async function main() {
     Status: 'Received',
     TotalAmount: 42500000,
     PaidAmount: 42500000,
-    Note: 'Nhập xi măng tháng 1',
-    ImportDate: new Date('2025-01-10'),
+    Note: 'Nhập xi măng tháng 3',
+    ImportDate: new Date('2026-03-10'),
     details: [
       { SKU: 'XM-HT-PCB40', UnitName: 'Bao', Quantity: 300, UnitPrice: 85000 },
       { SKU: 'XM-NS-PC50', UnitName: 'Bao', Quantity: 100, UnitPrice: 95000 },
@@ -429,7 +391,7 @@ async function main() {
     TotalAmount: 115000000,
     PaidAmount: 60000000, // Nợ 55 triệu
     Note: 'Nhập thép đợt 1 - còn nợ 55 triệu',
-    ImportDate: new Date('2025-01-15'),
+    ImportDate: new Date('2026-03-15'),
     details: [
       { SKU: 'TT-HP-D10', UnitName: 'Cây', Quantity: 1000, UnitPrice: 68000 },
       { SKU: 'TC-PM-D6', UnitName: 'Kg', Quantity: 3000, UnitPrice: 15667 },
@@ -442,8 +404,8 @@ async function main() {
     Status: 'Pending',
     TotalAmount: 22500000,
     PaidAmount: 10000000,
-    Note: 'Nhập sơn tháng 2 - đang chờ nhận hàng',
-    ImportDate: new Date('2025-02-01'),
+    Note: 'Nhập sơn tháng 4 - đang chờ nhận hàng',
+    ImportDate: new Date('2026-04-01'),
     details: [
       { SKU: 'SON-DLX-NT5', UnitName: 'Thùng', Quantity: 20, UnitPrice: 750000 },
       { SKU: 'SON-KV-CT11', UnitName: 'Thùng', Quantity: 10, UnitPrice: 600000 },
@@ -456,8 +418,8 @@ async function main() {
     Status: 'Received',
     TotalAmount: 45600000,
     PaidAmount: 20000000, // Nợ 25.6 triệu
-    Note: 'Nhập gạch tháng 1',
-    ImportDate: new Date('2025-01-20'),
+    Note: 'Nhập gạch tháng 3',
+    ImportDate: new Date('2026-03-20'),
     details: [
       { SKU: 'GO-4L', UnitName: 'Pallet', Quantity: 20, UnitPrice: 480000 },
       { SKU: 'GC-30-PR', UnitName: 'Thùng', Quantity: 200, UnitPrice: 180000 },
@@ -471,7 +433,7 @@ async function main() {
     TotalAmount: 18400000,
     PaidAmount: 0,
     Note: 'Nhập cát sỏi - xe đang trên đường',
-    ImportDate: new Date('2025-02-05'),
+    ImportDate: new Date('2026-04-10'),
     details: [
       { SKU: 'CV-XD', UnitName: 'Xe', Quantity: 3, UnitPrice: 2300000 },
       { SKU: 'DD-1X2', UnitName: 'Khối', Quantity: 40, UnitPrice: 285000 },
@@ -485,7 +447,7 @@ async function main() {
     TotalAmount: 51000000,
     PaidAmount: 30000000, // Nợ 21 triệu
     Note: 'Nhập thép đợt 2',
-    ImportDate: new Date('2025-02-10'),
+    ImportDate: new Date('2026-04-20'),
     details: [
       { SKU: 'TT-HP-D10', UnitName: 'Cây', Quantity: 500, UnitPrice: 70000 },
       { SKU: 'TC-PM-D6', UnitName: 'Kg', Quantity: 1000, UnitPrice: 16000 },
@@ -543,7 +505,7 @@ async function main() {
     TotalAmount: 21500000,
     PaidAmount: 21500000,
     Note: 'Đơn hàng xi măng gạch - thanh toán đủ',
-    OrderDate: new Date('2025-01-12'),
+    OrderDate: new Date('2026-03-12'),
     details: [
       { SKU: 'XM-HT-PCB40', UnitName: 'Bao', Quantity: 100, UnitPrice: 90000, CostPrice: 85000 },
       { SKU: 'GO-4L', UnitName: 'Pallet', Quantity: 25, UnitPrice: 500000, CostPrice: 480000 },
@@ -558,7 +520,7 @@ async function main() {
     TotalAmount: 37600000,
     PaidAmount: 20000000, // Nợ 17.6 triệu
     Note: 'Đơn hàng lớn - nợ 17.6 triệu',
-    OrderDate: new Date('2025-01-18'),
+    OrderDate: new Date('2026-03-18'),
     details: [
       { SKU: 'TT-HP-D10', UnitName: 'Cây', Quantity: 200, UnitPrice: 75000, CostPrice: 68000 },
       { SKU: 'XM-HT-PCB40', UnitName: 'Bao', Quantity: 150, UnitPrice: 88000, CostPrice: 85000 },
@@ -574,7 +536,7 @@ async function main() {
     TotalAmount: 12400000,
     PaidAmount: 5000000, // Nợ 7.4 triệu
     Note: 'Giao hàng công trình Đông Anh - nợ',
-    OrderDate: new Date('2025-01-25'),
+    OrderDate: new Date('2026-03-25'),
     details: [
       { SKU: 'XM-NS-PC50', UnitName: 'Bao', Quantity: 50, UnitPrice: 97000, CostPrice: 95000 },
       { SKU: 'CV-XD', UnitName: 'Khối', Quantity: 10, UnitPrice: 350000, CostPrice: 300000 },
@@ -590,7 +552,7 @@ async function main() {
     TotalAmount: 8750000,
     PaidAmount: 8750000,
     Note: 'Mua sơn và ống nước - trả đủ',
-    OrderDate: new Date('2025-02-01'),
+    OrderDate: new Date('2026-04-05'),
     details: [
       { SKU: 'SON-DLX-NT5', UnitName: 'Thùng', Quantity: 5, UnitPrice: 850000, CostPrice: 750000 },
       { SKU: 'SON-KV-CT11', UnitName: 'Thùng', Quantity: 3, UnitPrice: 650000, CostPrice: 600000 },
@@ -606,7 +568,7 @@ async function main() {
     TotalAmount: 71400000,
     PaidAmount: 30000000, // Đặt cọc 30 triệu
     Note: 'Đơn sỉ gạch + xi măng - đã cọc 30 triệu, chờ giao',
-    OrderDate: new Date('2025-02-05'),
+    OrderDate: new Date('2026-04-15'),
     details: [
       { SKU: 'GO-4L', UnitName: 'Pallet', Quantity: 40, UnitPrice: 500000, CostPrice: 480000 },
       { SKU: 'XM-HT-PCB40', UnitName: 'Bao', Quantity: 200, UnitPrice: 88000, CostPrice: 85000 },
@@ -622,7 +584,7 @@ async function main() {
     TotalAmount: 3500000,
     PaidAmount: 0,
     Note: 'Khách vãng lai huỷ đơn',
-    OrderDate: new Date('2025-01-30'),
+    OrderDate: new Date('2026-04-01'),
     details: [
       { SKU: 'DD-CDV-25', UnitName: 'Cuộn', Quantity: 2, UnitPrice: 1050000, CostPrice: 950000 },
       { SKU: 'OC-PNS-02', UnitName: 'Cái', Quantity: 10, UnitPrice: 85000, CostPrice: 65000 },
@@ -637,7 +599,7 @@ async function main() {
     TotalAmount: 89000000,
     PaidAmount: 50000000, // Nợ 39 triệu
     Note: 'Dự án KĐT Ciputra - công nợ lớn',
-    OrderDate: new Date('2025-02-08'),
+    OrderDate: new Date('2026-04-22'),
     details: [
       { SKU: 'XM-HT-PCB40', UnitName: 'Bao', Quantity: 300, UnitPrice: 88000, CostPrice: 85000 },
       { SKU: 'TT-HP-D10', UnitName: 'Cây', Quantity: 500, UnitPrice: 68000, CostPrice: 68000 },
@@ -654,7 +616,7 @@ async function main() {
     TotalAmount: 5700000,
     PaidAmount: 5700000,
     Note: 'Mua điện nước bổ sung - trả đủ',
-    OrderDate: new Date('2025-02-10'),
+    OrderDate: new Date('2026-05-03'),
     details: [
       { SKU: 'DD-CDV-25', UnitName: 'Cuộn', Quantity: 3, UnitPrice: 1050000, CostPrice: 950000 },
       { SKU: 'OC-PNS-02', UnitName: 'Cái', Quantity: 20, UnitPrice: 85000, CostPrice: 65000 },
@@ -670,7 +632,7 @@ async function main() {
     TotalAmount: 15600000,
     PaidAmount: 10000000,
     Note: 'Đơn xi măng + sơn - đặt trước chờ giao',
-    OrderDate: new Date('2025-02-12'),
+    OrderDate: new Date('2026-05-08'),
     details: [
       { SKU: 'XM-HT-PCB40', UnitName: 'Bao', Quantity: 100, UnitPrice: 90000, CostPrice: 85000 },
       { SKU: 'SON-DLX-NT5', UnitName: 'Thùng', Quantity: 8, UnitPrice: 825000, CostPrice: 750000 },
@@ -684,7 +646,7 @@ async function main() {
     TotalAmount: 1920000,
     PaidAmount: 1920000,
     Note: 'Khách vãng lai mua gạch lẻ',
-    OrderDate: new Date('2025-02-03'),
+    OrderDate: new Date('2026-05-12'),
     details: [
       { SKU: 'GC-30-PR', UnitName: 'Thùng', Quantity: 5, UnitPrice: 336000, CostPrice: 180000 },
       { SKU: 'OC-PNS-02', UnitName: 'Cái', Quantity: 2, UnitPrice: 85000, CostPrice: 65000 },
@@ -753,6 +715,7 @@ async function main() {
   console.log(`   Customers:       ${Object.keys(customers).length}`);
   console.log(`   Stock Receipts:  6 (2 Pending, 4 Received, 3 còn nợ NCC)`);
   console.log(`   Orders:          10 (7 Completed, 2 Pending, 1 Cancelled)`);
+  console.log(`   Order dates:     03–05/2026 (hiển thị trong report)`);
   console.log(`   Inventory Logs:  ${logEntries.length}`);
   console.log('');
   console.log('📌 Tài khoản demo: admin@app.com / 123456');

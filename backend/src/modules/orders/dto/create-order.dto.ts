@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsInt, IsString, IsArray, ValidateNested, ArrayMinSize, IsIn } from 'class-validator';
+import { IsOptional, IsInt, IsString, IsArray, ValidateNested, ArrayMinSize, IsIn, IsNumber, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateOrderItemDto } from './create-order-item.dto';
 
@@ -35,6 +35,20 @@ export class CreateOrderDto {
     message: 'DeliveryMethod chỉ được là Immediate hoặc Reserved. Để giao thẳng dùng POST /inventory/direct-ship',
   })
   DeliveryMethod?: 'Immediate' | 'Reserved';
+
+  @ApiProperty({
+    description:
+      'Số tiền khách đã thanh toán. ' +
+      'Với đơn Immediate tự động bằng TotalAmount nếu không truyền. ' +
+      'Với đơn Reserved là tiền cọc (mặc định 0).',
+    example: 500000,
+    required: false,
+  })
+  @IsOptional()
+  @IsNumber({}, { message: 'PaidAmount phải là số' })
+  @Min(0, { message: 'PaidAmount không được âm' })
+  @Type(() => Number)
+  PaidAmount?: number;
 
   @ApiProperty({
     description: 'Danh sách sản phẩm trong đơn hàng',

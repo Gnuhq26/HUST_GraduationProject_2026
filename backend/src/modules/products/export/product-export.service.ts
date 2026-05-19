@@ -1,22 +1,35 @@
 import { Injectable } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import type { Response } from 'express';
-import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../common/prisma';
+
+/** Shape returned by the product findMany query with productExportInclude */
+interface ProductWithRelations {
+  ProductID: number;
+  SKU: string | null;
+  ProductName: string;
+  BaseUnit: string;
+  Description: string | null;
+  IsActive: boolean;
+  CreatedAt: Date;
+  MarginRate: { toString(): string };
+  category: { CategoryName: string } | null;
+  units: { UnitName: string; ExchangeValue: { toString(): string } }[];
+  inventories: {
+    Quantity: { toString(): string };
+    ReservedQty: { toString(): string };
+    InTransitQty: { toString(): string };
+  }[];
+}
 
 /* Cấu trúc include dùng cho query export */
 const productExportInclude = {
   category: { select: { CategoryName: true } },
   units: true,
-  prices: true,
   inventories: {
     select: { Quantity: true, ReservedQty: true, InTransitQty: true },
   },
-} satisfies Prisma.ProductInclude;
-
-type ProductWithRelations = Prisma.ProductGetPayload<{
-  include: typeof productExportInclude;
-}>;
+};
 
 @Injectable()
 export class ProductExportService {
@@ -70,11 +83,9 @@ export class ProductExportService {
       { header: 'Đơn vị gốc', key: 'baseUnit', width: 14 },
       { header: 'Mô tả', key: 'description', width: 30 },
       { header: 'Trạng thái', key: 'status', width: 14 },
+      { header: 'Biên LN (%)', key: 'marginRate', width: 14 },
       { header: 'Đơn vị quy đổi', key: 'unitName', width: 16 },
       { header: 'Hệ số quy đổi', key: 'exchangeValue', width: 16 },
-      { header: 'Tên giá', key: 'priceName', width: 16 },
-      { header: 'Giá bán', key: 'unitPrice', width: 16 },
-      { header: 'SL tối thiểu', key: 'minQuantity', width: 14 },
       { header: 'Tồn kho', key: 'quantity', width: 12 },
       { header: 'Đang giữ', key: 'reservedQty', width: 12 },
       { header: 'Đang vận chuyển', key: 'inTransitQty', width: 16 },
@@ -106,42 +117,38 @@ export class ProductExportService {
         baseUnit: product.BaseUnit,
         description: product.Description ?? '',
         status: product.IsActive ? 'Hoạt động' : 'Ngưng',
+        marginRate: Number(product.MarginRate),
         quantity: inv ? Number(inv.Quantity) : 0,
         reservedQty: inv ? Number(inv.ReservedQty) : 0,
         inTransitQty: inv ? Number(inv.InTransitQty) : 0,
         createdAt: this.formatDate(product.CreatedAt),
       };
 
-      const { units, prices } = product;
-      const maxRows = Math.max(1, units.length, prices.length);
+      const { units } = product;
+      const maxRows = Math.max(1, units.length);
 
       for (let i = 0; i < maxRows; i++) {
         const unit = units[i] as (typeof units)[number] | undefined;
-        const price = prices[i] as (typeof prices)[number] | undefined;
 
         sheet.addRow({
           // Chỉ hiện thông tin sản phẩm ở dòng đầu tiên
           ...(i === 0 ? base : { sku: base.sku }),
           unitName: unit?.UnitName ?? '',
           exchangeValue: unit ? Number(unit.ExchangeValue) : null,
-          priceName: price?.PriceName ?? '',
-          unitPrice: price ? Number(price.UnitPrice) : null,
-          minQuantity: price ? Number(price.MinQuantity) : null,
         });
       }
     }
   }
 
   private formatNumberColumns(sheet: ExcelJS.Worksheet) {
-    // Cột giá bán (J) - định dạng number
-    sheet.getColumn('unitPrice').numFmt = '#,##0';
-    // Cột hệ số quy đổi (H)
+    // Cột biên lợi nhuận - hiển thị % (0.15 → 15.00%)
+    sheet.getColumn('marginRate').numFmt = '0.00%';
+    // Cột hệ số quy đổi
     sheet.getColumn('exchangeValue').numFmt = '#,##0.##';
     // Cột tồn kho
     sheet.getColumn('quantity').numFmt = '#,##0.##';
     sheet.getColumn('reservedQty').numFmt = '#,##0.##';
     sheet.getColumn('inTransitQty').numFmt = '#,##0.##';
-    sheet.getColumn('minQuantity').numFmt = '#,##0';
   }
 
   private formatDate(date: Date): string {

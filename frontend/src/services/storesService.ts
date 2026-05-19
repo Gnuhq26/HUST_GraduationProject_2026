@@ -27,10 +27,11 @@ const storesService = {
   },
 
   /**
-   * Add a member to the store
+   * Add a member to the store.
+   * Returns `temporaryPassword` when a new user account was created.
    */
-  async addMember(data: AddMemberDto): Promise<StoreUser> {
-    const response = await apiClient.post<StoreUser>('/stores/members', data);
+  async addMember(data: AddMemberDto): Promise<{ message: string; member: StoreUser; temporaryPassword?: string }> {
+    const response = await apiClient.post<{ message: string; member: StoreUser; temporaryPassword?: string }>('/stores/members', data);
     return response.data;
   },
 

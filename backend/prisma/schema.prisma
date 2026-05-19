@@ -149,11 +149,12 @@ model Product {
   CreatedAt   DateTime @default(now()) @db.Timestamp(0)
   UpdatedAt   DateTime @updatedAt @db.Timestamp(0)
 
+  MarginRate  Decimal  @db.Decimal(5, 2) @default(0.10) // Biên lợi nhuận mục tiêu (0.10 = 10%)
+
   // Relations
   store        Store         @relation(fields: [StoreID], references: [StoreID], onDelete: Cascade)
   category     Category      @relation(fields: [CategoryID], references: [CategoryID], onDelete: Restrict)
   units        ProductUnit[]
-  prices       PriceList[]
   inventories  Inventory[]
   stockReceiptDetails StockReceiptDetail[]
   orderDetails OrderDetail[]
@@ -171,18 +172,6 @@ model ProductUnit {
 
   // Relations
   product       Product @relation(fields: [ProductID], references: [ProductID], onDelete: Cascade)
-}
-
-model PriceList {
-  PriceID      Int     @id @default(autoincrement())
-  ProductID    Int
-  PriceName    String  @db.VarChar(100) // Ví dụ: Giá thợ, Giá bán lẻ
-  UnitName     String  @db.VarChar(50) // Đơn vị tính cho giá này (Viên, Thùng, Pallet...)
-  UnitPrice    Decimal @db.Decimal(18, 2) // Giá theo UnitName
-  MinQuantity  Int     @default(0)
-
-  // Relations
-  product      Product @relation(fields: [ProductID], references: [ProductID], onDelete: Cascade)
 }
 
 // ==========================================
@@ -253,7 +242,9 @@ model StockReceiptDetail {
   ProductID    Int
   UnitName     String   @db.VarChar(50) // Đơn vị tính khi nhập (có thể khác BaseUnit)
   Quantity     Decimal  @db.Decimal(18, 2) // Số lượng nhập theo UnitName
-  UnitPrice    Decimal  @db.Decimal(18, 2) // Giá nhập của đơn vị này
+  UnitPrice    Decimal  @db.Decimal(18, 2) // Giá nhập niêm yết của đơn vị này
+  DiscountRate Decimal  @db.Decimal(5, 2) @default(0.00) // Chiết khấu từ NCC (0.10 = 10%)
+  CostPrice    Decimal  @db.Decimal(18, 2) @default(0) // Giá vốn thực = UnitPrice × (1 - DiscountRate)
 
   // Relations
   receipt      StockReceipt @relation(fields: [ReceiptID], references: [ReceiptID], onDelete: Cascade)
