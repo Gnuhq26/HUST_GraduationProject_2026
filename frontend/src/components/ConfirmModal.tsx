@@ -23,19 +23,19 @@ const variantConfig: Record<ConfirmVariant, {
     icon: Trash2,
     iconBg: 'bg-red-50',
     iconColor: 'text-accent-red',
-    confirmClass: 'btn bg-accent-red! text-white! hover:opacity-90 flex-1',
+    confirmClass: 'btn bg-accent-red! text-white! hover:opacity-90 flex-1 rounded-lg!',
   },
   warning: {
     icon: AlertTriangle,
     iconBg: 'bg-yellowfish-50',
     iconColor: 'text-yellowfish-500',
-    confirmClass: 'btn bg-yellowfish-500! text-white! hover:opacity-90 flex-1',
+    confirmClass: 'btn bg-yellowfish-500! text-white! hover:opacity-90 flex-1 rounded-lg!',
   },
   default: {
     icon: HelpCircle,
     iconBg: 'bg-bluesh-50',
     iconColor: 'text-bluesh-800',
-    confirmClass: 'btn btn-primary flex-1',
+    confirmClass: 'btn btn-primary flex-1 rounded-lg!',
   },
 };
 
@@ -69,11 +69,11 @@ export default function ConfirmModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 pb-6 flex gap-3">
-          <button type="button" onClick={onCancel} className="btn btn-secondary flex-1">
+        <div className="px-6 pb-6 flex gap-3 justify-center">
+          <button type="button" onClick={onCancel} className="btn btn-secondary w-[40%]! rounded-lg!">
             {cancelLabel}
           </button>
-          <button type="button" onClick={onConfirm} className={config.confirmClass}>
+          <button type="button" onClick={onConfirm} className={`w-[40%]! ${config.confirmClass}`}>
             {confirmLabel}
           </button>
         </div>

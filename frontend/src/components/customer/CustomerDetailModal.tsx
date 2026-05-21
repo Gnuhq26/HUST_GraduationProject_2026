@@ -122,14 +122,13 @@ export default function CustomerDetailModal({ customerId, onClose }: Props) {
                     <h3 className="text-2xl font-bold text-blacky-950 mb-1">
                       {customer.CustomerName}
                     </h3>
-                    {/* <p className="text-sm text-blacky-500">
+                    <p className="text-sm text-blacky-500">
                       {customer.CustomerCode && (
-                        <span className="font-mono font-medium text-bluesh-800 bg-basic-white px-2 py-0.5 rounded mr-2">
+                        <span className="font-mono font-medium text-bluesh-800  px-0.5 py-0.5 rounded-lg mr-2">
                           {customer.CustomerCode}
                         </span>
                       )}
-                      ID: {customer.CustomerID}
-                    </p> */}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -177,9 +176,6 @@ export default function CustomerDetailModal({ customerId, onClose }: Props) {
                       <p className="text-2xl font-bold text-accent-green">
                         {customer.orders.length} đơn
                       </p>
-                      {/* <p className="text-xs text-blacky-400 mt-1">
-                        (10 đơn hàng gần nhất)
-                      </p> */}
                     </div>
                   </div>
                 </div>
@@ -234,7 +230,6 @@ export default function CustomerDetailModal({ customerId, onClose }: Props) {
 
                           {debt > 0 && (
                             <div className="mt-2 p-2 bg-yellowfish-50 border border-yellowfish-400/30 rounded-lg flex items-center gap-2">
-                              <DollarSign className="w-3.5 h-3.5 text-yellowfish-600" />
                               <span className="text-xs text-yellowfish-700">
                                 Còn nợ: <strong>{formatCurrency(debt)}</strong>
                               </span>
@@ -281,8 +276,8 @@ export default function CustomerDetailModal({ customerId, onClose }: Props) {
 
         {/* Footer */}
         {!loading && !error && (
-          <div className="px-6 py-4 border-t border-basic-border flex justify-end">
-            <button onClick={onClose} className="btn btn-secondary">
+          <div className="px-6 py-4 border-t border-basic-border flex justify-center">
+            <button onClick={onClose} className="btn btn-secondary w-[30%] rounded-lg">
               Đóng
             </button>
           </div>

@@ -20,18 +20,18 @@ export class ReportsService {
       lte: new Date(endDate + 'T23:59:59.999Z'),
     };
 
-    // Doanh thu đã chốt: đơn Completed → TotalAmount
+    // Tiền thực thu từ đơn hoàn tất: SUM(PaidAmount) của đơn Completed
     const completedResult = await this.prisma.order.aggregate({
       where: {
         StoreID: storeId,
         OrderDate: dateFilter,
         Status: 'Completed',
       },
-      _sum: { TotalAmount: true },
+      _sum: { PaidAmount: true, TotalAmount: true },
       _count: { _all: true },
     });
 
-    // Doanh thu đặt cọc: đơn Pending → PaidAmount (tiền đã thu thực tế)
+    // Tiền cọc đặt trước: SUM(PaidAmount) của đơn Pending
     const pendingResult = await this.prisma.order.aggregate({
       where: {
         StoreID: storeId,
@@ -42,14 +42,18 @@ export class ReportsService {
       _count: { _all: true },
     });
 
-    const confirmedRevenue = Number(completedResult._sum.TotalAmount || 0);
-    const pendingDeposit = Number(pendingResult._sum.PaidAmount || 0);
+    const totalSalesValue = Number(completedResult._sum.TotalAmount || 0);  // Doanh số: tổng TotalAmount đơn Completed
+    const confirmedRevenue = Number(completedResult._sum.PaidAmount || 0);  // Tiền thực thu từ đơn Completed
+    const debtIncurred = totalSalesValue - confirmedRevenue;                // Công nợ phát sinh từ hàng đã giao
+    const pendingDeposit = Number(pendingResult._sum.PaidAmount || 0);      // Tiền cọc đơn Pending
     const pendingTotalValue = Number(pendingResult._sum.TotalAmount || 0);
 
     return {
       startDate,
       endDate,
+      totalSalesValue,
       confirmedRevenue,
+      debtIncurred,
       pendingDeposit,
       pendingTotalValue,
       totalRevenue: confirmedRevenue + pendingDeposit,
@@ -66,7 +70,7 @@ export class ReportsService {
   async getProfitReport(storeId: number, query: ReportQueryDto) {
     const { startDate, endDate } = query;
 
-    // Lấy tất cả OrderDetails trong khoảng thời gian
+    // Lấy OrderDetails chỉ của đơn Completed (doanh thu đã chốt)
     const orderDetails = await this.prisma.orderDetail.findMany({
       where: {
         order: {
@@ -75,9 +79,7 @@ export class ReportsService {
             gte: new Date(startDate),
             lte: new Date(endDate + 'T23:59:59.999Z'),
           },
-          Status: {
-            not: 'Cancelled',
-          },
+          Status: 'Completed',
         },
       },
       select: {
@@ -123,7 +125,7 @@ export class ReportsService {
   async getTopProducts(storeId: number, query: TopProductsQueryDto) {
     const { startDate, endDate, sortBy = 'revenue', limit = 10 } = query;
 
-    // Lấy dữ liệu OrderDetail với thông tin sản phẩm
+    // Lấy dữ liệu OrderDetail chỉ của đơn Completed
     const orderDetails = await this.prisma.orderDetail.findMany({
       where: {
         order: {
@@ -132,9 +134,7 @@ export class ReportsService {
             gte: new Date(startDate),
             lte: new Date(endDate + 'T23:59:59.999Z'),
           },
-          Status: {
-            not: 'Cancelled',
-          },
+          Status: 'Completed',
         },
       },
       select: {

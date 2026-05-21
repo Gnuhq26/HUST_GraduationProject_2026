@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ShoppingBag, ShoppingCart, Users, TrendingDown } from 'lucide-react';
+import { TrendingUp, ShoppingBag, ShoppingCart, Users } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { productsService } from '../services/productsService';
 import { customersService } from '../services/customersService';
@@ -100,7 +100,7 @@ export default function Dashboard() {
     { icon: ShoppingBag, label: 'Sản phẩm', value: stats.products, color: 'text-bluesh-800', bg: 'bg-basic-white', labelColor: 'text-blacky-700', valueColor: 'text-bluesh-800' },
     { icon: ShoppingCart, label: 'Đơn hàng', value: stats.orders, color: 'text-yellowfish-400', bg: 'bg-basic-white', labelColor: 'text-blacky-700', valueColor: 'text-yellowfish-400' },
     { icon: Users, label: 'Khách hàng', value: stats.customers, color: 'text-yellowfish-700', bg: 'bg-basic-white', labelColor: 'text-blacky-700', valueColor: 'text-yellowfish-700' },
-    { icon: TrendingDown, label: 'Doanh thu', value: formatCurrency(stats.revenue), color: 'text-accent-green', bg: 'bg-basic-white', labelColor: 'text-blacky-700', valueColor: 'text-accent-green' },
+    { icon: TrendingUp, label: 'Doanh thu', value: formatCurrency(stats.revenue), color: 'text-accent-green', bg: 'bg-basic-white', labelColor: 'text-blacky-700', valueColor: 'text-accent-green' },
   ];
 
   return (
@@ -134,7 +134,7 @@ export default function Dashboard() {
 
       {/* Date Preset Filter */}
       <div className="flex items-center gap-2 mb-6">
-        <span className="text-sm text-blacky-500 mr-1">Kỳ phân tích:</span>
+        <span className="text text-blacky-800 mr-1">Kỳ phân tích:</span>
         {(['7d', '30d', '90d'] as DatePreset[]).map((p) => (
           <button
             key={p}
@@ -191,12 +191,12 @@ export default function Dashboard() {
               {recentOrders.map((order) => (
                 <div key={order.OrderID} className="py-3 flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-blacky-950">
+                    <p className="text-sm font-medium text-bluesh-800">
                       {order.customer?.CustomerName || 'Khách vãng lai'}
                     </p>
-                    <p className="text-xs text-blacky-950 font-medium">{formatDate(order.OrderDate)}</p>
+                    <p className="text-xs text-blacky-600">{formatDate(order.OrderDate)}</p>
                   </div>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-sm text-accent-green font-semibold">
                     {formatCurrency(parseFloat(order.TotalAmount || '0'))}
                   </span>
                 </div>

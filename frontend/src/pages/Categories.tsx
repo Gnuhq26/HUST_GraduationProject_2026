@@ -1,9 +1,9 @@
 import { useState, useEffect, type FormEvent } from 'react';
-import { Plus, Edit2, Trash2, X, Search, Package } from 'lucide-react';
-import { useForm, type SubmitHandler } from 'react-hook-form';
+import { Plus, Edit2, Trash2, Search, Package } from 'lucide-react';
 import { categoriesService } from '../services/categoriesService';
 import ProtectedAction from '../components/ProtectedAction';
 import ConfirmModal from '../components/ConfirmModal';
+import CategoryFormModal from '../components/categories/CategoryFormModal';
 import { useToast } from '../components/ToastProvider';
 import type { Category } from '@/types';
 
@@ -11,11 +11,6 @@ interface CategoryWithCount extends Category {
   _count?: {
     products?: number;
   };
-}
-
-interface CategoryFormData {
-  CategoryName: string;
-  Description?: string;
 }
 
 export default function Categories() {
@@ -27,8 +22,6 @@ export default function Categories() {
   const [confirmDelete, setConfirmDelete] = useState<{ id: number; name: string } | null>(null);
 
   const toast = useToast();
-
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<CategoryFormData>();
 
   // Load categories
   const loadCategories = async (search = '') => {
@@ -56,35 +49,13 @@ export default function Categories() {
   // Open modal for create
   const handleCreate = () => {
     setEditingCategory(null);
-    reset({});
     setShowModal(true);
   };
 
   // Open modal for edit
   const handleEdit = (category: Category) => {
     setEditingCategory(category);
-    setValue('CategoryName', category.CategoryName);
-    setValue('Description', category.Description ?? '');
     setShowModal(true);
-  };
-
-  // Submit form
-  const onSubmit: SubmitHandler<CategoryFormData> = async (data) => {
-    try {
-      if (editingCategory) {
-        await categoriesService.update(editingCategory.CategoryID, data);
-        toast.success('Cập nhật danh mục thành công');
-      } else {
-        await categoriesService.create(data);
-        toast.success('Thêm danh mục thành công');
-      }
-      setShowModal(false);
-      loadCategories(searchTerm);
-    } catch (err: unknown) {
-      console.error('Lỗi:', err);
-      const e = err as { response?: { data?: { message?: string } } };
-      toast.error(e.response?.data?.message || 'Có lỗi xảy ra');
-    }
   };
 
   // Delete category
@@ -167,6 +138,7 @@ export default function Categories() {
             <table className="w-full">
               <thead className="bg-bluesh-800">
                 <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">STT</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">Tên danh mục</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">Mô tả</th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-basic-white uppercase">Số sản phẩm</th>
@@ -174,12 +146,13 @@ export default function Categories() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-basic-border">
-                {categories.map((category) => (
+                {categories.map((category, idx) => (
                   <tr key={category.CategoryID} className="hover:bg-blacky-50">
-                    <td className="px-6 py-4 text-sm font-medium text-blacky-900">
+                    <td className="px-6 py-4 text-sm text-left text-blacky-700">{idx + 1}</td>
+                    <td className="px-6 py-4 text-sm text-left font-medium text-blacky-900">
                       {category.CategoryName}
                     </td>
-                    <td className="px-6 py-4 text-sm text-blacky-700">
+                    <td className="px-6 py-4 text-sm  text-blacky-700">
                       {category.Description || '—'}
                     </td>
                     <td className="px-6 py-4 text-center text-sm text-blacky-700">
@@ -216,64 +189,13 @@ export default function Categories() {
         )}
       </div>
 
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-blacky-950/30 flex items-center justify-center z-50 p-4">
-          <div className="bg-basic-white rounded-2xl border border-basic-border max-w-xl w-full shadow-lg">
-            <div className="px-6 py-4 border-b border-yellowfish-400 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-blacky-950">
-                {editingCategory ? 'Cập nhật danh mục' : 'Thêm danh mục mới'}
-              </h2>
-              <button
-                onClick={() => setShowModal(false)}
-                title="Đóng"
-                className="p-1.5 rounded-lg bg-bluesh-50 text-bluesh-800 hover:text-basic-white hover:bg-bluesh-800 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-blacky-700 mb-1.5">
-                  Tên danh mục <span className="text-accent-red">*</span>
-                </label>
-                <input
-                  {...register('CategoryName', {
-                    required: 'Tên danh mục là bắt buộc',
-                    minLength: { value: 1, message: 'Tên danh mục quá ngắn' },
-                    maxLength: { value: 255, message: 'Tên danh mục quá dài' },
-                  })}
-                  className="input-field"
-                  placeholder="Nhập tên danh mục"
-                />
-                {errors.CategoryName && (
-                  <p className="mt-1 text-sm text-accent-red">{errors.CategoryName.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-blacky-700 mb-1.5">Mô tả</label>
-                <textarea
-                  {...register('Description')}
-                  rows={4}
-                  className="input-field resize-none"
-                  placeholder="Nhập mô tả danh mục (không bắt buộc)"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setShowModal(false)} className="btn btn-secondary flex-1">
-                  Hủy
-                </button>
-                <button type="submit" className="btn btn-primary flex-1">
-                  {editingCategory ? 'Cập nhật' : 'Thêm mới'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Category Form Modal */}
+      <CategoryFormModal
+        open={showModal}
+        editingCategory={editingCategory}
+        onClose={() => setShowModal(false)}
+        onSaved={() => loadCategories(searchTerm)}
+      />
 
       {/* Confirm Delete Modal */}
       <ConfirmModal

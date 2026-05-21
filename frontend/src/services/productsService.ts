@@ -97,4 +97,20 @@ export const productsService = {
     });
     return response.data;
   },
+
+  //Đơn vị quy đổi
+  addUnit: async (productId: number, data: { unitName: string; exchangeValue: number; isDefault?: boolean }) => {
+    const response = await api.post(`/products/${productId}/units`, data);
+    return response.data;
+  },
+
+  updateUnit: async (productId: number, unitId: number, data: { unitName?: string; exchangeValue?: number; isDefault?: boolean }) => {
+    const response = await api.patch(`/products/${productId}/units/${unitId}`, data);
+    return response.data;
+  },
+
+  deleteUnit: async (productId: number, unitId: number) => {
+    const response = await api.delete(`/products/${productId}/units/${unitId}`);
+    return response.data;
+  },
 };

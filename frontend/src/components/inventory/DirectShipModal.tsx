@@ -1,6 +1,7 @@
 import { type FormEvent } from 'react';
 import { Package, Truck, X } from 'lucide-react';
 import type { Supplier, Product, Customer } from '@/types';
+import CustomSelect from '../CustomSelect';
 
 export interface DirectShipState {
   supplierId: string;
@@ -9,6 +10,7 @@ export interface DirectShipState {
   totalQty: string;
   deliverQty: string;
   importUnitPrice: string;
+  discountRate: string;
   saleUnitPrice: string;
   customerId: string;
   note: string;
@@ -43,9 +45,9 @@ function DirectShipModal({ isOpen, onClose, onSubmit, suppliers, products, custo
 
   return (
     <div className="fixed inset-0 backdrop-blur-sm bg-blacky-950/30 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-basic-white rounded-2xl border border-basic-border shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-basic-white rounded-2xl border border-basic-border shadow-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="px-6 py-5 border-b border-yellowfish-400 sticky top-0 bg-basic-white z-10">
+        <div className="px-6 py-5 border-b border-yellowfish-400 bg-basic-white shrink-0">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-xl font-bold text-blacky-950 flex items-center gap-2">
@@ -59,24 +61,19 @@ function DirectShipModal({ isOpen, onClose, onSubmit, suppliers, products, custo
           </div>
         </div>
 
-        <form onSubmit={onSubmit} className="p-6 space-y-5">
+        <div className="flex-1 overflow-y-auto">
+          <form id="direct-ship-form" onSubmit={onSubmit} className="p-6 space-y-5">
           {/* Supplier */}
           <div>
             <label className="block text-sm font-medium text-blacky-700 mb-1">
               Nhà cung cấp <span className="text-accent-red">*</span>
             </label>
-            <select
-              required
-              title="Nhà cung cấp"
+            <CustomSelect
               value={ds.supplierId}
-              onChange={(e) => onDsChange('supplierId', e.target.value)}
-              className="w-full px-3 py-2 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50"
-            >
-              <option value="">-- Chọn nhà cung cấp --</option>
-              {suppliers.map((s) => (
-                <option key={s.SupplierID} value={s.SupplierID}>{s.SupplierName}</option>
-              ))}
-            </select>
+              onChange={(v) => onDsChange('supplierId', v)}
+              options={suppliers.map((s) => ({ value: String(s.SupplierID), label: s.SupplierName }))}
+              placeholder="Chọn nhà cung cấp"
+            />
           </div>
 
           {/* Product + Unit */}
@@ -85,36 +82,24 @@ function DirectShipModal({ isOpen, onClose, onSubmit, suppliers, products, custo
               <label className="block text-sm font-medium text-blacky-700 mb-1">
                 Sản phẩm <span className="text-accent-red">*</span>
               </label>
-              <select
-                required
-                title="Sản phẩm"
+              <CustomSelect
                 value={ds.productId}
-                onChange={(e) => onDsChange('productId', e.target.value)}
-                className="w-full px-3 py-2 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50"
-              >
-                <option value="">-- Chọn sản phẩm --</option>
-                {products.map((p) => (
-                  <option key={p.ProductID} value={p.ProductID}>{p.ProductName} ({p.SKU})</option>
-                ))}
-              </select>
+                onChange={(v) => onDsChange('productId', v)}
+                options={products.map((p) => ({ value: String(p.ProductID), label: `${p.ProductName} (${p.SKU})` }))}
+                placeholder="Chọn sản phẩm"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-blacky-700 mb-1">
                 Đơn vị tính <span className="text-accent-red">*</span>
               </label>
-              <select
-                required
-                title="Đơn vị tính"
-                disabled={!ds.productId}
+              <CustomSelect
                 value={ds.unitName}
-                onChange={(e) => onDsChange('unitName', e.target.value)}
-                className="w-full px-3 py-2 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 disabled:bg-blacky-100"
-              >
-                <option value="">-- Đơn vị --</option>
-                {getDsUnits().map((u, i) => (
-                  <option key={i} value={u.UnitName}>{u.UnitName} {Number(u.ExchangeValue) > 1 && `(×${u.ExchangeValue})`}</option>
-                ))}
-              </select>
+                onChange={(v) => onDsChange('unitName', v)}
+                options={getDsUnits().map((u) => ({ value: u.UnitName, label: u.UnitName + (Number(u.ExchangeValue) > 1 ? ` (×${u.ExchangeValue})` : '') }))}
+                placeholder="Chọn đơn vị"
+                disabled={!ds.productId}
+              />
             </div>
           </div>
 
@@ -164,7 +149,7 @@ function DirectShipModal({ isOpen, onClose, onSubmit, suppliers, products, custo
           </div>
 
           {/* Prices */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-blacky-700 mb-1">
                 Giá nhập (VNĐ) <span className="text-accent-red">*</span>
@@ -174,6 +159,18 @@ function DirectShipModal({ isOpen, onClose, onSubmit, suppliers, products, custo
                 placeholder="Giá mua từ NCC"
                 value={ds.importUnitPrice}
                 onChange={(e) => onDsChange('importUnitPrice', e.target.value)}
+                className="w-full px-3 py-2 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-blacky-700 mb-1">
+                Chiết khấu NCC (%)
+              </label>
+              <input
+                type="number" step="0.01" min="0" max="100"
+                placeholder="VD: 5"
+                value={ds.discountRate}
+                onChange={(e) => onDsChange('discountRate', e.target.value)}
                 className="w-full px-3 py-2 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50"
               />
             </div>
@@ -194,20 +191,44 @@ function DirectShipModal({ isOpen, onClose, onSubmit, suppliers, products, custo
           {/* Summary */}
           {ds.totalQty && ds.importUnitPrice && ds.deliverQty && ds.saleUnitPrice && (
             <div className="bg-blacky-50 border border-basic-border rounded-xl p-4 space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span className="text-blacky-500">Tổng nhập (NCC):</span>
-                <span className="font-medium text-blacky-950">{formatCurrency(parseFloat(ds.totalQty) * parseFloat(ds.importUnitPrice))}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-blacky-500">Doanh thu (bán):</span>
-                <span className="font-medium text-accent-green">{formatCurrency(parseFloat(ds.deliverQty) * parseFloat(ds.saleUnitPrice))}</span>
-              </div>
-              <div className="flex justify-between border-t border-basic-border pt-1">
-                <span className="text-blacky-500">Lợi nhuận giao thẳng:</span>
-                <span className="font-bold text-yellowfish-600">
-                  {formatCurrency(parseFloat(ds.deliverQty) * (parseFloat(ds.saleUnitPrice) - parseFloat(ds.importUnitPrice)))}
-                </span>
-              </div>
+              {(() => {
+                const totalQty = parseFloat(ds.totalQty);
+                const deliverQty = parseFloat(ds.deliverQty);
+                const importPrice = parseFloat(ds.importUnitPrice);
+                const salePrice = parseFloat(ds.saleUnitPrice);
+                const discount = ds.discountRate ? parseFloat(ds.discountRate) / 100 : 0;
+                const costPrice = importPrice * (1 - discount);
+                return (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-blacky-500">Tổng nhập (NCC):</span>
+                      <span className="font-medium text-blacky-950">{formatCurrency(totalQty * importPrice)}</span>
+                    </div>
+                    {discount > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-blacky-500">Chiết khấu ({ds.discountRate}%):</span>
+                        <span className="font-medium text-accent-green">-{formatCurrency(totalQty * importPrice * discount)}</span>
+                      </div>
+                    )}
+                    {discount > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-blacky-500">Giá vốn thực tế:</span>
+                        <span className="font-medium text-blacky-700">{formatCurrency(costPrice)}/đvt</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-blacky-500">Doanh thu (bán):</span>
+                      <span className="font-medium text-accent-green">{formatCurrency(deliverQty * salePrice)}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-basic-border pt-1">
+                      <span className="text-blacky-500">Lợi nhuận giao thẳng:</span>
+                      <span className="font-bold text-yellowfish-600">
+                        {formatCurrency(deliverQty * (salePrice - costPrice))}
+                      </span>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           )}
 
@@ -216,17 +237,12 @@ function DirectShipModal({ isOpen, onClose, onSubmit, suppliers, products, custo
             <label className="block text-sm font-medium text-blacky-700 mb-1">
               Khách hàng <span className="text-blacky-400">(tùy chọn)</span>
             </label>
-            <select
-              title="Khách hàng"
+            <CustomSelect
               value={ds.customerId}
-              onChange={(e) => onDsChange('customerId', e.target.value)}
-              className="w-full px-3 py-2 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50"
-            >
-              <option value="">-- Khách vãng lai --</option>
-              {customers.map((c) => (
-                <option key={c.CustomerID} value={c.CustomerID}>{c.CustomerName}</option>
-              ))}
-            </select>
+              onChange={(v) => onDsChange('customerId', v)}
+              options={customers.map((c) => ({ value: String(c.CustomerID), label: c.CustomerName }))}
+              placeholder="Khách vãng lai"
+            />
           </div>
 
           {/* Note */}
@@ -236,21 +252,24 @@ function DirectShipModal({ isOpen, onClose, onSubmit, suppliers, products, custo
               rows={2}
               value={ds.note}
               onChange={(e) => onDsChange('note', e.target.value)}
-              className="w-full px-3 py-2 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50"
+              className="input-field resize-none"
               placeholder="VD: Giao nửa xe tại công trình Đông Anh..."
             />
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-3">
-            <button type="button" onClick={onClose} className="btn btn-secondary flex-1!">
+          </form>
+        </div>
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-basic-border bg-basic-white shrink-0">
+          <div className="flex gap-3 justify-center">
+            <button type="button" onClick={onClose} className="btn btn-secondary w-[30%]! rounded-lg!">
               Hủy
             </button>
-            <button type="submit" className="btn btn-primary flex-1!">
+            <button type="submit" form="direct-ship-form" className="btn btn-primary w-[30%]! rounded-lg!">
               Xác nhận giao thẳng
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

@@ -345,6 +345,7 @@ export class InventoryService {
         receipt: {
           select: {
             ReceiptID: true,
+            ReceiptCode: true,
             ImportDate: true,
             TotalAmount: true,
             Note: true,
@@ -374,6 +375,7 @@ export class InventoryService {
       history: history.map((item) => ({
         DetailID: item.DetailID,
         ReceiptID: item.ReceiptID,
+        ReceiptCode: item.receipt.ReceiptCode,
         ImportDate: item.receipt.ImportDate,
         Supplier: item.receipt.supplier,
         UnitName: item.UnitName,

@@ -268,7 +268,7 @@ function OrderDetailModal({ orderId, onClose }: Props) {
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-basic-border bg-basic-white">
-          <button onClick={onClose} className="btn btn-secondary mx-auto block w-[30%]">
+          <button onClick={onClose} className="btn btn-secondary mx-auto block w-[30%] rounded-lg">
             Đóng
           </button>
         </div>

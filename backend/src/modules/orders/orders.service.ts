@@ -221,11 +221,8 @@ export class OrdersService {
       }
 
       // 3. Tạo Order (sau khi validate xong toàn bộ, để có OrderID cho log)
-      // PaidAmount: Immediate → tự động bằng TotalAmount; Reserved → dùng tiền cọc từ client (mặc định 0)
-      const paidAmount =
-        deliveryMethod === 'Immediate'
-          ? totalAmount
-          : new Prisma.Decimal(createOrderDto.PaidAmount ?? 0);
+      // PaidAmount: do client truyền vào (mặc định 0). Debt được quản lý độc lập ở trang Debts.
+      const paidAmount = new Prisma.Decimal(createOrderDto.PaidAmount ?? 0);
 
       const orderCode = await this.generateOrderCode(tx);
       const order = await tx.order.create({
@@ -498,7 +495,7 @@ export class OrdersService {
         });
       }
 
-      // Cập nhật Status → Completed
+      // Cập nhật Status → Completed (chỉ xử lý kho, debt quản lý độc lập)
       const updatedOrder = await tx.order.update({
         where: { OrderID: orderId },
         data: { Status: 'Completed' },

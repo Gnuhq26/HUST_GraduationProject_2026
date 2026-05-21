@@ -78,7 +78,7 @@ export default function CustomerFormModal({ customer, onClose, onSuccess }: Cust
                 required: 'Tên khách hàng là bắt buộc',
                 maxLength: { value: 100, message: 'Tên khách hàng không được quá 100 ký tự' },
               })}
-              className="w-full px-3 py-2 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50"
+              className="input-field"
               placeholder="Nhập tên khách hàng"
             />
             {errors.CustomerName && (
@@ -92,7 +92,7 @@ export default function CustomerFormModal({ customer, onClose, onSuccess }: Cust
               {...register('Phone', {
                 maxLength: { value: 20, message: 'Số điện thoại không được quá 20 ký tự' },
               })}
-              className="w-full px-3 py-2 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50"
+              className="input-field"
               placeholder="0912345678"
             />
             {errors.Phone && (
@@ -107,7 +107,7 @@ export default function CustomerFormModal({ customer, onClose, onSuccess }: Cust
                 maxLength: { value: 255, message: 'Địa chỉ không được quá 255 ký tự' },
               })}
               rows={3}
-              className="w-full px-3 py-2 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50"
+              className="input-field resize-none"
               placeholder="Nhập địa chỉ khách hàng"
             />
             {errors.Address && (
@@ -115,11 +115,11 @@ export default function CustomerFormModal({ customer, onClose, onSuccess }: Cust
             )}
           </div>
 
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="btn btn-secondary flex-1!">
+          <div className="flex gap-3 pt-2 justify-center">
+            <button type="button" onClick={onClose} className="btn btn-secondary w-[30%] rounded-lg">
               Hủy
             </button>
-            <button type="submit" className="btn btn-primary flex-1!">
+            <button type="submit" className="btn btn-primary w-[30%] rounded-lg">
               {customer ? 'Cập nhật' : 'Thêm mới'}
             </button>
           </div>

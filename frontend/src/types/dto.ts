@@ -145,6 +145,8 @@ export interface DirectShipDto {
   deliverQty: string;
   /** String from form input — service calls parseFloat() before sending */
   importUnitPrice: string;
+  /** Discount % as string — service divides by 100 before sending. E.g. "5" → 0.05 */
+  importDiscountRate?: string;
   /** String from form input — service calls parseFloat() before sending */
   saleUnitPrice: string;
   customerId?: number;
@@ -235,6 +237,8 @@ export interface ImportPreviewRow {
   unitName?: string;
   /** Margin rate 0–1 (e.g. 0.15 = 15%). Replaces old unitPrice column. */
   marginRate?: number | null;
+  /** True when this valid row belongs to the same SKU as the previous valid row (multi-unit grouping) */
+  isContinuation?: boolean;
   [key: string]: unknown;
 }
 

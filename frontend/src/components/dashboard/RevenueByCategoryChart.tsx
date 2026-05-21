@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { PieChart as PieChartIcon } from 'lucide-react';
 import reportsService from '../../services/reportsService';
 import type { RevenueByCategoryItem } from '../../types/models';
@@ -49,7 +49,7 @@ const CustomLegend = ({ items }: { items: RevenueByCategoryItem[] }) => (
           className={`inline-block w-2.5 h-2.5 rounded-full shrink-0 ${COLOR_BG_CLASSES[i % COLOR_BG_CLASSES.length]}`}
         />
         <span className="text-blacky-700 truncate max-w-32">{item.categoryName}</span>
-        <span className="text-blacky-400 ml-auto shrink-0">{item.percentage.toFixed(1)}%</span>
+        <span className="text-blacky-700 ml-auto shrink-0">{item.percentage.toFixed(1)}%</span>
       </div>
     ))}
   </div>
@@ -77,7 +77,7 @@ export default function RevenueByCategoryChart({ startDate, endDate }: Props) {
   }, [startDate, endDate]);
 
   return (
-    <div className="bg-basic-white rounded-xl border border-basic-border p-6 flex flex-col gap-4">
+    <div className="bg-basic-white rounded-xl border border-basic-border p-6 flex flex-col gap-4 h-full">
       <h3 className="text-base font-semibold text-blacky-950">Doanh thu theo danh mục</h3>
 
       {loading && (
@@ -105,26 +105,24 @@ export default function RevenueByCategoryChart({ startDate, endDate }: Props) {
       {!loading && !error && data.length > 0 && (
         <div className="flex items-center gap-4">
           <div className="shrink-0 w-40 h-40">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={data}
-                  dataKey="totalRevenue"
-                  nameKey="categoryName"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={48}
-                  outerRadius={76}
-                  paddingAngle={2}
-                  strokeWidth={0}
-                >
-                  {data.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
+            <PieChart width={160} height={160}>
+              <Pie
+                data={data}
+                dataKey="totalRevenue"
+                nameKey="categoryName"
+                cx="50%"
+                cy="50%"
+                innerRadius={48}
+                outerRadius={76}
+                paddingAngle={2}
+                strokeWidth={0}
+              >
+                {data.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip content={<CustomTooltip />} />
+            </PieChart>
           </div>
           <div className="flex-1 min-w-0">
             <CustomLegend items={data} />

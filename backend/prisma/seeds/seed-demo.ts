@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { PrismaClient } from '../../generated/prisma/client';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
+import { seedCategories } from './seed-categories';
 
 const adapter = new PrismaMariaDb(process.env.DATABASE_URL!);
 const prisma = new PrismaClient({ adapter } as any);
@@ -28,25 +29,7 @@ async function main() {
   // 1. DANH MỤC (Categories)
   // ══════════════════════════════════════════════════════════
   console.log('Creating categories...');
-  const categoryData = [
-    { CategoryName: 'Xi măng', Description: 'Các loại xi măng xây dựng' },
-    { CategoryName: 'Sắt thép', Description: 'Thép thanh, thép cuộn, thép hình' },
-    { CategoryName: 'Gạch', Description: 'Gạch xây, gạch ốp lát, gạch trang trí' },
-    { CategoryName: 'Cát sỏi', Description: 'Cát xây dựng, sỏi, đá dăm' },
-    { CategoryName: 'Sơn', Description: 'Sơn nội thất, ngoại thất, chống thấm' },
-    { CategoryName: 'Ống nước', Description: 'Ống PVC, ống PPR, phụ kiện ống' },
-    { CategoryName: 'Điện', Description: 'Dây điện, ổ cắm, công tắc, đèn' },
-  ];
-
-  const categories: Record<string, number> = {};
-  for (const cat of categoryData) {
-    const c = await prisma.category.upsert({
-      where: { StoreID_CategoryName: { StoreID, CategoryName: cat.CategoryName } },
-      update: {},
-      create: { StoreID, ...cat },
-    });
-    categories[cat.CategoryName] = c.CategoryID;
-  }
+  const categories = await seedCategories(prisma, StoreID);
 
   // ══════════════════════════════════════════════════════════
   // 2. SẢN PHẨM (Products) + Đơn vị + Bảng giá

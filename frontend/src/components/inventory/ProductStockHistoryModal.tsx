@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { X, Package, Truck, Calendar, FileText } from 'lucide-react';
+import { X, Package } from 'lucide-react';
 import inventoryService from '../../services/inventoryService';
+import { useToast } from '../ToastProvider';
 
 interface StockHistoryItem {
   DetailID: number;
@@ -13,6 +14,7 @@ interface StockHistoryItem {
   Note?: string;
   ImportDate: string;
   ReceiptID: number;
+  ReceiptCode: string;
   Supplier?: { SupplierName: string };
 }
 
@@ -33,6 +35,7 @@ interface Props {
 }
 
 function ProductStockHistoryModal({ productId, onClose }: Props) {
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ProductStockHistoryResponse | null>(null);
 
@@ -47,7 +50,7 @@ function ProductStockHistoryModal({ productId, onClose }: Props) {
       setData(result as ProductStockHistoryResponse);
     } catch (err) {
       console.error('Error loading stock history:', err);
-      alert('Có lỗi khi tải lịch sử nhập kho');
+      toast.error('Có lỗi khi tải lịch sử nhập kho');
     } finally {
       setLoading(false);
     }
@@ -57,6 +60,7 @@ function ProductStockHistoryModal({ productId, onClose }: Props) {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND',
+      currencyDisplay: 'code'
     }).format(Number(value));
   };
 
@@ -77,12 +81,17 @@ function ProductStockHistoryModal({ productId, onClose }: Props) {
         <div className="px-6 py-5 border-b border-yellowfish-400 sticky top-0 bg-basic-white z-10">
           <div className="flex justify-between items-start">
             <div>
-              <h2 className="text-xl font-bold text-blacky-950 flex items-center gap-2">
+              <h2 className="text-xl font-bold text-bluesh-800 flex items-center gap-2">
                 <Package className="w-5 h-5 text-bluesh-800" />Lịch sử nhập kho
               </h2>
               {data?.product && (
-                <div className="text-blacky-500 text-sm mt-1">
-                  {data.product.ProductName} - {data.product.SKU}
+                <div>
+                  <div className="text-blacky-700 text-sm mt-1">
+                    {data.product.ProductName}
+                  </div>
+                    <div className="text-blacky-700 text-sm mt-1">
+                    {data.product.SKU}
+                  </div>
                 </div>
               )}
             </div>
@@ -111,17 +120,17 @@ function ProductStockHistoryModal({ productId, onClose }: Props) {
                   <div className="text-2xl font-bold text-bluesh-800">{data.history.length}</div>
                   <div className="text-xs text-blacky-500 mt-1">Lần nhập</div>
                 </div>
-                <div className="bg-accent-green/10 rounded-xl p-4 border border-accent-green/30 text-center">
-                  <div className="text-2xl font-bold text-accent-green">
+                <div className="bg-yellowfish-50 rounded-xl p-4 border border-yellowfish-400/30 text-center">
+                  <div className="text-2xl font-bold text-yellowfish-400">
                     {data.history.reduce((sum: number, item: StockHistoryItem) => sum + Number(item.Quantity), 0).toLocaleString('vi-VN')}
                   </div>
                   <div className="text-xs text-blacky-500 mt-1">Tổng số lượng ({data.product.BaseUnit})</div>
                 </div>
-                <div className="bg-blacky-50 rounded-xl p-4 border border-basic-border text-center">
-                  <div className="text-lg font-bold text-blacky-950">
+                <div className="bg-accent-green/10 rounded-xl p-4 border border-accent-green/30 text-center">
+                  <div className="text-sm text-blacky-500 mt-1">Tổng giá trị</div>
+                  <div className="text-2xl font-bold text-accent-green">
                     {formatCurrency(data.history.reduce((sum: number, item: StockHistoryItem) => sum + item.TotalPrice, 0))}
                   </div>
-                  <div className="text-xs text-blacky-500 mt-1">Tổng giá trị</div>
                 </div>
               </div>
 
@@ -158,19 +167,16 @@ function ProductStockHistoryModal({ productId, onClose }: Props) {
                       <tr key={item.DetailID} className="hover:bg-blacky-50">
                         <td className="px-4 py-3 whitespace-nowrap">
                           <div className="flex items-center gap-1 text-sm font-medium text-bluesh-800">
-                            <FileText className="w-3.5 h-3.5" />
-                            #{item.ReceiptID}
+                            #{item.ReceiptCode}
                           </div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="flex items-center gap-1 text-sm text-blacky-500">
-                            <Calendar className="w-3.5 h-3.5" />
+                          <div className="flex items-center gap-1 text-sm text-blacky-700">
                             {formatDate(item.ImportDate)}
                           </div>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1 text-sm text-blacky-700">
-                            <Truck className="w-3.5 h-3.5 text-blacky-400 shrink-0" />
                             {item.Supplier?.SupplierName || '—'}
                           </div>
                         </td>
@@ -183,7 +189,7 @@ function ProductStockHistoryModal({ productId, onClose }: Props) {
                           </span>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <span className="px-2 py-1 text-xs font-medium bg-bluesh-50 text-bluesh-800 rounded">
+                          <span className="px-2 py-1 text-sm font-medium bg-bluesh-50 text-bluesh-800 rounded">
                             {item.UnitName}
                           </span>
                         </td>
@@ -191,11 +197,6 @@ function ProductStockHistoryModal({ productId, onClose }: Props) {
                           <div className="text-sm font-medium text-blacky-950">
                             {formatCurrency(item.CostPrice)}
                           </div>
-                          {Number(item.DiscountRate) > 0 && (
-                            <div className="text-xs text-blacky-400">
-                              {formatCurrency(item.UnitPrice)} &minus; {(Number(item.DiscountRate) * 100).toFixed(0)}%
-                            </div>
-                          )}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-right">
                           <span className="text-sm font-semibold text-accent-green">
@@ -216,7 +217,7 @@ function ProductStockHistoryModal({ productId, onClose }: Props) {
                     .filter((item: StockHistoryItem) => item.Note)
                     .map((item: StockHistoryItem) => (
                       <div key={item.DetailID} className="flex gap-2 text-sm text-blacky-700 bg-yellowfish-50 border border-yellowfish-400/30 rounded-lg p-2">
-                        <span className="text-bluesh-800 font-medium shrink-0">#{item.ReceiptID}:</span>
+                        <span className="text-bluesh-800 font-medium shrink-0">#{item.ReceiptCode}:</span>
                         <span>{item.Note}</span>
                       </div>
                     ))}
@@ -228,7 +229,7 @@ function ProductStockHistoryModal({ productId, onClose }: Props) {
 
         {/* Footer */}
         <div className="p-4 border-t border-basic-border bg-basic-white">
-          <button onClick={onClose} className="btn btn-secondary w-[30%]! mx-auto block">
+          <button onClick={onClose} className="btn btn-secondary w-[30%]! mx-auto block rounded-lg!">
             Đóng
           </button>
         </div>

@@ -1,6 +1,7 @@
 import { type FormEvent } from 'react';
 import { Plus, X } from 'lucide-react';
 import type { Supplier, Product, StockReceiptStatus } from '@/types';
+import CustomSelect from '../CustomSelect';
 
 export interface StockInFormItem {
   productId: string;
@@ -41,9 +42,9 @@ function StockInModal({
 
   return (
     <div className="fixed inset-0 backdrop-blur-sm bg-blacky-950/30 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-basic-white rounded-2xl border border-basic-border shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-basic-white rounded-2xl border border-basic-border shadow-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="px-6 py-5 border-b border-yellowfish-400 sticky top-0 bg-basic-white z-10">
+        <div className="px-6 py-5 border-b border-yellowfish-400 bg-basic-white shrink-0">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold text-blacky-950">Nhập kho</h2>
             <button onClick={onClose} title="Đóng" className="text-bluesh-800 bg-blacky-50 hover:text-basic-white hover:bg-bluesh-800 rounded-lg p-2 transition-colors">
@@ -52,28 +53,19 @@ function StockInModal({
           </div>
         </div>
 
-        <form onSubmit={onSubmit} className="p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto">
+        <form id="stock-in-form" onSubmit={onSubmit} className="p-6 space-y-6">
           {/* Supplier Selection */}
           <div>
             <label className="block text-sm font-medium text-blacky-700 mb-1">
               Nhà cung cấp <span className="text-accent-red">*</span>
             </label>
-            <div className="relative">
-              <select
-                required
-                title="Nhà cung cấp"
-                value={selectedSupplier}
-                onChange={(e) => onSupplierChange(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50"
-              >
-                <option value="">Chọn nhà cung cấp</option>
-                {suppliers.map((supplier) => (
-                  <option key={supplier.SupplierID} value={supplier.SupplierID}>
-                    {supplier.SupplierName}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CustomSelect
+              value={selectedSupplier}
+              onChange={onSupplierChange}
+              options={suppliers.map((s) => ({ value: String(s.SupplierID), label: s.SupplierName }))}
+              placeholder="Chọn nhà cung cấp"
+            />
           </div>
 
           {/* Status */}
@@ -124,7 +116,7 @@ function StockInModal({
               rows={2}
               value={note}
               onChange={(e) => onNoteChange(e.target.value)}
-              className="w-full px-3 py-2 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50"
+              className="input-field resize-none"
               placeholder="Ghi chú về phiếu nhập..."
             />
           </div>
@@ -138,7 +130,7 @@ function StockInModal({
               <button
                 type="button"
                 onClick={onAddItem}
-                className="text-bluesh-800 bg-basic-white border border-bluesh-800 hover:text-basic-white hover:bg-bluesh-800 text-base flex items-center gap-1 px-3 py-1 rounded-lg transition-colors"
+                className="text-bluesh-800 bg-basic-white border border-bluesh-800 hover:text-basic-white hover:bg-bluesh-800 text-sm flex items-center gap-1 px-3 py-1 rounded-lg transition-colors"
               >
                 <Plus className="w-5 h-5" /> Thêm sản phẩm
               </button>
@@ -158,39 +150,26 @@ function StockInModal({
                   : [];
 
                 return (
-                  <div key={index} className="flex gap-2 items-start p-3 bg-bluesh-50 rounded-lg">
+                  <div key={index} className="flex gap-2 items-start p-3 bg-basic-white border border-bluesh-600 rounded-lg">
                     <div className="flex-1 grid grid-cols-5 gap-2">
-                      <select
-                        required
-                        title="Sản phẩm"
+                      <CustomSelect
+                        compact
                         value={item.productId}
-                        onChange={(e) => onItemChange(index, 'productId', e.target.value)}
-                        className="px-3 py-2 border border-blacky-300 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50"
-                      >
-                        <option value="">-- Chọn sản phẩm --</option>
-                        {products.map((product) => (
-                          <option key={product.ProductID} value={product.ProductID}>
-                            {product.ProductName} ({product.SKU})
-                          </option>
-                        ))}
-                      </select>
-
-                      <select
-                        required
-                        title="Đơn vị tính"
+                        onChange={(val) => onItemChange(index, 'productId', val)}
+                        options={products.map((p) => ({ value: String(p.ProductID), label: `${p.ProductName} (${p.SKU})` }))}
+                        placeholder="Chọn sản phẩm"
+                      />
+                      <CustomSelect
+                        compact
                         disabled={!item.productId}
                         value={item.unitName}
-                        onChange={(e) => onItemChange(index, 'unitName', e.target.value)}
-                        className="px-3 py-2 border border-blacky-300 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 disabled:bg-blacky-100 disabled:cursor-not-allowed"
-                      >
-                        <option value="">-- Chọn đơn vị --</option>
-                        {availableUnits.map((unit, idx) => (
-                          <option key={idx} value={unit.UnitName}>
-                            {unit.UnitName} {Number(unit.ExchangeValue) > 1 && `(1 = ${unit.ExchangeValue} ${selectedProduct?.BaseUnit || ''})`}
-                          </option>
-                        ))}
-                      </select>
-
+                        onChange={(val) => onItemChange(index, 'unitName', val)}
+                        options={availableUnits.map((unit) => ({
+                          value: unit.UnitName,
+                          label: unit.UnitName + (Number(unit.ExchangeValue) > 1 ? ` (1 = ${unit.ExchangeValue} ${selectedProduct?.BaseUnit || ''})` : ''),
+                        }))}
+                        placeholder="Chọn đơn vị"
+                      />
                       <input
                         type="number"
                         required
@@ -201,7 +180,6 @@ function StockInModal({
                         onChange={(e) => onItemChange(index, 'quantity', e.target.value)}
                         className="px-3 py-2 border border-blacky-300 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50"
                       />
-
                       <input
                         type="number"
                         required
@@ -212,20 +190,18 @@ function StockInModal({
                         onChange={(e) => onItemChange(index, 'unitPrice', e.target.value)}
                         className="px-3 py-2 border border-blacky-300 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50"
                       />
-
                       <input
                         type="number"
                         step="0.01"
                         min="0"
                         max="100"
-                        placeholder="CK (%) 0-100"
+                        placeholder="Chiết khấu (%)"
                         title="Chiết khấu từ nhà cung cấp (%)"
                         value={item.discountRate}
                         onChange={(e) => onItemChange(index, 'discountRate', e.target.value)}
                         className="px-3 py-2 border border-blacky-300 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50"
                       />
                     </div>
-
                     {items.length > 1 && (
                       <button
                         type="button"
@@ -250,16 +226,16 @@ function StockInModal({
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-3">
-            <button type="button" onClick={onClose} className="btn btn-secondary flex-1!">
-              Hủy
-            </button>
-            <button type="submit" className="btn btn-primary flex-1!">
-              Xác nhận nhập kho
-            </button>
-          </div>
         </form>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-basic-border bg-basic-white shrink-0">
+          <div className="flex gap-3 justify-center">
+            <button type="button" onClick={onClose} className="btn btn-secondary w-[20%]! rounded-lg!">Hủy</button>
+            <button type="submit" form="stock-in-form" className="btn btn-primary w-[25%]! rounded-lg!">Xác nhận nhập kho</button>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, User, X, Loader2, AlertTriangle } from 'lucide-react';
+import { Plus, X, Loader2, AlertTriangle } from 'lucide-react';
 import ordersService from '../../services/ordersService';
 import { customersService } from '../../services/customersService';
 import { productsService } from '../../services/productsService';
 import { useToast } from '../ToastProvider';
-import type { Customer, Product, DeliveryMethod } from '@/types';
+import CustomerPhoneInput from './CustomerPhoneInput';
+import CustomSelect from '../CustomSelect';
+import type { Product, DeliveryMethod } from '@/types';
 
 interface OrderFormItem {
   productId: string;
@@ -25,9 +27,10 @@ interface Props {
 
 function CreateOrderModal({ open, onClose, onSuccess }: Props) {
   const toast = useToast();
-  const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [selectedCustomer, setSelectedCustomer] = useState('');
+  const [customerId, setCustomerId] = useState<number | null>(null);
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
   const [note, setNote] = useState('');
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('Immediate');
   const [paidAmount, setPaidAmount] = useState('');
@@ -37,14 +40,7 @@ function CreateOrderModal({ open, onClose, onSuccess }: Props) {
     if (!open) return;
     (async () => {
       try {
-        const [customersRes, productsData] = await Promise.all([
-          customersService.getAll(),
-          productsService.getAll(),
-        ]);
-        const customersArr = Array.isArray(customersRes)
-          ? customersRes
-          : (customersRes as { data?: Customer[] })?.data ?? [];
-        setCustomers(customersArr as Customer[]);
+        const productsData = await productsService.getAll();
         setProducts(
           (Array.isArray(productsData)
             ? productsData
@@ -52,7 +48,7 @@ function CreateOrderModal({ open, onClose, onSuccess }: Props) {
           ).filter((p: Product) => p.IsActive),
         );
       } catch (err) {
-        console.error('Error loading form data:', err);
+        console.error('Error loading products:', err);
       }
     })();
   }, [open]);
@@ -132,6 +128,7 @@ function CreateOrderModal({ open, onClose, onSuccess }: Props) {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND',
+      currencyDisplay: 'code',
     }).format(Number(value));
   };
 
@@ -145,8 +142,18 @@ function CreateOrderModal({ open, onClose, onSuccess }: Props) {
       return;
     }
     try {
+      // Nếu chưa chọn khách có sẵn nhưng có SĐT + tên → tạo khách mới trước
+      let resolvedCustomerId: number | null = customerId;
+      if (!customerId && customerPhone && customerName) {
+        const newCustomer = await customersService.create({
+          CustomerName: customerName,
+          Phone: customerPhone,
+        });
+        resolvedCustomerId = newCustomer.CustomerID;
+      }
+
       await ordersService.createOrder({
-        customerId: selectedCustomer ? parseInt(selectedCustomer) : null,
+        customerId: resolvedCustomerId,
         note,
         deliveryMethod,
         ...(deliveryMethod === 'Reserved' && paidAmount !== '' ? { paidAmount: parseFloat(paidAmount) || 0 } : {}),
@@ -189,24 +196,15 @@ function CreateOrderModal({ open, onClose, onSuccess }: Props) {
           {/* Customer Selection */}
           <div>
             <label className="block text-sm font-medium text-blacky-700 mb-1.5">
-              Khách hàng <span className="text-blacky-400 font-normal">(để trống nếu khách vãng lai)</span>
+              SĐT Khách hàng
             </label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blacky-400" />
-              <select
-                title="Khách hàng"
-                value={selectedCustomer}
-                onChange={(e) => setSelectedCustomer(e.target.value)}
-                className="input-field pl-9"
-              >
-                <option value="">-- Khách vãng lai --</option>
-                {customers.map((customer) => (
-                  <option key={customer.CustomerID} value={customer.CustomerID}>
-                    {customer.CustomerName} - {customer.Phone}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CustomerPhoneInput
+              onChange={(id, name, phone) => {
+                setCustomerId(id);
+                setCustomerName(name);
+                setCustomerPhone(phone);
+              }}
+            />
           </div>
 
           {/* Note */}
@@ -224,15 +222,14 @@ function CreateOrderModal({ open, onClose, onSuccess }: Props) {
           {/* Delivery Method */}
           <div>
             <label className="block text-sm font-medium text-blacky-700 mb-1.5">Phương thức giao hàng</label>
-            <select
-              title="Phương thức giao hàng"
+            <CustomSelect
               value={deliveryMethod}
-              onChange={(e) => setDeliveryMethod(e.target.value as DeliveryMethod)}
-              className="input-field"
-            >
-              <option value="Immediate">Giao ngay</option>
-              <option value="Reserved">Đặt trước</option>
-            </select>
+              onChange={(v) => setDeliveryMethod(v as DeliveryMethod)}
+              options={[
+                { value: 'Immediate', label: 'Giao ngay' },
+                { value: 'Reserved', label: 'Đặt trước' },
+              ]}
+            />
           </div>
 
           {/* Deposit — chỉ hiện với đơn Đặt trước */}
@@ -262,9 +259,9 @@ function CreateOrderModal({ open, onClose, onSuccess }: Props) {
               <button
                 type="button"
                 onClick={handleAddItem}
-                className="text-bluesh-800 hover:text-bluesh-900 text-sm font-medium flex items-center gap-1"
+                className="text-bluesh-800 bg-basic-white border border-bluesh-800 hover:text-basic-white hover:bg-bluesh-800 text-base flex items-center gap-1 px-3 py-1 rounded-lg transition-colors"
               >
-                <Plus className="w-4 h-4" /> Thêm sản phẩm
+                <Plus className="w-4 h-4" />Thêm sản phẩm
               </button>
             </div>
 
@@ -285,38 +282,25 @@ function CreateOrderModal({ open, onClose, onSuccess }: Props) {
                   <div key={index} className="flex gap-2 items-start p-3 bg-blacky-50 rounded-xl border border-basic-border">
                     <div className="flex-1 space-y-2">
                       <div className="grid grid-cols-3 gap-2">
-                        <select
-                          required
-                          title="Sản phẩm"
+                        <CustomSelect
+                          compact
                           value={item.productId}
-                          onChange={(e) => handleItemChange(index, 'productId', e.target.value)}
-                          className="input-field"
-                        >
-                          <option value="">-- Chọn sản phẩm --</option>
-                          {products.map((product) => (
-                            <option key={product.ProductID} value={product.ProductID}>
-                              {product.ProductName} ({product.SKU})
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(v) => handleItemChange(index, 'productId', v)}
+                          options={products.map((p) => ({ value: String(p.ProductID), label: `${p.ProductName} (${p.SKU})` }))}
+                          placeholder="Chọn sản phẩm"
+                        />
 
-                        <select
-                          required
-                          title="Đơn vị tính"
-                          disabled={!item.productId}
+                        <CustomSelect
+                          compact
                           value={item.unitName}
-                          onChange={(e) => handleItemChange(index, 'unitName', e.target.value)}
-                          className="input-field disabled:opacity-50"
-                        >
-                          <option value="">-- Chọn đơn vị --</option>
-                          {availableUnits.map((unit, idx) => (
-                            <option key={idx} value={unit.UnitName}>
-                              {unit.UnitName}{' '}
-                              {Number(unit.ExchangeValue) > 1 &&
-                                `(1 = ${unit.ExchangeValue} ${selectedProduct?.BaseUnit || ''})`}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(v) => handleItemChange(index, 'unitName', v)}
+                          options={availableUnits.map((unit) => ({
+                            value: unit.UnitName,
+                            label: unit.UnitName + (Number(unit.ExchangeValue) > 1 ? ` (1 = ${unit.ExchangeValue} ${selectedProduct?.BaseUnit || ''})` : ''),
+                          }))}
+                          placeholder="Chọn đơn vị"
+                          disabled={!item.productId}
+                        />
 
                         <input
                           type="number"
@@ -395,9 +379,9 @@ function CreateOrderModal({ open, onClose, onSuccess }: Props) {
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-1">
-            <button type="button" onClick={onClose} className="btn btn-secondary flex-1">Hủy</button>
-            <button type="submit" className="btn btn-primary flex-1">Tạo đơn hàng</button>
+          <div className="flex gap-3 pt-1 justify-center">
+            <button type="button" onClick={onClose} className="btn btn-secondary w-[30%] rounded-lg">Hủy</button>
+            <button type="submit" className="btn btn-primary w-[30%] rounded-lg">Tạo đơn hàng</button>
           </div>
         </form>
         </div>

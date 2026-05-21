@@ -73,6 +73,9 @@ const inventoryService = {
       totalQty: parseFloat(data.totalQty),
       deliverQty: parseFloat(data.deliverQty),
       importUnitPrice: parseFloat(data.importUnitPrice),
+      ...(data.importDiscountRate && parseFloat(data.importDiscountRate) > 0
+        ? { importDiscountRate: parseFloat(data.importDiscountRate) / 100 }
+        : {}),
       saleUnitPrice: parseFloat(data.saleUnitPrice),
       customerId: data.customerId || undefined,
       note: data.note || undefined,
