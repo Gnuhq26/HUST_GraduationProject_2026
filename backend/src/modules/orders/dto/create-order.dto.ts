@@ -38,9 +38,8 @@ export class CreateOrderDto {
 
   @ApiProperty({
     description:
-      'Số tiền khách đã thanh toán. ' +
-      'Với đơn Immediate tự động bằng TotalAmount nếu không truyền. ' +
-      'Với đơn Reserved là tiền cọc (mặc định 0).',
+      'Số tiền khách đã thanh toán tại thời điểm tạo đơn (mặc định 0). ' +
+      'Debt = TotalAmount - PaidAmount, được quản lý độc lập ở module Debts.',
     example: 500000,
     required: false,
   })

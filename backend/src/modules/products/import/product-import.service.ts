@@ -53,14 +53,19 @@ export class ProductImportService {
       invalidCount: invalidRows.length,
       createCount: new Set(toCreate.map((r) => r.sku.toLowerCase())).size,
       updateCount: new Set(toUpdate.map((r) => r.sku.toLowerCase())).size,
-      validRows: validRows.map((r) => ({
+      validRows: validRows.map((r, idx) => ({
         rowNumber: r.rowNumber,
         sku: r.sku,
         productName: r.productName,
         categoryName: r.categoryName,
         baseUnit: r.baseUnit,
+        unitName: r.unitName || null,
+        exchangeValue: r.exchangeValue ?? null,
         marginRate: r.marginRate,
         action: existingSkuSet.has(r.sku.toLowerCase()) ? 'UPDATE' : 'CREATE',
+        isContinuation:
+          idx > 0 &&
+          validRows[idx - 1].sku.toLowerCase() === r.sku.toLowerCase(),
       })),
       invalidRows: invalidRows.map((r) => ({
         rowNumber: r.rowNumber,
@@ -203,7 +208,7 @@ export class ProductImportService {
     headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
     headerRow.height = 24;
 
-    // Dòng mẫu
+    // Dòng mẫu — SP 1 dòng 1: đơn vị Bao (base unit)
     sheet.addRow({
       sku: 'XM-HT-PCB40',
       productName: 'Xi măng Hoàng Thạch PCB40',
@@ -214,6 +219,23 @@ export class ProductImportService {
       unitName: 'Tấn',
       exchangeValue: 20,
     });
+    // Dòng mẫu — SP 1 dòng 2: cùng SKU, đơn vị thứ 2 (miêu tả thêm đv quy đổi)
+    const continuationRow = sheet.addRow({
+      sku: 'XM-HT-PCB40',
+      productName: '',
+      categoryName: '',
+      baseUnit: '',
+      description: '',
+      marginRate: '',
+      unitName: 'Xe',
+      exchangeValue: 300,
+    });
+    continuationRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE8F0FE' },
+    };
+    // Dòng mẫu — SP 2
     sheet.addRow({
       sku: 'GACH-TL-200',
       productName: 'Gạch tuynel 200',
@@ -224,6 +246,19 @@ export class ProductImportService {
       unitName: 'Pallet',
       exchangeValue: 500,
     });
+
+    // Ghi chú hướng dẫn: dòng cùng SKU = thêm đơn vị quy đổi
+    const noteRow = sheet.addRow([
+      '\u2139 Hướng dẫn: Để thêm nhiều đơn vị quy đổi cho 1 sản phẩm, hãy thêm nhiều dòng với cùng mã SKU (chỉ điền SKU và ĐV quy đổi).',
+    ]);
+    noteRow.font = { italic: true, color: { argb: 'FF7F6000' } };
+    noteRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFFFF2CC' },
+    };
+    noteRow.getCell(1).alignment = { wrapText: true };
+    sheet.mergeCells(`A${noteRow.number}:H${noteRow.number}`);
 
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);

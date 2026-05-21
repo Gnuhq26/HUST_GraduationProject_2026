@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { X, FileText, Truck, Calendar, Package, DollarSign, CheckCircle } from 'lucide-react';
+import { X, FileText, Truck, Calendar, Package, CheckCircle } from 'lucide-react';
 import inventoryService from '../../services/inventoryService';
+import ConfirmModal from '../ConfirmModal';
+import { useToast } from '../ToastProvider';
 import type { StockReceipt } from '@/types';
 
 interface Props {
@@ -10,9 +12,11 @@ interface Props {
 }
 
 function StockReceiptDetailModal({ receiptId, onClose, onConfirmed }: Props) {
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [receipt, setReceipt] = useState<StockReceipt | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     loadReceiptDetail();
@@ -25,7 +29,7 @@ function StockReceiptDetailModal({ receiptId, onClose, onConfirmed }: Props) {
       setReceipt(data);
     } catch (err) {
       console.error('Error loading receipt detail:', err);
-      alert('Có lỗi khi tải chi tiết phiếu nhập');
+      toast.error('Có lỗi khi tải chi tiết phiếu nhập');
     } finally {
       setLoading(false);
     }
@@ -35,6 +39,7 @@ function StockReceiptDetailModal({ receiptId, onClose, onConfirmed }: Props) {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND',
+      currencyDisplay: 'code'
     }).format(Number(value));
   };
 
@@ -72,11 +77,6 @@ function StockReceiptDetailModal({ receiptId, onClose, onConfirmed }: Props) {
                     <Calendar className="w-3.5 h-3.5" />
                     <span>{formatDate(receipt.ImportDate)}</span>
                   </div>
-                  <span>•</span>
-                  <div className="flex items-center gap-1">
-                    <Truck className="w-3.5 h-3.5" />
-                    <span>{receipt.supplier?.SupplierName}</span>
-                  </div>
                 </div>
               )}
             </div>
@@ -102,21 +102,23 @@ function StockReceiptDetailModal({ receiptId, onClose, onConfirmed }: Props) {
               {/* Receipt Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-blacky-50 rounded-xl p-4 border border-basic-border">
-                  <div className="flex items-center gap-2 text-sm text-blacky-500 mb-1">
+                  <div className="flex items-center gap-2 text-sm font-medium text-blacky-500 mb-1">
                     <Truck className="w-4 h-4" />
                     <span>Nhà cung cấp</span>
                   </div>
                   <div className="font-semibold text-blacky-950">
                     {receipt.supplier?.SupplierName || 'N/A'}
                   </div>
-                  <div className="text-xs text-blacky-400 mt-1">
-                    Mã NCC: {receipt.supplier?.SupplierID || '-'}
+                  <div className="text-sm text-blacky-700 mt-1">
+                    Số ĐT: {receipt.supplier?.Phone || '-'}
+                  </div>
+                  <div className="text-sm text-blacky-700 mt-1">
+                    Địa chỉ: {receipt.supplier?.Address || '-'}
                   </div>
                 </div>
 
                 <div className="bg-blacky-50 rounded-xl p-4 border border-basic-border">
-                  <div className="flex items-center gap-2 text-sm text-blacky-500 mb-1">
-                    <DollarSign className="w-4 h-4" />
+                  <div className="flex items-center gap-2 text-sm font-medium text-blacky-500 mb-1">
                     <span>Tổng giá trị</span>
                   </div>
                   <div className="font-bold text-2xl text-accent-green">
@@ -154,18 +156,21 @@ function StockReceiptDetailModal({ receiptId, onClose, onConfirmed }: Props) {
                           Sản phẩm
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-basic-white uppercase tracking-wider">
-                          SKU
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-basic-white uppercase tracking-wider">
                           Đơn vị
                         </th>
                         <th className="px-4 py-3 text-right text-xs font-medium text-basic-white uppercase tracking-wider">
                           Số lượng
                         </th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-basic-white uppercase tracking-wider">
+                        <th className="px-4 py-3 text-center text-xs font-medium text-basic-white uppercase tracking-wider">
                           Đơn giá
                         </th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-basic-white uppercase tracking-wider">
+                        <th className="px-4 py-3 text-center text-xs font-medium text-basic-white uppercase tracking-wider">
+                          Chiết khấu
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-basic-white uppercase tracking-wider">
+                          Tiền CK
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-basic-white uppercase tracking-wider">
                           Thành tiền
                         </th>
                       </tr>
@@ -181,26 +186,31 @@ function StockReceiptDetailModal({ receiptId, onClose, onConfirmed }: Props) {
                               </div>
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap">
-                              <span className="text-sm text-blacky-500">
-                                {detail.product?.SKU || '-'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-4 whitespace-nowrap">
                               <span className="px-2 py-1 text-xs font-medium bg-bluesh-50 text-bluesh-800 rounded">
                                 {detail.UnitName}
                               </span>
                             </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-right">
+                            <td className="px-4 py-4 whitespace-nowrap text-center">
                               <span className="text-sm font-semibold text-blacky-950">
                                 {formatQuantity(detail.Quantity)}
                               </span>
                             </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-right">
+                            <td className="px-4 py-4 whitespace-nowrap text-center">
                               <span className="text-sm text-blacky-700">
                                 {formatCurrency(detail.UnitPrice)}
                               </span>
                             </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-right">
+                            <td className="px-4 py-4 whitespace-nowrap text-center">
+                              <span className="text-sm font-medium text-blacky-700">
+                                {Number(detail.DiscountRate)*100}%
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap text-center">
+                              <span className="text-sm font-medium text-blacky-500">
+                                {formatCurrency(Number(detail.Quantity) * Number(detail.UnitPrice) * (Number(detail.DiscountRate) || 0))}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap text-center">
                               <span className="text-sm font-semibold text-accent-green">
                                 {formatCurrency(totalPrice)}
                               </span>
@@ -209,17 +219,33 @@ function StockReceiptDetailModal({ receiptId, onClose, onConfirmed }: Props) {
                         );
                       })}
                     </tbody>
-                    <tfoot className="bg-blacky-50">
-                      <tr>
-                        <td colSpan={5} className="px-4 py-4 text-right font-semibold text-blacky-700">
-                          Tổng cộng:
-                        </td>
-                        <td className="px-4 py-4 text-right">
-                          <span className="text-lg font-bold text-accent-green">
-                            {formatCurrency(receipt.TotalAmount)}
-                          </span>
-                        </td>
-                      </tr>
+                    <tfoot className="bg-blacky-50 divide-y divide-basic-border">
+                      {(() => {
+                        const subtotal = (receipt.details || []).reduce(
+                          (sum, d) => sum + Number(d.Quantity) * Number(d.UnitPrice), 0
+                        );
+                        const totalDiscount = (receipt.details || []).reduce(
+                          (sum, d) => sum + Number(d.Quantity) * Number(d.UnitPrice) * Number(d.DiscountRate || 0), 0
+                        );
+                        return (
+                          <>
+                            <tr>
+                              <td colSpan={6} className="px-4 py-2 text-right text-sm text-blacky-500">Tổng tiền hàng:</td>
+                              <td className="px-4 py-2 text-center text-sm text-blacky-950 font-medium">{formatCurrency(subtotal)}</td>
+                            </tr>
+                            <tr>
+                              <td colSpan={6} className="px-4 py-2 text-right text-sm text-blacky-500">Tổng chiết khấu:</td>
+                              <td className="px-4 py-2 text-center text-sm text-blacky-950 font-medium">{formatCurrency(totalDiscount)}</td>
+                            </tr>
+                            <tr>
+                              <td colSpan={6} className="px-4 py-3 text-right font-semibold text-blacky-700">Tổng thanh toán:</td>
+                              <td className="px-4 py-3 text-center">
+                                <span className="text-lg font-bold text-accent-green">{formatCurrency(receipt.TotalAmount)}</span>
+                              </td>
+                            </tr>
+                          </>
+                        );
+                      })()}
                     </tfoot>
                   </table>
                 </div>
@@ -229,36 +255,46 @@ function StockReceiptDetailModal({ receiptId, onClose, onConfirmed }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-basic-border bg-basic-white flex gap-3">
+        <div className="p-4 border-t border-basic-border bg-basic-white flex gap-3 justify-center">
           {receipt?.Status === 'Pending' && (
             <button
-              onClick={async () => {
-                if (!window.confirm('Xác nhận đã nhận hàng?')) return;
-                try {
-                  setConfirming(true);
-                  await inventoryService.confirmReceipt(receiptId);
-                  alert('Xác nhận nhận hàng thành công!');
-                  onConfirmed?.();
-                  loadReceiptDetail();
-                } catch (err: unknown) {
-                  const e = err as { response?: { data?: { message?: string } } };
-                  alert(e.response?.data?.message || 'Có lỗi xảy ra');
-                } finally {
-                  setConfirming(false);
-                }
-              }}
+              onClick={() => setConfirmOpen(true)}
               disabled={confirming}
-              className="btn btn-primary flex-1! disabled:opacity-50"
+              className="btn btn-primary w-[30%]!  rounded-lg!"
             >
               <CheckCircle className="w-4 h-4" />
               {confirming ? 'Đang xử lý...' : 'Xác nhận nhận hàng'}
             </button>
           )}
-          <button onClick={onClose} className="btn btn-secondary flex-1!">
+          <button onClick={onClose} className="btn btn-secondary w-[30%]! rounded-lg!">
             Đóng
           </button>
         </div>
       </div>
+
+      <ConfirmModal
+        open={confirmOpen}
+        title="Xác nhận nhận hàng"
+        message="Xác nhận đã nhận hàng cho phiếu nhập này? Tồn kho sẽ được cập nhật ngay lập tức."
+        confirmLabel="Xác nhận nhận hàng"
+        variant="default"
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={async () => {
+          setConfirmOpen(false);
+          try {
+            setConfirming(true);
+            await inventoryService.confirmReceipt(receiptId);
+            toast.success('Xác nhận nhận hàng thành công!');
+            onConfirmed?.();
+            loadReceiptDetail();
+          } catch (err: unknown) {
+            const e = err as { response?: { data?: { message?: string } } };
+            toast.error(e.response?.data?.message || 'Có lỗi xảy ra');
+          } finally {
+            setConfirming(false);
+          }
+        }}
+      />
     </div>
   );
 }

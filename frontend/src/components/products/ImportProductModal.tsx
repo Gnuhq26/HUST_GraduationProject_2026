@@ -220,33 +220,47 @@ export default function ImportProductModal({ onClose, onSuccess }: Props) {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-basic-border">
-                      {previewData.rows.map((row, idx) => (
-                        <tr
-                          key={idx}
-                          className={row.errors?.length > 0 ? 'bg-accent-red/5' : 'bg-accent-green/5'}
-                        >
-                          <td className="px-3 py-2 text-blacky-600">{row.rowNumber}</td>
-                          <td className="px-3 py-2 font-medium text-blacky-700">{row.sku}</td>
-                          <td className="px-3 py-2 text-blacky-800">{row.productName}</td>
-                          <td className="px-3 py-2 text-blacky-800">{row.categoryName}</td>
-                          <td className="px-3 py-2 text-blacky-800">{row.baseUnit}</td>
-                          <td className="px-3 py-2 text-blacky-800">{row.unitName || '—'}</td>
-                          <td className="px-3 py-2 text-blacky-800">{row.marginRate != null ? (Number(row.marginRate) * 100).toFixed(2) + '%' : '—'}</td>
-                          <td className="px-3 py-2 text-center">
-                            {row.errors?.length > 0 ? (
-                              <span className="inline-flex items-center gap-1 text-xs text-accent-red" title={row.errors.join('; ')}>
-                                <AlertCircle className="w-3.5 h-3.5" />
-                                {row.errors.length} lỗi
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 text-xs text-accent-green">
-                                <CheckCircle className="w-3.5 h-3.5" />
-                                OK
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                      {previewData.rows.map((row, idx) => {
+                        const hasError = (row.errors?.length ?? 0) > 0;
+                        const isCont = !hasError && !!row.isContinuation;
+                        return (
+                          <tr
+                            key={idx}
+                            className={`${hasError ? 'bg-accent-red/5' : 'bg-accent-green/5'} ${isCont ? 'border-l-4 border-l-bluesh-800/30' : ''}`}
+                          >
+                            <td className="px-3 py-2 text-blacky-600">{row.rowNumber}</td>
+                            <td className="px-3 py-2 font-medium text-blacky-700">
+                              {isCont ? (
+                                <span className="pl-2 text-blacky-400 text-xs">↳</span>
+                              ) : (
+                                row.sku
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-blacky-800">{isCont ? '' : row.productName}</td>
+                            <td className="px-3 py-2 text-blacky-800">{isCont ? '' : row.categoryName}</td>
+                            <td className="px-3 py-2 text-blacky-800">{isCont ? '' : row.baseUnit}</td>
+                            <td className="px-3 py-2 text-blacky-800">{row.unitName || '—'}</td>
+                            <td className="px-3 py-2 text-blacky-800">
+                              {isCont ? '' : (row.marginRate != null ? (Number(row.marginRate) * 100).toFixed(2) + '%' : '—')}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              {hasError ? (
+                                <span className="inline-flex items-center gap-1 text-xs text-accent-red" title={row.errors.join('; ')}>
+                                  <AlertCircle className="w-3.5 h-3.5" />
+                                  {row.errors.length} lỗi
+                                </span>
+                              ) : isCont ? (
+                                <span className="text-xs text-bluesh-500">+đv</span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-xs text-accent-green">
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                  OK
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -271,17 +285,17 @@ export default function ImportProductModal({ onClose, onSuccess }: Props) {
                 <h3 className="text-lg font-semibold text-blacky-950">Import thành công!</h3>
               </div>
               <div className="grid grid-cols-3 gap-4">
-                <div className="bg-accent-green/10 rounded-xl p-3 text-center border border-accent-green/20">
+                <div className="bg-accent-green/10 rounded-xl p-3 text-center border border-accent-green">
                   <p className="text-2xl font-bold text-accent-green">{commitResult.created}</p>
-                  <p className="text-xs text-blacky-500 mt-0.5">Tạo mới</p>
+                  <p className="text-sm font-semibold text-blacky-900 mt-0.5">Tạo mới</p>
                 </div>
-                <div className="bg-bluesh-50 rounded-xl p-3 text-center border border-bluesh-800/15">
+                <div className="bg-bluesh-50 rounded-xl p-3 text-center border border-bluesh-600">
                   <p className="text-2xl font-bold text-bluesh-800">{commitResult.updated}</p>
-                  <p className="text-xs text-blacky-500 mt-0.5">Cập nhật</p>
+                  <p className="text-sm font-semibold text-blacky-900 mt-0.5">Cập nhật</p>
                 </div>
-                <div className="bg-accent-red/10 rounded-xl p-3 text-center border border-accent-red/20">
+                <div className="bg-accent-red/10 rounded-xl p-3 text-center border border-accent-red">
                   <p className="text-2xl font-bold text-accent-red">{commitResult.skipped}</p>
-                  <p className="text-xs text-blacky-500 mt-0.5">Bỏ qua (lỗi)</p>
+                  <p className="text-sm font-semibold text-blacky-900 mt-0.5">Bỏ qua (lỗi)</p>
                 </div>
               </div>
             </div>
@@ -299,7 +313,7 @@ export default function ImportProductModal({ onClose, onSuccess }: Props) {
                 type="button"
                 onClick={handlePreview}
                 disabled={!file || loading}
-                className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed gap-2"
+                className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed gap-2 "
               >
                 {loading ? (
                   <><Loader2 className="w-4 h-4 animate-spin" />Đang xử lý...</>

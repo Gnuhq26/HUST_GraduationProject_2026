@@ -196,19 +196,21 @@ function Suppliers() {
 
       {/* Table */}
       <div className="bg-basic-white rounded-xl border-2 border-basic-border overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="min-w-full">
           <thead className="bg-bluesh-800">
             <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase tracking-wider">STT</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase tracking-wider">
                 Tên nhà cung cấp
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase tracking-wider">
+              <th className="px-6 py-3 text-center text-xs font-medium text-basic-white uppercase tracking-wider">
                 Số điện thoại
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase tracking-wider">
                 Địa chỉ
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase tracking-wider">
+              <th className="px-6 py-3 text-center text-xs font-medium text-basic-white uppercase tracking-wider">
                 Số phiếu nhập
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-basic-white uppercase tracking-wider">
@@ -219,36 +221,36 @@ function Suppliers() {
           <tbody className="divide-y divide-basic-border">
             {suppliers.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-blacky-500">
+                <td colSpan={6} className="px-6 py-8 text-center text-blacky-500">
                   Không có nhà cung cấp nào
                 </td>
               </tr>
             ) : (
-              suppliers.map((supplier) => (
+              suppliers.map((supplier, idx) => (
                 <tr key={supplier.SupplierID} className="hover:bg-blacky-50 transition-colors">
+                  <td className="px-6 py-4 text-left text-blacky-700">{idx + 1}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
-                      <Truck className="w-4 h-4 text-blacky-400" />
-                      <span className="font-medium text-blacky-950">{supplier.SupplierName}</span>
+                      <span className="font-medium text-bluesh-800">{supplier.SupplierName}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2 text-blacky-700">
-                      <Phone className="w-4 h-4 text-blacky-400" />
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <div className="flex items-center gap-2 text-blacky-700 justify-center">
+                      <Phone className="w-4 h-4 text-bluesh-800" />
                       {supplier.Phone || <span className="text-blacky-400 italic">Chưa có</span>}
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-start gap-2 text-blacky-700">
-                      <MapPin className="w-4 h-4 text-blacky-400 mt-0.5 shrink-0" />
+                      <MapPin className="w-4 h-4 text-bluesh-800 mt-0.5 shrink-0" />
                       <span className="line-clamp-2">
-                        {supplier.Address || <span className="text-blacky-400 italic">Chưa có</span>}
+                        {supplier.Address || <span className="text-blacky-700 italic">Chưa có</span>}
                       </span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <Package className="w-4 h-4 text-blacky-400" />
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <div className="flex items-center gap-2 justify-center">
+                      <Package className="w-4 h-4 text-yellowfish-400" />
                       <span className="text-blacky-700">{supplier._count?.receipts || 0}</span>
                     </div>
                   </td>
@@ -275,6 +277,7 @@ function Suppliers() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Supplier Form Modal */}

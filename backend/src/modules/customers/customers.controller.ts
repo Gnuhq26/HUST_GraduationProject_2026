@@ -39,8 +39,9 @@ export class CustomersController {
     @CurrentStore() storeId: number,
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+    @Query('search') search?: string,
   ) {
-    return this.customersService.findAll(storeId, parsePagination(page, limit));
+    return this.customersService.findAll(storeId, parsePagination(page, limit), search);
   }
 
   @Get(':id')

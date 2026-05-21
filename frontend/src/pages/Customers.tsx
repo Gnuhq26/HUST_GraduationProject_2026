@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, User, Phone, MapPin, ShoppingCart, Upload, Download } from 'lucide-react';
+import { Plus, Edit2, Trash2, User, Phone, MapPin, Upload, Download } from 'lucide-react';
 import { customersService } from '../services/customersService';
 import CustomerDetailModal from '../components/customer/CustomerDetailModal';
 import CustomerFormModal from '../components/customer/CustomerFormModal';
@@ -22,7 +22,7 @@ export default function Customers() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: number; name: string } | null>(null);
 
   const toast = useToast();
 
@@ -56,15 +56,15 @@ export default function Customers() {
   };
 
   // Delete customer
-  const handleDelete = (id: number) => {
-    setConfirmDelete(id);
+  const handleDelete = (customer: CustomerWithCount) => {
+    setConfirmDelete({ id: customer.CustomerID, name: customer.CustomerName });
   };
 
   const doDelete = async () => {
     if (confirmDelete === null) return;
     setConfirmDelete(null);
     try {
-      await customersService.delete(confirmDelete);
+      await customersService.delete(confirmDelete.id);
       toast.success('Xóa khách hàng thành công');
       loadCustomers();
     } catch (error: unknown) {
@@ -146,12 +146,13 @@ export default function Customers() {
           <table className="w-full">
             <thead className="bg-bluesh-800 border-b border-basic-border">
               <tr>
-                {/* <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">Mã KH</th> */}
-                <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">Tên khách hàng</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">Số điện thoại</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">Địa chỉ</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-basic-white uppercase">Đơn hàng</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-basic-white uppercase">Thao tác</th>
+                <th className="px-6 py-3 text-left text-sm font-medium text-basic-white uppercase">STT</th>
+                <th className="px-6 py-3 text-center text-sm font-medium text-basic-white uppercase">Mã KH</th>
+                <th className="px-6 py-3 text-left text-sm font-medium text-basic-white uppercase">Tên khách hàng</th>
+                <th className="px-6 py-3 text-left text-sm font-medium text-basic-white uppercase">Số điện thoại</th>
+                <th className="px-6 py-3 text-left text-sm font-medium text-basic-white uppercase">Địa chỉ</th>
+                <th className="px-6 py-3 text-center text-sm font-medium text-basic-white uppercase">Đơn hàng</th>
+                <th className="px-6 py-3 text-right text-sm font-medium text-basic-white uppercase">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-basic-border">
@@ -168,7 +169,7 @@ export default function Customers() {
                   </td>
                 </tr>
               ) : (
-                customers.map((customer) => (
+                customers.map((customer, idx) => (
                   <tr
                     key={customer.CustomerID}
                     className="hover:bg-blacky-50 cursor-pointer"
@@ -179,11 +180,12 @@ export default function Customers() {
                       }
                     }}
                   >
-                    {/* <td className="px-6 py-4 text-sm">
-                      <span className="font-mono text-xs font-medium text-bluesh-800 bg-bluesh-50 px-2 py-1 rounded">
+                    <td className="px-6 py-4 text-sm text-left text-blacky-700">{idx + 1}</td>
+                    <td className="px-6 py-4 text-sm text-center">
+                      <span className="text-sm font-medium text-bluesh-800 px-2 py-1 rounded">
                         {customer.CustomerCode || '-'}
                       </span>
-                    </td> */}
+                    </td>
                     <td className="px-6 py-4 text-sm font-medium text-blacky-950">
                       <div className="flex items-center gap-2">
                         <User className="w-4 h-4 text-bluesh-800" />
@@ -210,13 +212,12 @@ export default function Customers() {
                         <span className="text-blacky-500">-</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-center text-sm">
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                    <td className="px-6 py-4 text-center">
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm font-medium ${
                         (customer._count?.orders ?? 0) > 0
                           ? 'bg-accent-green/10 text-accent-green'
                           : 'bg-blacky-100 text-blacky-500'
                       }`}>
-                        <ShoppingCart className="w-3 h-3" />
                         {customer._count?.orders || 0}
                       </span>
                     </td>
@@ -237,7 +238,7 @@ export default function Customers() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDelete(customer.CustomerID);
+                            handleDelete(customer);
                           }}
                           className="text-accent-red hover:text-accent-red/80"
                           title="Xóa"
@@ -283,7 +284,7 @@ export default function Customers() {
       <ConfirmModal
         open={confirmDelete !== null}
         title="Xóa khách hàng"
-        message="Bạn có chắc muốn xóa khách hàng này? Hành động này không thể hoàn tác."
+        message={`Bạn có chắc muốn xóa khách hàng ${confirmDelete?.name || ''}? Hành động này không thể hoàn tác.`}
         confirmLabel="Xóa"
         variant="danger"
         onConfirm={doDelete}

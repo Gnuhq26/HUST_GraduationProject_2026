@@ -1,13 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Upload, Download, Edit2, Trash2, X } from 'lucide-react';
 import { useForm, SubmitHandler, Controller } from 'react-hook-form';
 import { productsService } from '../services/productsService';
 import ProtectedAction from '../components/ProtectedAction';
 import ImportProductModal from '../components/products/ImportProductModal';
+import ProductDetailPanel from '../components/products/ProductDetailPanel';
 import CustomSelect from '../components/CustomSelect';
 import ConfirmModal from '../components/ConfirmModal';
 import { useToast } from '../components/ToastProvider';
-import type { Product } from '@/types';
+import { categoriesService } from '../services/categoriesService';
+import type { Product, Category } from '@/types';
 
 interface ProductFormData {
   ProductName: string;
@@ -28,6 +30,9 @@ export default function Products() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [showInactive, setShowInactive] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const selectedProductIdRef = useRef<number | null>(null);
 
   const toast = useToast();
   const { register, handleSubmit, reset, setValue, control, formState: { errors } } = useForm<ProductFormData>();
@@ -36,7 +41,7 @@ export default function Products() {
   const loadProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await productsService.getAll(showInactive ? {} : { isActive: true });
+      const data = await productsService.getAll(showInactive ? { isActive: false } : { isActive: true });
       setProducts(data ?? []);
     } catch (error) {
       console.error('Lỗi tải sản phẩm:', error);
@@ -46,6 +51,33 @@ export default function Products() {
   }, [showInactive]);
 
   useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
+
+  useEffect(() => {
+    categoriesService.getAll().then(setCategories).catch(() => {});
+  }, []);
+
+  // Sync selectedProduct object when the products list reloads (e.g. after unit CRUD)
+  useEffect(() => {
+    const id = selectedProductIdRef.current;
+    if (id !== null) {
+      const updated = products.find((p) => p.ProductID === id);
+      if (updated) setSelectedProduct(updated);
+    }
+  }, [products]);
+
+  const handleSelectProduct = (product: Product) => {
+    if (selectedProduct?.ProductID === product.ProductID) {
+      setSelectedProduct(null);
+      selectedProductIdRef.current = null;
+    } else {
+      setSelectedProduct(product);
+      selectedProductIdRef.current = product.ProductID;
+    }
+  };
+
+  const handleUnitUpdated = useCallback(() => {
     loadProducts();
   }, [loadProducts]);
 
@@ -163,8 +195,25 @@ export default function Products() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-basic-white rounded-xl border-2 border-basic-border overflow-hidden">
+      {/* Panel + Table */}
+      <div className="flex gap-4 items-start">
+        {/* Detail panel — slides in from the left */}
+        <div
+          className={`shrink-0 overflow-hidden transition-all duration-300 ease-in-out ${
+            selectedProduct ? 'w-95' : 'w-0'
+          }`}
+        >
+          {selectedProduct && (
+            <ProductDetailPanel
+              product={selectedProduct}
+              onClose={() => { setSelectedProduct(null); selectedProductIdRef.current = null; }}
+              onUpdated={handleUnitUpdated}
+            />
+          )}
+        </div>
+
+        {/* Table — shrinks automatically */}
+        <div className="flex-1 bg-basic-white rounded-xl border-2 border-basic-border overflow-hidden min-w-0">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-4">
             <p className="text-blacky-400 font-medium">Đang tải...</p>
@@ -179,6 +228,7 @@ export default function Products() {
           <table className="w-full">
             <thead className="bg-bluesh-800 border-b border-basic-border">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">STT</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">Mã SKU</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">Tên sản phẩm</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase">Đơn vị</th>
@@ -188,8 +238,15 @@ export default function Products() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {products.map((product) => (
-                  <tr key={product.ProductID} className="hover:bg-gray-50">
+              {products.map((product, idx) => (
+                  <tr
+                    key={product.ProductID}
+                    className={`cursor-pointer hover:bg-bluesh-50 transition-colors ${
+                      selectedProduct?.ProductID === product.ProductID ? 'bg-bluesh-50' : ''
+                    }`}
+                    onClick={() => handleSelectProduct(product)}
+                  >
+                    <td className="px-6 py-4 text-sm text-left text-blacky-700">{idx + 1}</td>
                     <td className="px-6 py-4 text-sm font-medium text-blacky-900">{product.SKU}</td>
                     <td className="px-6 py-4 text-sm text-blacky-900">{product.ProductName}</td>
                     <td className="px-6 py-4 text-sm text-blacky-900">{product.BaseUnit}</td>
@@ -204,7 +261,7 @@ export default function Products() {
                     <td className="px-6 py-4 text-right text-sm">
                       <ProtectedAction action="update" subject="Product">
                         <button
-                          onClick={() => handleEdit(product)}
+                          onClick={(e) => { e.stopPropagation(); handleEdit(product); }}
                           title="Chỉnh sửa"
                           className="text-bluesh-800 hover:text-bluesh-900 mr-3"
                         >
@@ -213,7 +270,7 @@ export default function Products() {
                       </ProtectedAction>
                       <ProtectedAction action="delete" subject="Product">
                         <button
-                          onClick={() => handleDelete(product.ProductID)}
+                          onClick={(e) => { e.stopPropagation(); handleDelete(product.ProductID); }}
                           title="Xóa"
                           className="text-accent-red hover:text-red-700"
                         >
@@ -228,6 +285,7 @@ export default function Products() {
           </table>
         </div>
         )}
+        </div>
       </div>
 
       {/* Modal */}
@@ -294,12 +352,21 @@ export default function Products() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-blacky-700 mb-1.5">ID Danh mục</label>
-                  <input
-                    type="number"
-                    {...register('CategoryID')}
-                    className="input-field"
-                    placeholder="1"
+                  <label className="block text-sm font-medium text-blacky-700 mb-1.5">Danh mục</label>
+                  <Controller
+                    name="CategoryID"
+                    control={control}
+                    render={({ field }) => (
+                      <CustomSelect
+                        value={field.value != null ? String(field.value) : ''}
+                        onChange={(val) => field.onChange(val ? Number(val) : undefined)}
+                        options={[
+                          { value: '', label: 'Không có danh mục' },
+                          ...categories.map((c) => ({ value: String(c.CategoryID), label: c.CategoryName })),
+                        ]}
+                        placeholder="Chọn danh mục"
+                      />
+                    )}
                   />
                 </div>
 
@@ -316,7 +383,7 @@ export default function Products() {
                     className="input-field"
                     placeholder="10"
                   />
-                  <p className="mt-1 text-xs text-blacky-400">Ví dụ: 15 = 15% — dùng để tính giá bán gợi ý</p>
+                  <p className="mt-1 text-xs text-blacky-400"></p>
                   {errors.marginRate && <p className="mt-1 text-sm text-accent-red">Giá trị từ 0 đến 100</p>}
                 </div>
 

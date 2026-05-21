@@ -4,13 +4,15 @@ import reportsService from '../services/reportsService';
 import { useToast } from '../components/ToastProvider';
 
 interface RevenueReport {
+  totalSalesValue: number;
+  confirmedRevenue: number;
+  debtIncurred: number;
+  pendingDeposit: number;
+  pendingTotalValue: number;
   totalRevenue: number;
   totalOrders: number;
   completedOrders: number;
   pendingOrders: number;
-  confirmedRevenue: number;
-  pendingDeposit: number;
-  pendingTotalValue: number;
 }
 
 interface ProfitReport {
@@ -250,20 +252,20 @@ function Reports() {
             {revenueReport && (
               <div className="bg-basic-white rounded-xl border border-basic-border2 p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-bluesh-800">Chi tiết Doanh thu</h3>
+                  <h3 className="font-semibold text-bluesh-800">Thống kê Bán hàng & Dòng tiền</h3>
                   <div className="w-8 h-8 rounded-lg bg-bluesh-800 flex items-center justify-center">
                     <DollarSign className="w-5 h-5 text-basic-white" />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center p-3 bg-basic-white border border-bluesh-100 rounded-lg">
-                    <span className="text-blacky-700 text-base">Doanh thu thực thu</span>
+                    <span className="text-blacky-700 text-base">Tổng giá trị bán ra (Doanh số)</span>
                     <span className="font-semibold text-bluesh-800">
-                      {formatCurrency(revenueReport.totalRevenue)}
+                      {formatCurrency(revenueReport.totalSalesValue)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-basic-white border border-bluesh-100 rounded-lg">
-                    <span className="text-blacky-700 text-base">Đơn hoàn tất ({revenueReport.completedOrders})</span>
+                    <span className="text-blacky-700 text-base">Dòng tiền thu về/Thực thu</span>
                     <span className="font-semibold text-accent-green">
                       {formatCurrency(revenueReport.confirmedRevenue)}
                     </span>
@@ -274,25 +276,31 @@ function Reports() {
                       {formatCurrency(revenueReport.pendingDeposit)}
                     </span>
                   </div>
-                  {revenueReport.pendingTotalValue > 0 && (
+                  <div className="flex justify-between items-center p-3 bg-accent-red/10 border border-accent-red rounded-lg">
+                    <span className="text-blacky-700 text-base font-medium">Công nợ phát sinh</span>
+                    <span className="font-bold text-accent-red">
+                      {formatCurrency(revenueReport.debtIncurred)}
+                    </span>
+                  </div>
+                  {revenueReport.pendingDeposit > 0 && (
                     <div className="flex justify-between items-center p-3 bg-basic-white border border-bluesh-100 rounded-lg">
-                      <span className="text-blacky-700 text-base">Giá trị đơn chờ xử lý</span>
-                      <span className="font-medium text-blacky-500 text-base">
-                        {formatCurrency(revenueReport.pendingTotalValue)}
+                      <span className="text-blacky-700 text-base">Tiền cọc đặt trước ({revenueReport.pendingOrders} đơn)</span>
+                      <span className="font-semibold text-yellowfish-600">
+                        {formatCurrency(revenueReport.pendingDeposit)}
                       </span>
                     </div>
                   )}
                   <div className="flex justify-between items-center p-3 bg-basic-white border border-bluesh-100 rounded-lg">
-                    <span className="text-blacky-700 text-base">Tổng đơn hàng</span>
+                    <span className="text-blacky-700 text-base">Đơn giao thành công</span>
                     <span className="font-semibold text-bluesh-800">
-                      {revenueReport.totalOrders}
+                      {revenueReport.completedOrders} đơn
                     </span>
                   </div>
                   <div className="flex justify-between items-center p-3 border border-bluesh-100 rounded-lg">
-                    <span className="text-blacky-700 text-base">Doanh thu TB/đơn</span>
+                    <span className="text-blacky-700 text-base">Giá trị TB/Đơn</span>
                     <span className="font-semibold text-accent-green">
-                      {revenueReport.totalOrders > 0
-                        ? formatCurrency(revenueReport.totalRevenue / revenueReport.totalOrders)
+                      {revenueReport.completedOrders > 0
+                        ? formatCurrency(revenueReport.totalSalesValue / revenueReport.completedOrders)
                         : formatCurrency(0)}
                     </span>
                   </div>
@@ -304,20 +312,14 @@ function Reports() {
             {profitReport && (
               <div className="bg-basic-white rounded-xl border border-basic-border2 p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-green-900">Chi tiết Lợi nhuận</h3>
+                  <h3 className="font-semibold text-green-900">Phân tích lợi nhuận Gộp</h3>
                   <div className="w-8 h-8 rounded-lg bg-accent-green flex items-center justify-center">
                     <TrendingUp className="w-5 h-5 text-basic-white" />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center p-3 border border-accent-green bg-accent-green/10 rounded-lg">
-                    <span className="text-blacky-700 text-base">Lợi nhuận</span>
-                    <span className="font-semibold text-accent-green">
-                      {formatCurrency(profitReport.totalProfit)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 border border-accent-green bg-accent-green/10 rounded-lg">
-                    <span className="text-blacky-700 text-base">Doanh thu</span>
+                    <span className="text-blacky-700 text-base">Doanh số bán hàng</span>
                     <span className="font-semibold text-accent-green">
                       {formatCurrency(profitReport.totalRevenue)}
                     </span>
@@ -328,8 +330,14 @@ function Reports() {
                       {formatCurrency(profitReport.totalCost)}
                     </span>
                   </div>
+                  <div className="flex justify-between items-center p-3 border border-accent-green bg-accent-green/10 rounded-lg">
+                    <span className="text-blacky-700 text-base">Lợi nhuận gộp</span>
+                    <span className="font-semibold text-accent-green">
+                      {formatCurrency(profitReport.totalProfit)}
+                    </span>
+                  </div>
                   <div className="flex justify-between items-center p-3 bg-bluesh-50 rounded-lg border border-bluesh-600">
-                    <span className="text-blacky-700 text-base font-medium">Tỷ suất lợi nhuận</span>
+                    <span className="text-blacky-700 text-base font-medium">Biên lợi nhuận gộp</span>
                     <span className="font-bold text-bluesh-800">
                       {formatPercent(profitReport.profitMargin)}
                     </span>

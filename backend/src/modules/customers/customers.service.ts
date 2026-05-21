@@ -50,11 +50,17 @@ export class CustomersService {
   /**
    * Lấy danh sách khách hàng của cửa hàng có phân trang
    */
-  async findAll(storeId: number, pagination: PaginationParams): Promise<PaginatedResult<any>> {
+  async findAll(storeId: number, pagination: PaginationParams, search?: string): Promise<PaginatedResult<any>> {
     const { page, limit } = pagination;
     const skip = (page - 1) * limit;
 
-    const where = { StoreID: storeId };
+    const where: Record<string, unknown> = { StoreID: storeId };
+    if (search) {
+      where['OR'] = [
+        { Phone: { startsWith: search } },
+        { CustomerName: { contains: search } },
+      ];
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.customer.findMany({
@@ -62,6 +68,9 @@ export class CustomersService {
         orderBy: { CreatedAt: 'desc' },
         skip,
         take: limit,
+        include: {
+          _count: { select: { orders: true } },
+        },
       }),
       this.prisma.customer.count({ where }),
     ]);

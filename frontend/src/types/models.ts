@@ -195,7 +195,7 @@ export interface StockReceipt {
   Status: StockReceiptStatus;
   Note: string | null;
   CreatedAt: string;
-  supplier?: Pick<Supplier, 'SupplierID' | 'SupplierName' | 'Phone'>;
+  supplier?: Pick<Supplier, 'SupplierID' | 'SupplierName' | 'Phone' | 'Address'>;
   details?: StockReceiptDetail[];
 }
 
@@ -223,7 +223,7 @@ export interface InventoryLog {
 export interface Customer {
   CustomerID: number;
   /** Business code, e.g. "KH-20260430-001". Null until assigned. */
-  //CustomerCode: string | null;
+  CustomerCode: string | null;
   StoreID: number;
   CustomerName: string;
   Phone: string | null;

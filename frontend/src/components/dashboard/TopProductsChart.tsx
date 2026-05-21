@@ -58,7 +58,7 @@ export default function TopProductsChart({ startDate, endDate }: Props) {
   }));
 
   return (
-    <div className="bg-basic-white rounded-xl border border-basic-border p-6 flex flex-col gap-4">
+    <div className="bg-basic-white rounded-xl border border-basic-border p-6 flex flex-col gap-4 h-full">
       <h3 className="text-base font-semibold text-blacky-950">Top 5 sản phẩm bán chạy</h3>
 
       {loading && (

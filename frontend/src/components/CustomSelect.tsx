@@ -12,9 +12,11 @@ interface CustomSelectProps {
   options: SelectOption[];
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
+  compact?: boolean;
 }
 
-export default function CustomSelect({ value, onChange, options, placeholder, className }: CustomSelectProps) {
+export default function CustomSelect({ value, onChange, options, placeholder, className, disabled, compact }: CustomSelectProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -35,18 +37,21 @@ export default function CustomSelect({ value, onChange, options, placeholder, cl
       {/* Trigger */}
       <button
         type="button"
-        onClick={() => setOpen(!open)}
-        className={`w-full flex items-center justify-between px-4 py-4.5 bg-basic-white border rounded-lg text-base outline-none transition-colors cursor-pointer ${
-          open
-            ? 'bg-bluesh-50 border-bluesh-800'
-            : 'border-blacky-200 hover:border-blacky-300'
+        disabled={disabled}
+        onClick={() => !disabled && setOpen(!open)}
+        className={`w-full flex items-center justify-between border rounded-lg outline-none transition-colors ${compact ? 'px-3 py-2 text-sm' : 'px-4 py-4.5 text-base'} ${
+          disabled
+            ? 'opacity-50 cursor-not-allowed bg-blacky-100 border-blacky-200'
+            : open
+              ? 'bg-bluesh-50 border-bluesh-800 cursor-pointer'
+              : 'bg-basic-white border-blacky-200 hover:border-blacky-300 cursor-pointer'
         }`}
       >
         <span className={selected ? 'text-blacky-950' : 'text-blacky-600'}>
           {selected ? selected.label : (placeholder ?? 'Chọn...')}
         </span>
         <ChevronDown
-          className={`w-6 h-6 text-yellowfish-500 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          className={`${compact ? 'w-4 h-4' : 'w-6 h-6'} text-yellowfish-500 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
         />
       </button>
 
@@ -61,7 +66,7 @@ export default function CustomSelect({ value, onChange, options, placeholder, cl
                 onChange(option.value);
                 setOpen(false);
               }}
-              className={`w-full text-left px-4 py-3 text-sm transition-colors ${
+              className={`w-full text-left px-4 ${compact ? 'py-2' : 'py-3'} text-sm transition-colors ${
                 value === option.value
                   ? 'bg-yellowfish-50 text-yellowfish-500 font-semibold'
                   : 'text-blacky-700 hover:bg-blacky-50'

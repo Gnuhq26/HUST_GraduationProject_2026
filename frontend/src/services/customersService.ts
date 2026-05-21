@@ -9,9 +9,9 @@ import type {
 } from '@/types';
 
 export const customersService = {
-  // Lấy danh sách customers
-  getAll: async (): Promise<PaginatedResult<Customer>> => {
-    const response = await api.get<PaginatedResult<Customer>>('/customers');
+  // Lấy danh sách customers (có hỗ trợ search theo SĐT hoặc tên)
+  getAll: async (params?: { search?: string; limit?: number; page?: number }): Promise<PaginatedResult<Customer>> => {
+    const response = await api.get<PaginatedResult<Customer>>('/customers', { params });
     return response.data;
   },
 

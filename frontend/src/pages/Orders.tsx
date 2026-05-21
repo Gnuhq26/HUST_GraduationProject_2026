@@ -189,14 +189,14 @@ function Orders() {
             <button
               onClick={handleExport}
               disabled={exporting}
-              className="btn btn-secondary gap-2 disabled:opacity-50"
+              className="btn btn-secondary gap-2 disabled:opacity-50 rounded-lg"
             >
               {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               {exporting ? 'Đang xuất...' : 'Xuất Excel'}
             </button>
           </ProtectedAction>
           <ProtectedAction action="create" subject="Order">
-            <button onClick={handleOpenCreate} className="btn btn-primary gap-2">
+            <button onClick={handleOpenCreate} className="btn btn-primary gap-2 rounded-lg">
               <Plus className="w-4 h-4" />
               Tạo đơn hàng
             </button>
@@ -242,8 +242,8 @@ function Orders() {
             >
               {/* Top: OrderCode + Status */}
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-blacky-700 bg-yellowfish-50 px-2.5 py-1 rounded-lg truncate max-w-[55%]">
-                  {order.OrderCode || `#${order.OrderID}`}
+                <span className="text-xs font-semibold text-blacky-700 bg-yellowfish-50 border border-yellowfish-300/90 px-2.5 py-1 rounded-lg truncate max-w-[55%]">
+                  {order.OrderCode}
                 </span>
                 {getStatusBadge(order.Status)}
               </div>
