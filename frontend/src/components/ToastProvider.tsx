@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useRef } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 import React from 'react';
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -59,6 +59,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     setToasts((prev) => [...prev, { id, type, message }]);
     setTimeout(() => removeToast(id), 3500);
   }, [removeToast]);
+
+  // Lắng nghe toast events từ ngoài React (ví dụ: axios interceptor trong api.ts)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { type, message } = (e as CustomEvent<{ type: ToastType; message: string }>).detail;
+      addToast(type, message);
+    };
+    window.addEventListener('app:toast', handler);
+    return () => window.removeEventListener('app:toast', handler);
+  }, [addToast]);
 
   const value: ToastContextValue = {
     toast: addToast,

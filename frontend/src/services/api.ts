@@ -54,8 +54,12 @@ api.interceptors.response.use(
           window.location.href = '/login';
           break;
         case 403:
-          // Forbidden - Không có quyền truy cập
-          console.error('Bạn không có quyền thực hiện hành động này');
+          // Forbidden - Không có quyền truy cập — thông báo cho user qua toast
+          window.dispatchEvent(
+            new CustomEvent('app:toast', {
+              detail: { type: 'error', message: 'Bạn không có quyền thực hiện hành động này' },
+            })
+          );
           break;
         case 404:
           console.error('Không tìm thấy tài nguyên');

@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Patch, Body, Param, ParseIntPipe, Req, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto';
-import { CurrentStore } from '../../common/decorators';
+import { CurrentStore, CurrentUser } from '../../common/decorators';
 import { CheckPermission } from '../../common/decorators';
 import { parsePagination } from '../../common/pagination';
 
@@ -30,10 +30,9 @@ export class OrdersController {
   @ApiResponse({ status: 404, description: 'Sản phẩm hoặc khách hàng không tồn tại' })
   create(
     @CurrentStore() storeId: number,
-    @Req() req: any,
+    @CurrentUser() userId: number,
     @Body() createOrderDto: CreateOrderDto,
   ) {
-    const userId = req.user.UserID;
     return this.ordersService.createOrder(storeId, userId, createOrderDto);
   }
 
@@ -82,10 +81,10 @@ export class OrdersController {
   @ApiResponse({ status: 404, description: 'Đơn hàng không tồn tại' })
   fulfill(
     @CurrentStore() storeId: number,
-    @Req() req: any,
+    @CurrentUser() userId: number,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    return this.ordersService.fulfillOrder(storeId, req.user.UserID, id);
+    return this.ordersService.fulfillOrder(storeId, userId, id);
   }
 
   @Patch(':id/cancel')
@@ -101,9 +100,9 @@ export class OrdersController {
   @ApiResponse({ status: 404, description: 'Đơn hàng không tồn tại' })
   cancel(
     @CurrentStore() storeId: number,
-    @Req() req: any,
+    @CurrentUser() userId: number,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    return this.ordersService.cancelOrder(storeId, req.user.UserID, id);
+    return this.ordersService.cancelOrder(storeId, userId, id);
   }
 }

@@ -48,8 +48,10 @@ const inventoryService = {
   async getStockReceipts(supplierId: number | null = null): Promise<StockReceipt[]> {
     const params: Record<string, unknown> = {};
     if (supplierId) params.supplierId = supplierId;
-    const response = await apiClient.get<StockReceipt[]>('/inventory/receipts', { params });
-    return response.data;
+    const response = await apiClient.get<{ data: StockReceipt[] } | StockReceipt[]>('/inventory/receipts', { params });
+    // Backend trả về paginated response { data: [...], total, ... }
+    const payload = response.data as any;
+    return Array.isArray(payload) ? payload : (payload?.data ?? []);
   },
 
   // Chi tiết phiếu nhập

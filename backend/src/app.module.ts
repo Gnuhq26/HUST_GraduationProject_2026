@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
@@ -21,6 +22,13 @@ import { PrismaModule } from './common/prisma';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60_000, // 1 phút
+        limit: 120,  // 120 req/phút cho các route thông thường
+      },
+    ]),
     PrismaModule,
     AuthModule,
     RolesModule,
@@ -39,6 +47,10 @@ import { PrismaModule } from './common/prisma';
   controllers: [AppController],
   providers: [
     AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
     {
       provide: APP_GUARD,
       useClass: GlobalJwtAuthGuard,

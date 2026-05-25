@@ -1,9 +1,5 @@
 import apiClient from './api';
-import type {
-  TopProductsReportResponse,
-  RevenueByCategoryReportResponse,
-  VirtualInventoryTrendResponse,
-} from '../types/models';
+import type { TopProductsReportResponse, RevenueByCategoryReportResponse, VirtualInventoryTrendResponse, MonthlyRevenueResponse } from '../types/models';
 
 const reportsService = {
   // Báo cáo doanh thu
@@ -48,6 +44,14 @@ const reportsService = {
   ): Promise<VirtualInventoryTrendResponse> {
     const response = await apiClient.get('/reports/virtual-inventory-trend', {
       params: { startDate, endDate },
+    });
+    return response.data;
+  },
+
+  // Doanh thu theo tháng trong năm (Analytics Bar Chart)
+  async getMonthlyRevenue(year?: number): Promise<MonthlyRevenueResponse> {
+    const response = await apiClient.get('/reports/monthly-revenue', {
+      params: year ? { year } : {},
     });
     return response.data;
   },

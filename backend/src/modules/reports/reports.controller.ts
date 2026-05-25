@@ -60,4 +60,15 @@ export class ReportsController {
   ) {
     return this.reportsService.getVirtualInventoryTrend(storeId, query);
   }
+
+  @Get('monthly-revenue')
+  @CheckPermission('read', 'Report')
+  @ApiOperation({ summary: 'Doanh thu theo tháng trong năm (Analytics Chart)' })
+  async getMonthlyRevenue(
+    @CurrentStore() storeId: number,
+    @Query('year') year?: string,
+  ) {
+    const targetYear = year ? parseInt(year, 10) : new Date().getFullYear();
+    return this.reportsService.getMonthlyRevenue(storeId, targetYear);
+  }
 }

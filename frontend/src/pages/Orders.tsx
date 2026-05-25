@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, ShoppingCart, User, Download, Loader2, Calendar } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Plus, ShoppingCart, User, Download, Loader2, Calendar, Search, SlidersHorizontal } from 'lucide-react';
 import ordersService from '../services/ordersService';
 import OrderDetailModal from '../components/orders/OrderDetailModal';
 import CreateOrderModal from '../components/orders/CreateOrderModal';
@@ -13,6 +13,7 @@ interface OrderWithCount extends Order {
 }
 
 type StatusTab = 'All' | 'Pending' | 'Completed' | 'Cancelled';
+type SortOption = 'date_desc' | 'date_asc' | 'amount_desc' | 'amount_asc';
 
 interface ConfirmState {
   open: boolean;
@@ -30,26 +31,42 @@ function Orders() {
   const [exporting, setExporting] = useState(false);
   const [activeTab, setActiveTab] = useState<StatusTab>('All');
   const [confirmState, setConfirmState] = useState<ConfirmState>({ open: false, orderId: null, orderCode: null, action: null });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('date_desc');
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
 
-  // Load orders — limit=1000 đảm bảo tải đủ đơn để tab counts chính xác
-  const loadOrders = async () => {
+  // Load orders — server-side filter theo tab, giới hạn 50 đơn/lần
+  const loadOrders = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await ordersService.getAll({ limit: 1000 });
+      const status = activeTab === 'All' ? undefined : activeTab;
+      const res = await ordersService.getAll({ limit: 100, ...(status && { status }) });
       setOrders((Array.isArray(res) ? res : (res as { data?: OrderWithCount[] })?.data ?? []) as OrderWithCount[]);
     } catch (err) {
       console.error('Error loading orders:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab]);
 
   useEffect(() => {
-    loadOrders();
-  }, []);
+    void loadOrders();
+  }, [loadOrders]);
 
   // Alias — dùng sau các mutation để reload
   const reloadOrders = loadOrders;
+
+  // Đóng filter dropdown khi click ra ngoài
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setFilterOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   // Export Excel
   const handleExport = async () => {
@@ -144,8 +161,36 @@ function Orders() {
     { key: 'Cancelled', label: 'Đã hủy' },
   ];
 
-  const filteredOrders = activeTab === 'All' ? orders : orders.filter((o) => o.Status === activeTab);
-  const tabCount = (key: StatusTab) => key === 'All' ? orders.length : orders.filter((o) => o.Status === key).length;
+  const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+    { value: 'date_desc',   label: 'Ngày: Mới nhất' },
+    { value: 'date_asc',    label: 'Ngày: Cũ nhất' },
+    { value: 'amount_desc', label: 'Tiền: Cao → Thấp' },
+    { value: 'amount_asc',  label: 'Tiền: Thấp → Cao' },
+  ];
+
+  const displayedOrders = useMemo(() => {
+    let result = [...orders];
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter(
+        (o) => (o.customer?.CustomerName ?? 'Khách vãng lai').toLowerCase().includes(q),
+      );
+    }
+    switch (sortBy) {
+      case 'date_asc':
+        result.sort((a, b) => new Date(a.OrderDate).getTime() - new Date(b.OrderDate).getTime());
+        break;
+      case 'amount_desc':
+        result.sort((a, b) => parseFloat(b.TotalAmount ?? '0') - parseFloat(a.TotalAmount ?? '0'));
+        break;
+      case 'amount_asc':
+        result.sort((a, b) => parseFloat(a.TotalAmount ?? '0') - parseFloat(b.TotalAmount ?? '0'));
+        break;
+      default:
+        result.sort((a, b) => new Date(b.OrderDate).getTime() - new Date(a.OrderDate).getTime());
+    }
+    return result;
+  }, [orders, searchQuery, sortBy]);
 
   if (loading) {
     return (
@@ -204,7 +249,7 @@ function Orders() {
         </div>
       </div>
 
-      {/* Status Tabs */}
+      {/* Status Tabs + Search/Filter */}
       <div className="flex items-center gap-1 mb-6 border-b border-basic-border">
         {TABS.map((tab) => (
           <button
@@ -217,24 +262,77 @@ function Orders() {
             }`}
           >
             {tab.label}
-            <span className={`px-3 py-0.5 rounded-full text-xs font-semibold ${
-              activeTab === tab.key ? 'bg-bluesh-800 text-basic-white' : 'bg-blacky-100 text-blacky-500'
-            }`}>
-              {tabCount(tab.key)}
-            </span>
+            {activeTab === tab.key && (
+              <span className="px-3 py-0.5 rounded-full text-xs font-semibold bg-bluesh-800 text-basic-white">
+                {displayedOrders.length}
+              </span>
+            )}
           </button>
         ))}
+
+        {/* Search + Filter */}
+        <div className="ml-auto flex items-center gap-2 pb-2">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-blacky-500 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Tìm khách hàng..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 pr-3 py-1.5 text-sm border border-blacky-200 rounded-lg bg-basic-white focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 w-44 text-blacky-950 placeholder:text-blacky-400 transition-colors"
+            />
+          </div>
+          <div className="relative" ref={filterRef}>
+            <button
+              onClick={() => setFilterOpen((v) => !v)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-lg transition-colors ${
+                sortBy !== 'date_desc'
+                  ? 'border-bluesh-800 text-bluesh-800 bg-bluesh-50'
+                  : 'border-basic-border text-blacky-700 bg-basic-white hover:border-bluesh-800 hover:text-bluesh-800'
+              }`}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              Lọc
+            </button>
+            {filterOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-52 bg-basic-white border border-basic-border2 rounded-xl shadow-lg z-20 p-1.5">
+                {SORT_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => { setSortBy(opt.value); setFilterOpen(false); }}
+                    className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors flex items-center justify-between ${
+                      sortBy === opt.value
+                        ? 'bg-bluesh-50 text-bluesh-800 font-medium'
+                        : 'text-blacky-700 hover:bg-blacky-50'
+                    }`}
+                  >
+                    {opt.label}
+                    {sortBy === opt.value && <span className="w-1.5 h-1.5 rounded-full bg-bluesh-800 shrink-0" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Orders List */}
-      {filteredOrders.length === 0 ? (
+      {orders.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-20 text-blacky-400">
           <ShoppingCart className="w-12 h-12" />
           <p className="text-sm">Chưa có đơn hàng nào</p>
         </div>
+      ) : displayedOrders.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 py-20 text-blacky-400">
+          <Search className="w-12 h-12" />
+          <p className="text-sm">Không tìm thấy đơn hàng phù hợp</p>
+          <button onClick={() => setSearchQuery('')} className="text-sm text-bluesh-800 hover:underline">
+            Xóa tìm kiếm
+          </button>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredOrders.map((order) => (
+          {displayedOrders.map((order) => (
             <div
               key={order.OrderID}
               onClick={() => setSelectedOrderId(order.OrderID)}

@@ -10,8 +10,8 @@ import { GoogleStrategy } from './strategies/google.strategy';
   imports: [
     PassportModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
-      signOptions: { expiresIn: '1d' },
+      secret: process.env.JWT_SECRET as string,
+      signOptions: { expiresIn: (process.env.JWT_EXPIRES_IN || '1d') as '1d' },
     }),
   ],
   controllers: [AuthController],

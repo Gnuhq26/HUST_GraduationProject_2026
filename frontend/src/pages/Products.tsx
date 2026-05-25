@@ -1,26 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Upload, Download, Edit2, Trash2, X } from 'lucide-react';
-import { useForm, SubmitHandler, Controller } from 'react-hook-form';
+import { Plus, Upload, Download, Edit2, Trash2 } from 'lucide-react';
 import { productsService } from '../services/productsService';
 import ProtectedAction from '../components/ProtectedAction';
 import ImportProductModal from '../components/products/ImportProductModal';
 import ProductDetailPanel from '../components/products/ProductDetailPanel';
-import CustomSelect from '../components/CustomSelect';
+import ProductFormModal from '../components/products/ProductFormModal';
 import ConfirmModal from '../components/ConfirmModal';
 import { useToast } from '../components/ToastProvider';
 import { categoriesService } from '../services/categoriesService';
 import type { Product, Category } from '@/types';
-
-interface ProductFormData {
-  ProductName: string;
-  Description?: string;
-  SKU?: string;
-  BaseUnit: string;
-  CategoryID?: number;
-  IsActive?: string;
-  /** Displayed as percentage (e.g. 15 = 15%). Converted to decimal on submit. */
-  marginRate?: number;
-}
 
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -35,7 +23,6 @@ export default function Products() {
   const selectedProductIdRef = useRef<number | null>(null);
 
   const toast = useToast();
-  const { register, handleSubmit, reset, setValue, control, formState: { errors } } = useForm<ProductFormData>();
 
   // Load products
   const loadProducts = useCallback(async () => {
@@ -84,49 +71,13 @@ export default function Products() {
   // Open modal for create
   const handleCreate = () => {
     setEditingProduct(null);
-    reset({});
     setShowModal(true);
   };
 
   // Open modal for edit
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
-    setValue('ProductName', product.ProductName);
-    setValue('Description', product.Description ?? '');
-    setValue('SKU', product.SKU ?? '');
-    setValue('BaseUnit', product.BaseUnit);
-    setValue('CategoryID', product.CategoryID);
-    setValue('IsActive', String(product.IsActive));
-    setValue('marginRate', product.MarginRate ? parseFloat(product.MarginRate) * 100 : 10);
     setShowModal(true);
-  };
-
-  // Submit form
-  const onSubmit: SubmitHandler<ProductFormData> = async (data) => {
-    const payload = {
-      productName: data.ProductName,
-      categoryId: data.CategoryID ? Number(data.CategoryID) : undefined,
-      sku: data.SKU || undefined,
-      baseUnit: data.BaseUnit,
-      description: data.Description || undefined,
-      isActive: data.IsActive !== undefined ? data.IsActive === 'true' : undefined,
-      marginRate: data.marginRate != null ? data.marginRate / 100 : 0.10,
-    };
-    try {
-      if (editingProduct) {
-        await productsService.update(editingProduct.ProductID, payload);
-        toast.success('Cập nhật sản phẩm thành công');
-      } else {
-        await productsService.create(payload);
-        toast.success('Thêm sản phẩm thành công');
-      }
-      setShowModal(false);
-      loadProducts();
-    } catch (error: unknown) {
-      const e = error as { response?: { data?: { message?: string } } };
-      console.error('Lỗi:', error);
-      toast.error(e.response?.data?.message || 'Có lỗi xảy ra');
-    }
   };
 
   // Delete product
@@ -197,21 +148,6 @@ export default function Products() {
 
       {/* Panel + Table */}
       <div className="flex gap-4 items-start">
-        {/* Detail panel — slides in from the left */}
-        <div
-          className={`shrink-0 overflow-hidden transition-all duration-300 ease-in-out ${
-            selectedProduct ? 'w-95' : 'w-0'
-          }`}
-        >
-          {selectedProduct && (
-            <ProductDetailPanel
-              product={selectedProduct}
-              onClose={() => { setSelectedProduct(null); selectedProductIdRef.current = null; }}
-              onUpdated={handleUnitUpdated}
-            />
-          )}
-        </div>
-
         {/* Table — shrinks automatically */}
         <div className="flex-1 bg-basic-white rounded-xl border-2 border-basic-border overflow-hidden min-w-0">
         {loading ? (
@@ -286,145 +222,31 @@ export default function Products() {
         </div>
         )}
         </div>
+
+        {/* Detail panel — slides in from the right */}
+        <div
+          className={`shrink-0 overflow-hidden transition-all duration-300 ease-in-out ${
+            selectedProduct ? 'w-95' : 'w-0'
+          }`}
+        >
+          {selectedProduct && (
+            <ProductDetailPanel
+              product={selectedProduct}
+              onClose={() => { setSelectedProduct(null); selectedProductIdRef.current = null; }}
+              onUpdated={handleUnitUpdated}
+            />
+          )}
+        </div>
       </div>
 
-      {/* Modal */}
+      {/* Product Form Modal */}
       {showModal && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-blacky-950/30 flex items-center justify-center z-50 p-4">
-          <div className="bg-basic-white rounded-2xl border border-basic-border max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-lg">
-            <div className="px-6 py-4 border-b border-yellowfish-300 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-blacky-950">
-                {editingProduct ? 'Cập nhật sản phẩm' : 'Thêm sản phẩm mới'}
-              </h2>
-              <button onClick={() => setShowModal(false)} title="Đóng" className="p-1.5 rounded-lg text-bluesh-800 hover:text-blacky-600 hover:bg-blacky-50 transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-blacky-700 mb-1.5">
-                  Tên sản phẩm <span className="text-accent-red">*</span>
-                </label>
-                <input
-                  {...register('ProductName', { required: 'Tên sản phẩm là bắt buộc' })}
-                  className="input-field"
-                  placeholder="Nhập tên sản phẩm"
-                />
-                {errors.ProductName && <p className="mt-1 text-sm text-accent-red">{errors.ProductName.message}</p>}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-blacky-700 mb-1.5">Mô tả</label>
-                <textarea
-                  {...register('Description')}
-                  rows={3}
-                  className="input-field resize-none"
-                  placeholder="Nhập mô tả sản phẩm"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-blacky-700 mb-1.5">
-                    Mã SKU <span className="text-accent-red">*</span>
-                  </label>
-                  <input
-                    {...register('SKU', { required: 'Mã SKU là bắt buộc' })}
-                    className="input-field"
-                    placeholder="SKU-001"
-                  />
-                  {errors.SKU && <p className="mt-1 text-sm text-accent-red">{errors.SKU.message}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-blacky-700 mb-1.5">
-                    Đơn vị gốc <span className="text-accent-red">*</span>
-                  </label>
-                  <input
-                    {...register('BaseUnit', { required: 'Đơn vị gốc là bắt buộc' })}
-                    className="input-field"
-                    placeholder="Viên, Kg, Bao..."
-                  />
-                  {errors.BaseUnit && <p className="mt-1 text-sm text-accent-red">{errors.BaseUnit.message}</p>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-blacky-700 mb-1.5">Danh mục</label>
-                  <Controller
-                    name="CategoryID"
-                    control={control}
-                    render={({ field }) => (
-                      <CustomSelect
-                        value={field.value != null ? String(field.value) : ''}
-                        onChange={(val) => field.onChange(val ? Number(val) : undefined)}
-                        options={[
-                          { value: '', label: 'Không có danh mục' },
-                          ...categories.map((c) => ({ value: String(c.CategoryID), label: c.CategoryName })),
-                        ]}
-                        placeholder="Chọn danh mục"
-                      />
-                    )}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-blacky-700 mb-1.5">
-                    Biên lợi nhuận (%)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="100"
-                    {...register('marginRate', { min: 0, max: 100 })}
-                    className="input-field"
-                    placeholder="10"
-                  />
-                  <p className="mt-1 text-xs text-blacky-400"></p>
-                  {errors.marginRate && <p className="mt-1 text-sm text-accent-red">Giá trị từ 0 đến 100</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-blacky-700 mb-1.5">Trạng thái</label>
-                  <Controller
-                    name="IsActive"
-                    control={control}
-                    defaultValue="true"
-                    render={({ field }) => (
-                      <CustomSelect
-                        value={field.value ?? 'true'}
-                        onChange={field.onChange}
-                        options={[
-                          { value: 'true', label: 'Hoạt động' },
-                          { value: 'false', label: 'Ngưng hoạt động' },
-                        ]}
-                      />
-                    )}
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="btn btn-secondary flex-1"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary flex-1"
-                >
-                  {editingProduct ? 'Cập nhật' : 'Thêm mới'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <ProductFormModal
+          product={editingProduct}
+          categories={categories}
+          onClose={() => setShowModal(false)}
+          onSuccess={loadProducts}
+        />
       )}
       {/* Import Modal */}
       {showImportModal && (

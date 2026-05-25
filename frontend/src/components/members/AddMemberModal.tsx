@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { X, AlertCircle, Copy, Check } from 'lucide-react';
 import storesService from '../../services/storesService';
 import { useToast } from '../ToastProvider';
+import CustomSelect from '../CustomSelect';
 import type { Role } from '@/types';
 
 interface AddMemberModalProps {
@@ -152,21 +153,18 @@ export default function AddMemberModal({ open, roles, onClose, onSuccess }: AddM
             <label className="block text-sm font-medium text-bluesh-900 mb-1.5">
               Vai trò <span className="text-accent-red">*</span>
             </label>
-            <select
+            <CustomSelect
               value={roleId}
-              onChange={(e) => setRoleId(e.target.value)}
-              required
-              title="Vai trò"
-              className="w-full px-3 py-2.5 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 transition-colors bg-basic-white"
-            >
-              <option value="">Chọn vai trò</option>
-              {roles.map((role) => (
-                <option key={role.RoleID} value={role.RoleID}>
-                  {role.RoleName}
-                  {role.Description ? ` - ${role.Description}` : ''}
-                </option>
-              ))}
-            </select>
+              onChange={setRoleId}
+              compact
+              placeholder="Chọn vai trò"
+              options={[
+                ...roles.map((role) => ({
+                  value: String(role.RoleID),
+                  label: role.Description ? `${role.RoleName} - ${role.Description}` : role.RoleName,
+                })),
+              ]}
+            />
           </div>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={handleClose} className="btn btn-secondary flex-1 w-fit! px-4! rounded-lg!">
