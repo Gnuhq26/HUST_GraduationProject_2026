@@ -313,4 +313,58 @@ export class ReportsService {
 
     return { startDate, endDate, points };
   }
+
+  /**
+   * Doanh thu theo tháng trong năm (cho Analytics Bar Chart)
+   * Trả về 12 tháng với tổng TotalAmount đơn Completed mỗi tháng
+   */
+  async getMonthlyRevenue(storeId: number, year: number) {
+    const orders = await this.prisma.order.findMany({
+      where: {
+        StoreID: storeId,
+        OrderDate: {
+          gte: new Date(`${year}-01-01`),
+          lte: new Date(`${year}-12-31T23:59:59.999Z`),
+        },
+        Status: 'Completed',
+      },
+      select: {
+        OrderDate: true,
+        TotalAmount: true,
+      },
+    });
+
+    const monthlyRevenue = Array.from({ length: 12 }, (_, i) => ({
+      month: i + 1,
+      revenue: 0,
+    }));
+
+    for (const order of orders) {
+      const month = new Date(order.OrderDate).getMonth(); // 0-indexed
+      monthlyRevenue[month].revenue += Number(order.TotalAmount ?? 0);
+    }
+
+    const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    const now = new Date();
+    const currentMonthIndex = year === now.getFullYear() ? now.getMonth() : 11;
+    const currentMonthRevenue = monthlyRevenue[currentMonthIndex].revenue;
+    const lastMonthRevenue = currentMonthIndex > 0 ? monthlyRevenue[currentMonthIndex - 1].revenue : 0;
+    const growthPercent =
+      lastMonthRevenue > 0
+        ? Math.round(((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100)
+        : currentMonthRevenue > 0 ? 100 : 0;
+
+    return {
+      year,
+      months: monthlyRevenue.map((m) => ({
+        ...m,
+        monthLabel: monthLabels[m.month - 1],
+      })),
+      currentMonthRevenue,
+      lastMonthRevenue,
+      growthPercent,
+    };
+  }
 }

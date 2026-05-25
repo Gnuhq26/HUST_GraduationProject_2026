@@ -1,5 +1,5 @@
-import { useState, useEffect, type FormEvent } from 'react';
-import { Plus, Package, Truck, ShoppingBag, AlertTriangle, FileText, Eye, CheckCircle, Download } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef, type FormEvent } from 'react';
+import { Plus, Package, Truck, ShoppingBag, AlertTriangle, FileText, Eye, CheckCircle, Download, Search, SlidersHorizontal } from 'lucide-react';
 import inventoryService from '../services/inventoryService';
 import suppliersService from '../services/suppliersService';
 import { productsService } from '../services/productsService';
@@ -49,6 +49,10 @@ function Inventory() {
   const [isDirectShipModalOpen, setIsDirectShipModalOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [confirmReceipt, setConfirmReceipt] = useState<{ id: number; code: string } | null>(null);
+  const [inventorySearch, setInventorySearch] = useState('');
+  const [inventoryCategoryFilter, setInventoryCategoryFilter] = useState('');
+  const [inventoryFilterOpen, setInventoryFilterOpen] = useState(false);
+  const inventoryFilterRef = useRef<HTMLDivElement>(null);
 
   // Stock-In Form States
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -83,7 +87,7 @@ function Inventory() {
     try {
       setLoading(true);
       const res = await inventoryService.getStockReceipts();
-      setReceipts((Array.isArray(res) ? res : (res as { data?: StockReceiptWithCount[] })?.data ?? []) as StockReceiptWithCount[]);
+      setReceipts(res as StockReceiptWithCount[]);
     } catch (err) {
       console.error('Error loading receipts:', err);
     } finally {
@@ -114,6 +118,17 @@ function Inventory() {
       loadReceipts();
     }
   }, [activeTab]);
+
+  // Đóng filter dropdown khi click ra ngoài
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (inventoryFilterRef.current && !inventoryFilterRef.current.contains(e.target as Node)) {
+        setInventoryFilterOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   // Mở modal nhập kho
   const handleOpenStockIn = async () => {
@@ -284,6 +299,27 @@ function Inventory() {
     }
   };
 
+  // Derived unique categories from inventory
+  const inventoryCategories = useMemo(() => {
+    const names = inventory
+      .map((item) => item.Category?.CategoryName)
+      .filter((name): name is string => !!name);
+    return [...new Set(names)].sort();
+  }, [inventory]);
+
+  // Filtered inventory for display
+  const displayedInventory = useMemo(() => {
+    let result = inventory;
+    if (inventorySearch.trim()) {
+      const q = inventorySearch.trim().toLowerCase();
+      result = result.filter((item) => item.ProductName.toLowerCase().includes(q));
+    }
+    if (inventoryCategoryFilter) {
+      result = result.filter((item) => item.Category?.CategoryName === inventoryCategoryFilter);
+    }
+    return result;
+  }, [inventory, inventorySearch, inventoryCategoryFilter]);
+
   // Format currency
   const formatCurrency = (value: number | string): string => {
     return new Intl.NumberFormat('vi-VN', {
@@ -401,12 +437,74 @@ function Inventory() {
             </div>
           </div>
 
+          {/* Search + Filter */}
+          <div className="flex items-center gap-2 mb-4">
+            <div className="relative flex-1 max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blacky-400" />
+              <input
+                type="text"
+                value={inventorySearch}
+                onChange={(e) => setInventorySearch(e.target.value)}
+                placeholder="Tìm sản phẩm..."
+                className="w-full pl-9 pr-3 py-2 text-sm border border-basic-border2 rounded-lg bg-basic-white text-blacky-950 placeholder:text-blacky-400 focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 transition-colors"
+              />
+            </div>
+            <div className="relative" ref={inventoryFilterRef}>
+              <button
+                onClick={() => setInventoryFilterOpen((v) => !v)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-lg transition-colors ${
+                  inventoryCategoryFilter
+                    ? 'border-bluesh-800 text-bluesh-800 bg-bluesh-50'
+                    : 'border-basic-border text-blacky-700 bg-basic-white hover:border-bluesh-800 hover:text-bluesh-800'
+                }`}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                {inventoryCategoryFilter || 'Lọc'}
+              </button>
+              {inventoryFilterOpen && (
+                <div className="absolute right-0 top-full mt-1.5 w-52 bg-basic-white border border-basic-border2 rounded-xl shadow-lg z-20 p-1.5">
+                  <button
+                    onClick={() => { setInventoryCategoryFilter(''); setInventoryFilterOpen(false); }}
+                    className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors flex items-center justify-between ${
+                      !inventoryCategoryFilter
+                        ? 'bg-bluesh-50 text-bluesh-800 font-medium'
+                        : 'text-blacky-700 hover:bg-blacky-50'
+                    }`}
+                  >
+                    Tất cả danh mục
+                    {!inventoryCategoryFilter && <span className="w-1.5 h-1.5 rounded-full bg-bluesh-800 shrink-0" />}
+                  </button>
+                  {inventoryCategories.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => { setInventoryCategoryFilter(cat); setInventoryFilterOpen(false); }}
+                      className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors flex items-center justify-between ${
+                        inventoryCategoryFilter === cat
+                          ? 'bg-bluesh-50 text-bluesh-800 font-medium'
+                          : 'text-blacky-700 hover:bg-blacky-50'
+                      }`}
+                    >
+                      {cat}
+                      {inventoryCategoryFilter === cat && <span className="w-1.5 h-1.5 rounded-full bg-bluesh-800 shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </div>
+
           {/* Inventory Table */}
           <div className="bg-basic-white rounded-xl border-2 border-basic-border overflow-hidden">
             {inventory.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3">
                 <Package className="w-12 h-12 text-blacky-200" />
                 <p className="text-blacky-500">Chưa có dữ liệu tồn kho</p>
+              </div>
+            ) : displayedInventory.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <Search className="w-12 h-12 text-blacky-200" />
+                <p className="text-blacky-500">Không tìm thấy sản phẩm phù hợp</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -426,7 +524,7 @@ function Inventory() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-basic-border">
-                    {inventory.map((item, idx) => {
+                    {displayedInventory.map((item, idx) => {
                       const quantity = Number(item.Quantity);
                       const isOutOfStock = quantity === 0;
                       return (

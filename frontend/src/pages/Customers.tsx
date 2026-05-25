@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, User, Phone, MapPin, Upload, Download } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Plus, Edit2, Trash2, User, Phone, MapPin, Upload, Download, Search } from 'lucide-react';
 import { customersService } from '../services/customersService';
 import CustomerDetailModal from '../components/customer/CustomerDetailModal';
 import CustomerFormModal from '../components/customer/CustomerFormModal';
@@ -23,6 +23,7 @@ export default function Customers() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ id: number; name: string } | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const toast = useToast();
 
@@ -73,6 +74,16 @@ export default function Customers() {
       toast.error(e.response?.data?.message || 'Không thể xóa khách hàng (có thể đã có đơn hàng)');
     }
   };
+
+  const displayedCustomers = useMemo(() => {
+    if (!searchQuery.trim()) return customers;
+    const q = searchQuery.toLowerCase();
+    return customers.filter(
+      (c) =>
+        c.CustomerName.toLowerCase().includes(q) ||
+        (c.Phone ?? '').toLowerCase().includes(q),
+    );
+  }, [customers, searchQuery]);
 
   // Export Excel
   const handleExport = async () => {
@@ -139,6 +150,20 @@ export default function Customers() {
           </div>
         </div>
       </div>
+      
+      {/* Search */}
+      <div className="mb-4 flex items-center">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-blacky-500 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Tìm theo tên hoặc số điện thoại..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8 pr-3 py-1.5 text-sm border border-blacky-200 rounded-lg bg-basic-white focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 w-72"
+          />
+        </div>
+      </div>
 
       {/* Table */}
       <div className="bg-basic-white rounded-xl border-2 border-basic-border overflow-hidden">
@@ -158,18 +183,24 @@ export default function Customers() {
             <tbody className="divide-y divide-basic-border">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-blacky-400 font-medium">
+                  <td colSpan={7} className="px-6 py-8 text-center text-blacky-400 font-medium">
                     Đang tải...
                   </td>
                 </tr>
               ) : customers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-blacky-500">
+                  <td colSpan={7} className="px-6 py-8 text-center text-blacky-500">
                     Chưa có khách hàng nào
                   </td>
                 </tr>
+              ) : displayedCustomers.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-8 text-center text-blacky-500">
+                    Không tìm thấy khách hàng phù hợp
+                  </td>
+                </tr>
               ) : (
-                customers.map((customer, idx) => (
+                displayedCustomers.map((customer, idx) => (
                   <tr
                     key={customer.CustomerID}
                     className="hover:bg-blacky-50 cursor-pointer"

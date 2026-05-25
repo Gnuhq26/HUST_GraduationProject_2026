@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Plus, Edit2, Trash2, Search, Package } from 'lucide-react';
 import { categoriesService } from '../services/categoriesService';
 import ProtectedAction from '../components/ProtectedAction';
@@ -24,10 +24,10 @@ export default function Categories() {
   const toast = useToast();
 
   // Load categories
-  const loadCategories = async (search = '') => {
+  const loadCategories = async () => {
     setLoading(true);
     try {
-      const data = await categoriesService.getAll(search);
+      const data = await categoriesService.getAll();
       setCategories(data as CategoryWithCount[]);
     } catch (error) {
       console.error('Lỗi tải danh mục:', error);
@@ -40,11 +40,11 @@ export default function Categories() {
     loadCategories();
   }, []);
 
-  // Search handler
-  const handleSearch = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    loadCategories(searchTerm);
-  };
+  const displayedCategories = useMemo(() => {
+    if (!searchTerm.trim()) return categories;
+    const q = searchTerm.trim().toLowerCase();
+    return categories.filter((c) => c.CategoryName.toLowerCase().includes(q));
+  }, [categories, searchTerm]);
 
   // Open modal for create
   const handleCreate = () => {
@@ -69,7 +69,7 @@ export default function Categories() {
     try {
       await categoriesService.delete(confirmDelete.id);
       toast.success('Xóa danh mục thành công');
-      loadCategories(searchTerm);
+      loadCategories();
     } catch (err: unknown) {
       console.error('Lỗi xóa:', err);
       const e = err as { response?: { data?: { message?: string } } };
@@ -93,31 +93,17 @@ export default function Categories() {
       </div>
 
       {/* Search Bar */}
-      <div className="mb-4">
-        <form onSubmit={handleSearch} className="flex gap-2">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blacky-700 pointer-events-none" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Tìm kiếm danh mục..."
-              className="input-field pl-11! h-12.5!"
-            />
-          </div>
-          <button type="submit" className="btn btn-secondary w-fit! px-4! rounded-lg!">
-            Tìm kiếm
-          </button>
-          {searchTerm && (
-            <button
-              type="button"
-              onClick={() => { setSearchTerm(''); loadCategories(); }}
-              className="btn btn-secondary w-fit! px-4! rounded-lg!"
-            >
-              Xóa lọc
-            </button>
-          )}
-        </form>
+      <div className="flex items-center gap-2 mb-4">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blacky-400 pointer-events-none" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Tìm kiếm danh mục..."
+            className="w-full pl-9 pr-3 py-2 text-sm border border-basic-border2 rounded-lg bg-basic-white text-blacky-950 placeholder:text-blacky-400 focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 transition-colors"
+          />
+        </div>
       </div>
 
       {/* Table */}
@@ -129,9 +115,12 @@ export default function Categories() {
         ) : categories.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <Package className="w-12 h-12 text-blacky-200" />
-            <p className="text-blacky-500">
-              {searchTerm ? 'Không tìm thấy danh mục nào' : 'Chưa có danh mục nào'}
-            </p>
+            <p className="text-blacky-500">Chưa có danh mục nào</p>
+          </div>
+        ) : displayedCategories.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <Search className="w-12 h-12 text-blacky-200" />
+            <p className="text-blacky-500">Không tìm thấy danh mục nào</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -146,7 +135,7 @@ export default function Categories() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-basic-border">
-                {categories.map((category, idx) => (
+                {displayedCategories.map((category, idx) => (
                   <tr key={category.CategoryID} className="hover:bg-blacky-50">
                     <td className="px-6 py-4 text-sm text-left text-blacky-700">{idx + 1}</td>
                     <td className="px-6 py-4 text-sm text-left font-medium text-blacky-900">
@@ -194,7 +183,7 @@ export default function Categories() {
         open={showModal}
         editingCategory={editingCategory}
         onClose={() => setShowModal(false)}
-        onSaved={() => loadCategories(searchTerm)}
+        onSaved={() => loadCategories()}
       />
 
       {/* Confirm Delete Modal */}

@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Truck, Phone, MapPin, Search, Package, Upload, Download, Plus, Edit2, Trash2 } from 'lucide-react';
 import suppliersService from '../services/suppliersService';
 import ImportSupplierModal from '../components/supplier/ImportSupplierModal';
 import SupplierFormModal from '../components/supplier/SupplierFormModal';
+import SupplierDetailModal from '../components/supplier/SupplierDetailModal';
 import ConfirmModal from '../components/ConfirmModal';
 import ProtectedAction from '../components/ProtectedAction';
 import { useToast } from '../components/ToastProvider';
@@ -18,6 +19,7 @@ function Suppliers() {
   const [error, setError] = useState<string | null>(null);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<SupplierWithCount | null>(null);
+  const [detailSupplierId, setDetailSupplierId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -35,7 +37,7 @@ function Suppliers() {
     try {
       setLoading(true);
       setError(null);
-      const res = await suppliersService.getAll(searchQuery);
+      const res = await suppliersService.getAll();
       setSuppliers(res as SupplierWithCount[]);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
@@ -44,16 +46,21 @@ function Suppliers() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery]);
+  }, []);
 
   useEffect(() => {
     loadSuppliers();
   }, [loadSuppliers]);
 
-  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    loadSuppliers();
-  };
+  const displayedSuppliers = useMemo(() => {
+    if (!searchQuery.trim()) return suppliers;
+    const q = searchQuery.toLowerCase();
+    return suppliers.filter(
+      (s) =>
+        s.SupplierName.toLowerCase().includes(q) ||
+        (s.Phone ?? '').toLowerCase().includes(q),
+    );
+  }, [suppliers, searchQuery]);
 
   const handleCreate = () => {
     setSelectedSupplier(null);
@@ -168,23 +175,18 @@ function Suppliers() {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="bg-basic-white rounded-xl border border-basic-border p-4 mb-6">
-        <form onSubmit={handleSearch} className="flex gap-2">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blacky-400" />
-            <input
-              type="text"
-              placeholder="Tìm kiếm theo tên hoặc số điện thoại..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 transition-colors"
-            />
-          </div>
-          <button type="submit" className="btn btn-primary">
-            Tìm kiếm
-          </button>
-        </form>
+      {/* Search */}
+      <div className="mb-4 flex items-center">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-blacky-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Tìm theo tên hoặc số điện thoại..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8 pr-3 py-1.5 text-sm border border-basic-border rounded-lg bg-basic-white focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 w-72"
+          />
+        </div>
       </div>
 
       {/* Error Message */}
@@ -225,9 +227,23 @@ function Suppliers() {
                   Không có nhà cung cấp nào
                 </td>
               </tr>
+            ) : displayedSuppliers.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-8 text-center text-blacky-500">
+                  Không tìm thấy nhà cung cấp phù hợp
+                </td>
+              </tr>
             ) : (
-              suppliers.map((supplier, idx) => (
-                <tr key={supplier.SupplierID} className="hover:bg-blacky-50 transition-colors">
+              displayedSuppliers.map((supplier, idx) => (
+                <tr
+                  key={supplier.SupplierID}
+                  className="hover:bg-blacky-50 transition-colors cursor-pointer"
+                  onClick={(e: React.MouseEvent<HTMLTableRowElement>) => {
+                    if (!(e.target as Element).closest('button')) {
+                      setDetailSupplierId(supplier.SupplierID);
+                    }
+                  }}
+                >
                   <td className="px-6 py-4 text-left text-blacky-700">{idx + 1}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
@@ -279,6 +295,14 @@ function Suppliers() {
         </table>
         </div>
       </div>
+
+      {/* Supplier Detail Modal */}
+      {detailSupplierId && (
+        <SupplierDetailModal
+          supplierId={detailSupplierId}
+          onClose={() => setDetailSupplierId(null)}
+        />
+      )}
 
       {/* Supplier Form Modal */}
       {isFormModalOpen && (

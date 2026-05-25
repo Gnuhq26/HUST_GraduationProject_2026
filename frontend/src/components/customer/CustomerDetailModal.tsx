@@ -57,6 +57,7 @@ export default function CustomerDetailModal({ customerId, onClose }: Props) {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND',
+      currencyDisplay: 'code',
     }).format(Number(amount));
   };
 
@@ -167,9 +168,9 @@ export default function CustomerDetailModal({ customerId, onClose }: Props) {
                   <h4 className="text-sm font-semibold text-blacky-700 uppercase mb-3">
                     Lịch sử mua hàng
                   </h4>
-                  <div className="flex items-center gap-3 p-4 bg-accent-green/10 border border-accent-green/20 rounded-xl">
-                    <div className="p-3 bg-accent-green/10 border border-accent-green/30 rounded-lg">
-                      <ShoppingCart className="w-6 h-6 text-accent-green" />
+                  <div className="flex items-center gap-3 p-4 bg-basic-white border border-accent-green rounded-xl">
+                    <div className="p-3 bg-accent-green rounded-lg">
+                      <ShoppingCart className="w-6 h-6 text-basic-white" />
                     </div>
                     <div>
                       <p className="text-sm text-blacky-700">Đơn hàng gần đây</p>
@@ -208,7 +209,6 @@ export default function CustomerDetailModal({ customerId, onClose }: Props) {
                               </p>
                             </div>
                             <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${status.color}`}>
-                              {/* <StatusIcon className="w-3 h-3" /> */}
                               {status.label}
                             </span>
                           </div>
@@ -220,7 +220,7 @@ export default function CustomerDetailModal({ customerId, onClose }: Props) {
                                 {formatCurrency(order.TotalAmount)}
                               </p>
                             </div>
-                            <div>
+                            <div className="text-right">
                               <p className="text-xs text-blacky-700">Đã trả</p>
                               <p className="text-sm font-semibold text-accent-green">
                                 {formatCurrency(order.PaidAmount)}

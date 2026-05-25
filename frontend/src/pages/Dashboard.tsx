@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { TrendingUp, ShoppingBag, ShoppingCart, Users } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { TrendingUp, Package, FileText, Users } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { productsService } from '../services/productsService';
 import { customersService } from '../services/customersService';
@@ -9,6 +10,7 @@ import AiInsightsWidget from '../components/ai-analyst/AiInsightsWidget';
 import TopProductsChart from '../components/dashboard/TopProductsChart';
 import RevenueByCategoryChart from '../components/dashboard/RevenueByCategoryChart';
 import VirtualInventoryTrendChart from '../components/dashboard/VirtualInventoryTrendChart';
+import MonthlyRevenueChart from '../components/dashboard/MonthlyRevenueChart';
 import type { Order, PaginatedResult, Product, Customer } from '@/types';
 import EmptyShoppingCard from '../assets/empty_orders.png';
 
@@ -34,11 +36,6 @@ function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', currencyDisplay: 'code' }).format(amount);
 }
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('vi-VN', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-  });
-}
 
 type DatePreset = '7d' | '30d' | '90d';
 
@@ -97,8 +94,8 @@ export default function Dashboard() {
   }, []);
 
   const statCards: StatCard[] = [
-    { icon: ShoppingBag, label: 'Sản phẩm', value: stats.products, color: 'text-bluesh-800', bg: 'bg-basic-white', labelColor: 'text-blacky-700', valueColor: 'text-bluesh-800' },
-    { icon: ShoppingCart, label: 'Đơn hàng', value: stats.orders, color: 'text-yellowfish-400', bg: 'bg-basic-white', labelColor: 'text-blacky-700', valueColor: 'text-yellowfish-400' },
+    { icon: Package, label: 'Sản phẩm', value: stats.products, color: 'text-bluesh-800', bg: 'bg-basic-white', labelColor: 'text-blacky-700', valueColor: 'text-bluesh-800' },
+    { icon: FileText, label: 'Đơn hàng', value: stats.orders, color: 'text-yellowfish-400', bg: 'bg-basic-white', labelColor: 'text-blacky-700', valueColor: 'text-yellowfish-400' },
     { icon: Users, label: 'Khách hàng', value: stats.customers, color: 'text-yellowfish-700', bg: 'bg-basic-white', labelColor: 'text-blacky-700', valueColor: 'text-yellowfish-700' },
     { icon: TrendingUp, label: 'Doanh thu', value: formatCurrency(stats.revenue), color: 'text-accent-green', bg: 'bg-basic-white', labelColor: 'text-blacky-700', valueColor: 'text-accent-green' },
   ];
@@ -165,42 +162,73 @@ export default function Dashboard() {
         <VirtualInventoryTrendChart startDate={startDate} endDate={endDate} />
       </div>
 
+      {/* Analytics Bar Chart */}
+      <div className="mb-6">
+        <MonthlyRevenueChart />
+      </div>
+
       {/* Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Đơn hàng gần đây */}
-        <div className="bg-basic-white rounded-xl border border-basic-border2 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-blacky-950">Đơn hàng gần đây</h3>
+        <div className="bg-basic-white rounded-xl border border-basic-border2 p-6 flex flex-col gap-3.5">
+          {/* Card header */}
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-bold text-blacky-950">Đơn hàng gần đây</h3>
+            <Link to="/orders" className="text-sm font-medium text-bluesh-800 underline underline-offset-2 hover:opacity-80 transition-opacity">
+              Xem tất cả
+            </Link>
           </div>
 
           {loading ? (
-            <div className="space-y-3">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="h-12 bg-gray-100 animate-pulse rounded" />
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-9 bg-blacky-100 animate-pulse rounded" />
               ))}
             </div>
           ) : recentOrders.length === 0 ? (
-            <div className="text-center pt-6">
-              <div className="inline-flex items-center justify-center w-48 h-48">
-                <img src={EmptyShoppingCard} alt="Chưa có đơn hàng" className="w-48 h-48" />
-              </div>
-              <p className="text-blacky-500">Chưa có đơn hàng nào</p>
+            <div className="text-center py-6">
+              <img src={EmptyShoppingCard} alt="Chưa có đơn hàng" className="w-32 h-32 mx-auto" />
+              <p className="text-blacky-500 text-sm mt-2">Chưa có đơn hàng nào</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
-              {recentOrders.map((order) => (
-                <div key={order.OrderID} className="py-3 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-bluesh-800">
-                      {order.customer?.CustomerName || 'Khách vãng lai'}
-                    </p>
-                    <p className="text-xs text-blacky-600">{formatDate(order.OrderDate)}</p>
+            <div className="rounded-[14px] overflow-hidden">
+              {/* Header row */}
+              <div className="bg-bluesh-50 flex items-center gap-6 px-3 py-1.5 font-medium text-sm text-blacky-950">
+                <span className="w-30 shrink-0">Mã đơn hàng</span>
+                <span className="w-22.5 shrink-0">Trạng thái</span>
+                <span className="flex-1 min-w-0">Khách hàng</span>
+                <span className="w-30 shrink-0 text-right">Số tiền</span>
+              </div>
+              <div className="h-px bg-basic-border2" />
+              {recentOrders.map((order, i) => {
+                const statusMap: Record<string, { bg: string; label: string }> = {
+                  Completed: { bg: 'bg-accent-green',    label: 'Hoàn thành' },
+                  Pending:   { bg: 'bg-yellowfish-400',  label: 'Chờ xử lý' },
+                  Cancelled: { bg: 'bg-accent-red',      label: 'Đã hủy' },
+                };
+                const badge = statusMap[order.Status] ?? { bg: 'bg-blacky-400', label: order.Status };
+                return (
+                  <div key={order.OrderID}>
+                    <div className="flex items-center gap-6 px-3 py-2 text-sm">
+                      <span className="w-30 shrink-0 text-blacky-950 font-normal truncate">
+                        {order.OrderCode ?? `#${order.OrderID}`}
+                      </span>
+                      <div className="w-22.5 shrink-0">
+                        <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-[10px] font-normal text-basic-white whitespace-nowrap ${badge.bg}`}>
+                          {badge.label}
+                        </span>
+                      </div>
+                      <span className="flex-1 min-w-0 text-blacky-950 truncate">
+                        {order.customer?.CustomerName ?? 'Khách vãng lai'}
+                      </span>
+                      <span className="w-30 shrink-0 text-blacky-700 text-right tabular-nums">
+                        {formatCurrency(parseFloat(order.TotalAmount ?? '0'))}
+                      </span>
+                    </div>
+                    {i < recentOrders.length - 1 && <div className="h-px bg-basic-border2 opacity-90" />}
                   </div>
-                  <span className="text-sm text-accent-green font-semibold">
-                    {formatCurrency(parseFloat(order.TotalAmount || '0'))}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

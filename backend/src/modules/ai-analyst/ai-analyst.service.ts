@@ -31,28 +31,25 @@ interface CacheEntry {
 @Injectable()
 export class AiAnalystService {
   private readonly logger = new Logger(AiAnalystService.name);
-  /** Instance model Gemini được khởi tạo một lần duy nhất khi service boot */
-  private model: GenerativeModel;
+  /** Instance model Gemini — null nếu GEMINI_API_KEY chưa được cấu hình */
+  private model: GenerativeModel | null = null;
   /** Cache in-memory: storeId → CacheEntry. Tránh gọi Gemini API liên tục */
   private cache = new Map<number, CacheEntry>();
 
   constructor(private prisma: PrismaService) {
     const apiKey = process.env.GEMINI_API_KEY;
-    // Fail-fast: nếu thiếu API key thì không để service khởi động
     if (!apiKey) {
-      this.logger.error('GEMINI_API_KEY is not configured in .env');
-      throw new InternalServerErrorException(
-        'AI Analyst service is not configured. Missing GEMINI_API_KEY.',
-      );
+      // Graceful degradation: chỉ log warning, app vẫn khởi động bình thường.
+      // Endpoint AI sẽ trả 503 thay vì làm crash toàn bộ backend.
+      this.logger.warn('GEMINI_API_KEY is not configured. AI Analyst feature will be disabled.');
+      return;
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
     this.model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
       generationConfig: {
-        // Giới hạn độ dài phản hồi để kiểm soát chi phí và độ trễ
         maxOutputTokens: 1024,
-        // temperature = 0.7: cân bằng giữa sáng tạo và chính xác
         temperature: 0.7,
       },
     });
@@ -305,6 +302,13 @@ Yêu cầu:
    * @param forceRefresh  Bỏ qua cache và buộc gọi lại API (dùng khi user nhấn "Phân tích lại")
    */
   async generateInsights(storeId: number, forceRefresh = false): Promise<{ insights: string; generatedAt: Date; cached: boolean }> {
+    // Nếu API key chưa được cấu hình, trả lỗi rõ ràng thay vì crash
+    if (!this.model) {
+      throw new InternalServerErrorException(
+        'Tính năng AI chưa được cấu hình. Vui lòng thêm GEMINI_API_KEY vào file .env và khởi động lại server.',
+      );
+    }
+
     // Kiểm tra cache trước – trả ngay nếu còn hiệu lực và không yêu cầu refresh
     if (!forceRefresh) {
       const cached = this.cache.get(storeId);

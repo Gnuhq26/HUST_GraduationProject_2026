@@ -333,3 +333,17 @@ export interface VirtualInventoryTrendPoint {
 export interface VirtualInventoryTrendResponse {
   points: VirtualInventoryTrendPoint[];
 }
+
+export interface MonthlyRevenueItem {
+  month: number;
+  monthLabel: string;
+  revenue: number;
+}
+
+export interface MonthlyRevenueResponse {
+  year: number;
+  months: MonthlyRevenueItem[];
+  currentMonthRevenue: number;
+  lastMonthRevenue: number;
+  growthPercent: number;
+}

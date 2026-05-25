@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { DollarSign, TrendingUp, Package, BarChart2, Calendar, Award } from 'lucide-react';
 import reportsService from '../services/reportsService';
 import { useToast } from '../components/ToastProvider';
+import DatePickerInput from '../components/DatePickerInput';
+import CustomSelect from '../components/CustomSelect';
 
 interface RevenueReport {
   totalSalesValue: number;
@@ -106,12 +108,10 @@ function Reports() {
             <label className="flex items-center gap-1 text-sm font-medium text-bluesh-900 mb-1">
               <Calendar className="w-5 h-5" />Từ ngày
             </label>
-            <input
-              type="date"
+            <DatePickerInput
               title="Từ ngày"
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 bg-basic-white border border-bluesh-600 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 transition-colors"
+              onChange={setStartDate}
             />
           </div>
 
@@ -119,12 +119,10 @@ function Reports() {
             <label className="flex items-center gap-1 text-sm font-medium text-bluesh-900 mb-1">
               <Calendar className="w-5 h-5" />Đến ngày
             </label>
-            <input
-              type="date"
+            <DatePickerInput
               title="Đến ngày"
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 bg-basic-white border border-bluesh-600 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 transition-colors"
+              onChange={setEndDate}
             />
           </div>
 
@@ -132,15 +130,15 @@ function Reports() {
             <label className="block text-sm font-medium text-bluesh-900 mb-1">
               Sắp xếp theo
             </label>
-            <select
-              title="Sắp xếp theo"
+            <CustomSelect
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'revenue' | 'quantity')}
-              className="w-full px-3 py-2 bg-basic-white border border-bluesh-600 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 transition-colors"
-            >
-              <option value="revenue">Doanh thu</option>
-              <option value="quantity">Số lượng</option>
-            </select>
+              onChange={(v) => setSortBy(v as 'revenue' | 'quantity')}
+              compact
+              options={[
+                { value: 'revenue', label: 'Doanh thu' },
+                { value: 'quantity', label: 'Số lượng' },
+              ]}
+            />
           </div>
 
           <div className="w-32">
@@ -375,7 +373,7 @@ function Reports() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-basic-white uppercase tracking-wider">
                         SKU
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-basic-white uppercase tracking-wider">
+                      <th className="px-6 py-3 text-center text-xs font-medium text-basic-white uppercase tracking-wider">
                         Số lượng bán
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-basic-white uppercase tracking-wider">
@@ -419,7 +417,7 @@ function Reports() {
                           <td className="px-6 py-4 whitespace-nowrap text-blacky-900">
                             {product.sku || '-'}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
                             <span className="font-semibold text-blacky-950">
                               {formatNumber(product.totalQuantity)}
                             </span>
