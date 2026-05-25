@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma';
 import { CreateOrderDto } from './dto';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '../../../generated/prisma/client';
 import { PaginatedResult, PaginationParams, paginateResult } from '../../common/pagination';
 
 @Injectable()

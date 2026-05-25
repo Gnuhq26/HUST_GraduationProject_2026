@@ -4,7 +4,7 @@ import { PrismaService } from '../../../common/prisma';
 import { parseExcel } from './product-import.parser';
 import { validateRows, ValidatedRow } from './product-import.validator';
 import { ensureInventoryExists } from '../../../utils';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '../../../../generated/prisma/client';
 
 @Injectable()
 export class ProductImportService {
