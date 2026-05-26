@@ -1,0 +1,76 @@
+==============================================================
+  HƯỚNG DẪN CÀI ĐẶT & CHẠY PROJECT SAU KHI CLONE TỪ GITHUB
+==============================================================
+
+----------------------------
+1. CLONE PROJECT
+----------------------------
+git clone <repo-url>
+cd GR2_HUST_2025.1
+
+
+----------------------------
+2. TẠO FILE .env CHO BACKEND
+----------------------------
+- Copy file .env.example thành .env (hoặc tạo mới):
+    cd backend
+    copy .env.example .env       (Windows)
+    cp .env.example .env         (Linux/Mac)
+
+- Mở backend/.env và điền đầy đủ các giá trị:
+    DATABASE_URL=mysql://<user>:<pass>@<host>:3306/<db>
+    JWT_SECRET=<chuỗi bí mật>
+    CORS_ORIGINS=http://localhost:5173,http://localhost:8081
+    CLOUDFLARE_API_TOKEN=<token của bạn>
+    ... (xem file .env.example để biết thêm)
+
+
+----------------------------
+3A. CHẠY BẰNG DOCKER (Khuyên dùng)
+----------------------------
+# Đảm bảo Docker Desktop đang chạy, sau đó từ thư mục gốc:
+
+docker compose up --build        # Lần đầu (build + chạy)
+docker compose up -d             # Các lần sau (chạy nền)
+docker compose down              # Dừng
+
+- Frontend:  http://localhost:8081
+- Backend:   http://localhost:3000
+
+# Xem log khi đang chạy nền:
+docker compose logs -f
+docker compose logs -f api       # Chỉ backend
+docker compose logs -f web       # Chỉ frontend
+
+
+----------------------------
+3B. CHẠY THỦ CÔNG (Không dùng Docker)
+----------------------------
+
+## Backend
+cd backend
+npm install
+npx prisma generate
+npm run start:dev                # Development (hot-reload)
+# hoặc:
+npm run build ; npm run start:prod   # Production
+
+## Frontend (terminal khác)
+cd frontend
+npm install
+npm run dev                      # http://localhost:5173
+
+
+----------------------------
+4. CÀI ĐẶT PYTHON TOOL (Tùy chọn - quản lý DNS Cloudflare)
+----------------------------
+cd backend/src
+pip install cloudflare python-dotenv
+
+# Sử dụng:
+python "DNSCloudFlare 1.py"                          # Xem tất cả domain
+python "DNSCloudFlare 1.py" -n example.com           # Xem DNS records
+python "DNSCloudFlare 1.py" -n example.com -t A -e sub=1.2.3.4   # Thêm record
+
+
+==============================================================

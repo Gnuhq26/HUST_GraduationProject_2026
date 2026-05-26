@@ -52,7 +52,7 @@ export default function Header() {
           <div className="w-9 h-9 bg-bluesh-800 rounded-xl flex items-center justify-center shrink-0">
             <ShoppingBag className="w-5 h-5 text-white" />
           </div>
-          <span className="text-lg font-bold text-blacky-950">POS System</span>
+          <span className="text-lg font-bold text-blacky-950">Gnuh Buildify</span>
         </div>
         
         {/* Right Section */}

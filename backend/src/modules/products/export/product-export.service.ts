@@ -61,7 +61,7 @@ export class ProductExportService {
     });
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'POS System';
+    workbook.creator = 'Gnuh Buildify';
     const sheet = workbook.addWorksheet('Sản phẩm');
 
     this.setupColumns(sheet);

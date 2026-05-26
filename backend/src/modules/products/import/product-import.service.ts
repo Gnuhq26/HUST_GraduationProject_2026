@@ -180,7 +180,7 @@ export class ProductImportService {
    */
   async generateTemplate(): Promise<Buffer> {
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'POS System';
+    workbook.creator = 'Gnuh Buildify';
     const sheet = workbook.addWorksheet('Import Sản phẩm');
 
     // Header row

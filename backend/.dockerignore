@@ -1,0 +1,10 @@
+node_modules
+dist
+generated
+.env*
+test
+coverage
+*.md
+.git
+.gitignore
+tsconfig.build.tsbuildinfo

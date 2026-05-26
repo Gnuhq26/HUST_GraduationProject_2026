@@ -9,6 +9,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import { useToast } from '../components/ToastProvider';
 import { categoriesService } from '../services/categoriesService';
 import type { Product, Category } from '@/types';
+import productImg from '../assets/product.png';
 
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -156,7 +157,7 @@ export default function Products() {
           </div>
         ) : products.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-4">
-            <img src="/src/assets/product.png" alt="Không có sản phẩm" className="w-50 h-50 object-contain opacity-80" />
+            <img src= {productImg} alt="Không có sản phẩm" className="w-50 h-50 object-contain opacity-80" />
             <p className="text-blacky-500">Chưa có sản phẩm nào</p>
           </div>
         ) : (

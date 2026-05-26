@@ -43,7 +43,7 @@ export class CustomerExportService {
     });
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'POS System';
+    workbook.creator = 'Gnuh Buildify';
     const sheet = workbook.addWorksheet('Khách hàng');
 
     this.setupColumns(sheet);

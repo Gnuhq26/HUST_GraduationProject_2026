@@ -33,7 +33,7 @@ function SelectStore() {
         <div className="w-9 h-9 bg-bluesh-800 rounded-xl flex items-center justify-center shrink-0">
           <FiShoppingBag className="text-white text-lg" />
         </div>
-        <span className="font-bold text-blacky-950 text-lg">POS System</span>
+        <span className="font-bold text-blacky-950 text-lg">Gnuh Buildify</span>
       </header>
 
       {/* Main content */}
