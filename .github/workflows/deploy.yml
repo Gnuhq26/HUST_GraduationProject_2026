@@ -1,0 +1,29 @@
+name: Deploy Gnuh Buildify
+
+on:
+  push:
+    branches:
+      - hungdz # Thay 'main' bằng tên nhánh bạn muốn theo dõi
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Giao việc cho Robot SSH vào VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            # 1. Di chuyển vào đúng thư mục dự án
+            cd /var/www/datn/HUST_GraduationProject_2026
+            
+            # 2. Kéo code mới nhất từ GitHub về
+            git fetch origin && git reset --hard origin/hungdz
+            
+            # 3. Đập đi xây lại Frontend/Backend để nhận code mới
+            docker compose build 
+            
+            # 4. Chạy lại hệ thống
+            docker compose up -d
