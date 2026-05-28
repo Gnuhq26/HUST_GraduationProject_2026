@@ -10,6 +10,9 @@ services:
     volumes:
       - ./backend/certs:/app/certs:ro
     restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
 
   web:
     build:
