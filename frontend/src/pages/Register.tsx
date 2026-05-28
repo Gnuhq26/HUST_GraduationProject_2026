@@ -230,7 +230,7 @@ export default function Register() {
             <button
               type="button"
               title="Đăng nhập bằng Google"
-              onClick={() => { window.location.href = 'http://localhost:3000/auth/google'; }}
+              onClick={() => { window.location.href = `${import.meta.env.VITE_API_BASE_URL}/auth/google`; }}
               className="flex-1 h-12 rounded-lg border bg-basic-white border-basic-border2 flex items-center justify-center hover:border-bluesh-800 transition-colors"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -244,6 +244,7 @@ export default function Register() {
             <button
               type="button"
               title="Đăng nhập bằng Facebook"
+              onClick={() => { window.location.href = `${import.meta.env.VITE_API_BASE_URL}/auth/facebook`; }}
               className="flex-1 h-12 rounded-lg border bg-basic-white border-basic-border2 flex items-center justify-center hover:border-bluesh-800 transition-colors"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#1877F2">
