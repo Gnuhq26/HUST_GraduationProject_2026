@@ -1,7 +1,11 @@
 import { Link } from 'react-router-dom';
 import { FiShieldOff, FiHome } from 'react-icons/fi';
+import useAuthStore from '../store/authStore';
 
 export default function Forbidden() {
+  const tenantIdentifier = useAuthStore((s) => s.tenantIdentifier);
+  const homePath = tenantIdentifier ? `/${tenantIdentifier}` : '/select-store';
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
       <div className="max-w-lg w-full bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
@@ -15,7 +19,7 @@ export default function Forbidden() {
         </p>
 
         <Link
-          to="/"
+          to={homePath}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors"
         >
           <FiHome />

@@ -151,6 +151,8 @@ export class AuthService {
             StoreID: true,
             StoreName: true,
             Subdomain: true,
+            DisplayId: true,
+            SlugName: true,
           },
         },
         role: {
@@ -166,6 +168,8 @@ export class AuthService {
       storeId: su.store.StoreID,
       storeName: su.store.StoreName,
       subdomain: su.store.Subdomain,
+      displayId: su.store.DisplayId,
+      slugName: su.store.SlugName,
       roleId: su.role.RoleID,
       roleName: su.role.RoleName,
     }));

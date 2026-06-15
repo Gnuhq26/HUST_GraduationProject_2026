@@ -13,8 +13,18 @@ import { protectedRoutes } from './protectedRoutes';
 import type { RouteConfig } from './protectedRoutes';
 import useAuthStore from '../store/authStore';
 
+/**
+ * Compute the "home" path for an authenticated user.
+ * If a tenantIdentifier is known, go to /:tenant/; otherwise go to /select-store.
+ */
+function useHomePath(): string {
+  const tenantIdentifier = useAuthStore((s) => s.tenantIdentifier);
+  return tenantIdentifier ? `/${tenantIdentifier}` : '/select-store';
+}
+
 export default function AppRoutes() {
   const { isAuthenticated } = useAuthStore();
+  const homePath = useHomePath();
 
   const renderProtectedElement = (route: RouteConfig) => {
     const Component = route.component;
@@ -37,32 +47,36 @@ export default function AppRoutes() {
   return (
     <Routes>
       {/* Public Routes */}
-      <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
-      <Route path="/register" element={isAuthenticated ? <Navigate to="/" replace /> : <Register />} />
+      <Route path="/login" element={isAuthenticated ? <Navigate to={homePath} replace /> : <Login />} />
+      <Route path="/register" element={isAuthenticated ? <Navigate to={homePath} replace /> : <Register />} />
 
       {/* OAuth callback — always public, never redirect to login */}
       <Route path="/auth/callback" element={<AuthCallback />} />
 
-      {/* Multi-store Management (Auth Required) */}
+      {/* Multi-store Management (Auth Required, no tenant context) */}
       <Route path="/no-store" element={isAuthenticated ? <NoStore /> : <Navigate to="/login" replace />} />
       <Route path="/create-store" element={isAuthenticated ? <CreateStore /> : <Navigate to="/login" replace />} />
       <Route path="/select-store" element={isAuthenticated ? <SelectStore /> : <Navigate to="/login" replace />} />
       <Route path="/forbidden" element={isAuthenticated ? <Forbidden /> : <Navigate to="/login" replace />} />
 
-      {/* Protected Routes with Layout */}
-      <Route element={isAuthenticated ? <MainLayout /> : <Navigate to="/login" replace />}>
-        <Route path="/profile" element={<Profile />} />
+      {/* Protected Routes with Tenant prefix + Layout */}
+      <Route path="/:tenant" element={isAuthenticated ? <MainLayout /> : <Navigate to="/login" replace />}>
+        <Route path="profile" element={<Profile />} />
         {protectedRoutes.map((route) => (
           <Route
             key={route.path}
-            path={route.path}
+            index={route.path === '/'}
+            path={route.path === '/' ? undefined : route.path.replace(/^\//, '')}
             element={renderProtectedElement(route)}
           />
         ))}
       </Route>
 
-      {/* Catch all - redirect to login or dashboard */}
-      <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />}/>
+      {/* Root redirect — send to tenant home or login */}
+      <Route path="/" element={<Navigate to={isAuthenticated ? homePath : '/login'} replace />} />
+
+      {/* Catch all — redirect to tenant home or login */}
+      <Route path="*" element={<Navigate to={isAuthenticated ? homePath : '/login'} replace />} />
     </Routes>
   );
 }

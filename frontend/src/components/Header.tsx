@@ -3,9 +3,10 @@ import { User, LogOut, ChevronDown, ShoppingBag, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 import type { StoreInfo } from '@/types';
+import { getTenantIdentifier } from '../utils/tenantPath';
 
 export default function Header() {
-  const { user, stores, currentStoreId, setCurrentStore, logout } = useAuthStore();
+  const { user, stores, currentStoreId, logout } = useAuthStore();
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showStoreMenu, setShowStoreMenu] = useState(false);
@@ -37,11 +38,27 @@ export default function Header() {
     window.location.href = '/login';
   };
 
-  const handleStoreChange = (store: StoreInfo) => {
-    setCurrentStore(store);
+  const handleStoreChange = async (store: StoreInfo) => {
+    if (store.storeId === currentStoreId) {
+      setShowStoreMenu(false);
+      return;
+    }
+
     setShowStoreMenu(false);
-    // Reload page to refresh data for new store
-    window.location.reload();
+
+    // Resolve DisplayId/SlugName without touching Zustand — setCurrentStore here
+    // races with useTenantSync (URL still shows the old tenant) and reverts the switch.
+    let targetStore = store;
+    if (!store.displayId && !store.slugName) {
+      await useAuthStore.getState().refreshAuth();
+      targetStore =
+        useAuthStore.getState().stores.find((s) => s.storeId === store.storeId) ?? store;
+    }
+
+    const tid = getTenantIdentifier(targetStore);
+    localStorage.setItem('currentStoreId', String(targetStore.storeId));
+    localStorage.setItem('tenantIdentifier', tid);
+    window.location.assign(`/${tid}`);
   };
 
   return (
@@ -123,7 +140,7 @@ export default function Header() {
             {showUserMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-basic-border py-1 z-50">
                 <button
-                  onClick={() => { navigate('/profile'); setShowUserMenu(false); }}
+                  onClick={() => { const t = useAuthStore.getState().tenantIdentifier; navigate(t ? `/${t}/profile` : '/profile'); setShowUserMenu(false); }}
                   className="w-full text-left px-4 py-2 hover:bg-blacky-50 transition-colors flex items-center gap-2 text-blacky-700"
                 >
                   <Settings className="w-4 h-4" />

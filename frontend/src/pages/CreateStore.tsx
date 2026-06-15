@@ -102,7 +102,9 @@ function CreateStore() {
       }
       
       alert('Tạo cửa hàng thành công!');
-      navigate('/');
+      // Navigate to the newly created store's tenant dashboard
+      const tid = useAuthStore.getState().tenantIdentifier;
+      navigate(tid ? `/${tid}` : '/select-store');
     } catch (err: unknown) {
       console.error('Error creating store:', err);
       const e = err as { response?: { data?: { message?: string } } };

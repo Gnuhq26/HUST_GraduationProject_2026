@@ -7,8 +7,20 @@ interface ApiErrorResponse {
   error?: string;
 }
 
+/** Endpoints that must NOT use the tenant-path prefix (no store context needed) */
+const PUBLIC_PREFIXES = ['/auth/', '/auth'];
+
+const API_BASE: string = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:3000';
+
+/**
+ * Derive the app origin (without /api suffix) for building tenant paths.
+ * - Local: "http://localhost:3000/api" or "http://localhost:3000" → "http://localhost:3000"
+ * - VPS:   "/api" → "" (relative, same origin)
+ */
+const APP_ORIGIN = API_BASE.replace(/\/api\/?$/, '');
+
 const api: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
+  baseURL: API_BASE,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -19,14 +31,26 @@ api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('token');
     const currentStoreId = localStorage.getItem('currentStoreId');
+    const tenantIdentifier = localStorage.getItem('tenantIdentifier');
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Thêm X-Store-ID header cho các request cần multi-tenant
+    // Thêm X-Store-ID header (fallback cho các route không qua TenantMiddleware)
     if (currentStoreId && !config.headers['X-Store-ID']) {
       config.headers['X-Store-ID'] = currentStoreId;
+    }
+
+    // Nếu có tenantIdentifier và đây không phải auth hoặc global endpoint
+    // → rewrite URL sang /:tenant/api/... để đi qua TenantMiddleware
+    const isPublic = PUBLIC_PREFIXES.some((p) =>
+      config.url === p || config.url?.startsWith('/auth/'),
+    ) || (config.url === '/stores' && config.method?.toLowerCase() === 'post');
+
+    if (tenantIdentifier && config.url && !isPublic) {
+      config.baseURL = APP_ORIGIN || 'http://localhost:3000';
+      config.url = `/${tenantIdentifier}/api${config.url}`;
     }
 
     return config;

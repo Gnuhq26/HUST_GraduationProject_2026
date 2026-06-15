@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { FiHome, FiClock, FiLogOut } from 'react-icons/fi';
 import useAuthStore from '../store/authStore';
+import { getTenantIdentifier } from '../utils/tenantPath';
 
 function NoStore() {
   const navigate = useNavigate();
@@ -14,7 +15,8 @@ function NoStore() {
       const currentStores = useAuthStore.getState().stores;
 
       if (currentStores.length === 1) {
-        navigate('/', { replace: true });
+        const tid = getTenantIdentifier(currentStores[0]);
+        navigate(`/${tid}`, { replace: true });
       } else if (currentStores.length > 1) {
         navigate('/select-store', { replace: true });
       }
