@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FiShoppingBag, FiMapPin, FiPlus, FiChevronRight } from 'react-icons/fi';
 import useAuthStore from '../store/authStore';
 import type { StoreInfo } from '@/types';
+import { getTenantIdentifier } from '../utils/tenantPath';
 
 function SelectStore() {
   const navigate = useNavigate();
@@ -10,7 +11,8 @@ function SelectStore() {
 
   const handleSelectStore = (store: StoreInfo) => {
     setCurrentStore(store);
-    navigate('/');
+    const tid = getTenantIdentifier(store);
+    navigate(`/${tid}`);
   };
 
   const handleCreateNewStore = () => {
@@ -22,7 +24,8 @@ function SelectStore() {
       navigate('/no-store', { replace: true });
     } else if (stores.length === 1) {
       setCurrentStore(stores[0]);
-      navigate('/', { replace: true });
+      const tid = getTenantIdentifier(stores[0]);
+      navigate(`/${tid}`, { replace: true });
     }
   }, [stores, navigate, setCurrentStore]);
 

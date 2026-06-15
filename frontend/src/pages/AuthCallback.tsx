@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
+import { getTenantIdentifier } from '../utils/tenantPath';
 
 const ERROR_MESSAGES: Record<string, string> = {
   account_exists_local:
@@ -29,7 +30,8 @@ export default function AuthCallback() {
           if (stores.length === 0) {
             navigate('/no-store', { replace: true });
           } else if (stores.length === 1) {
-            navigate('/', { replace: true });
+            const tid = getTenantIdentifier(stores[0]);
+            navigate(`/${tid}`, { replace: true });
           } else {
             navigate('/select-store', { replace: true });
           }

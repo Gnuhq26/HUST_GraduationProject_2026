@@ -4,6 +4,7 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { ShoppingBag, Eye, EyeOff, Loader2 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import loginIllustration from '../assets/image.png';
+import { getTenantIdentifier } from '../utils/tenantPath';
 
 type LoginFormData = {
   email: string;
@@ -34,7 +35,8 @@ export default function Login() {
         if (stores.length === 0) {
           navigate('/no-store', { replace: true });
         } else if (stores.length === 1) {
-          navigate('/', { replace: true });
+          const tid = getTenantIdentifier(stores[0]);
+          navigate(`/${tid}`, { replace: true });
         } else {
           navigate('/select-store', { replace: true });
         }
@@ -55,7 +57,8 @@ export default function Login() {
         navigate('/no-store');
       } else if (stores.length === 1) {
         // Single store - go directly to dashboard
-        navigate('/');
+        const tid = getTenantIdentifier(stores[0]);
+        navigate(`/${tid}`);
       } else {
         // Multiple stores - show selection page
         navigate('/select-store');

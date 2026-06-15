@@ -50,6 +50,8 @@ export interface StoreInfo {
   storeId: number;
   storeName: string;
   subdomain: string;
+  displayId: string | null;
+  slugName: string | null;
   roleId: number;
   roleName: string;
 }

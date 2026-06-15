@@ -1,8 +1,9 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCanPerform } from '../hooks/usePermission';
 import { protectedRoutes } from '../routes/protectedRoutes';
 import type { RouteConfig } from '../routes/protectedRoutes';
+import { tenantPath } from '../utils/tenantPath';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -10,6 +11,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
+  const { tenant } = useParams<{ tenant: string }>();
   const { canPerform, loading } = useCanPerform();
 
   const canAccessRoute = (route: RouteConfig): boolean => {
@@ -27,6 +29,12 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const visibleStoreItems = protectedRoutes
     .filter((route) => route.menu?.group === 'store')
     .filter(canAccessRoute);
+
+  /** Build tenant-prefixed path for a route */
+  const buildTo = (routePath: string): string => {
+    if (!tenant) return routePath; // fallback (should never happen inside /:tenant)
+    return tenantPath(tenant, routePath);
+  };
 
   return (
     <aside className={`${collapsed ? 'w-16' : 'w-64'} bg-white border border-basic-border rounded-2xl m-2 flex flex-col transition-all duration-300 shrink-0`}>
@@ -54,7 +62,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             {visibleMenuItems.map((item) => (
               <li key={item.path}>
                 <NavLink
-                  to={item.path}
+                  to={buildTo(item.path)}
                   end={item.path === '/'}
                   title={collapsed ? item.menu.label : undefined}
                   className={({ isActive }) =>
@@ -88,7 +96,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             {visibleStoreItems.map((item) => (
               <li key={item.path}>
                 <NavLink
-                  to={item.path}
+                  to={buildTo(item.path)}
                   title={collapsed ? item.menu.label : undefined}
                   className={({ isActive }) =>
                     `flex items-center ${collapsed ? 'justify-center px-2' : 'gap-3 px-4'} py-3 rounded-lg transition-colors ${

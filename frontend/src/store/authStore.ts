@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { authService } from '../services/authService';
+import { getTenantIdentifier } from '../utils/tenantPath';
 import type { User, StoreInfo, RegisterDto } from '@/types';
 
 interface AuthActionResult<T = unknown> {
@@ -13,6 +14,7 @@ interface AuthState {
   token: string | null;
   stores: StoreInfo[];
   currentStoreId: number | null;
+  tenantIdentifier: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -38,6 +40,7 @@ const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   currentStoreId: localStorage.getItem('currentStoreId')
     ? Number(localStorage.getItem('currentStoreId'))
     : null,
+  tenantIdentifier: localStorage.getItem('tenantIdentifier'),
   isAuthenticated: !!localStorage.getItem('token'),
   isLoading: false,
   error: null,
@@ -54,12 +57,15 @@ const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
       
       // Lưu danh sách cửa hàng nếu có (backend dùng storeId)
       if (data.stores && data.stores.length > 0) {
+        const firstStore = data.stores[0] as StoreInfo;
+        const tid = getTenantIdentifier(firstStore);
         localStorage.setItem('stores', JSON.stringify(data.stores));
-        // Tự động chọn cửa hàng đầu tiên
-        localStorage.setItem('currentStoreId', String(data.stores[0].storeId));
+        localStorage.setItem('currentStoreId', String(firstStore.storeId));
+        localStorage.setItem('tenantIdentifier', tid);
         set({
           stores: data.stores,
-          currentStoreId: data.stores[0].storeId,
+          currentStoreId: firstStore.storeId,
+          tenantIdentifier: tid,
         });
       }
       
@@ -101,11 +107,13 @@ const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
 
   logout: () => {
     authService.logout();
+    localStorage.removeItem('tenantIdentifier');
     set({
       user: null,
       token: null,
       stores: [],
       currentStoreId: null,
+      tenantIdentifier: null,
       isAuthenticated: false,
       error: null,
     });
@@ -113,11 +121,14 @@ const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
 
   setCurrentStore: (storeIdOrObject: number | StoreInfo) => {
     // Accept both storeId (number) or store object
-    const storeId = typeof storeIdOrObject === 'number' 
-      ? storeIdOrObject 
-      : storeIdOrObject.storeId;
+    const store = typeof storeIdOrObject === 'number'
+      ? get().stores.find((s) => s.storeId === storeIdOrObject)
+      : storeIdOrObject;
+    const storeId = store?.storeId ?? (storeIdOrObject as number);
+    const tid = store ? getTenantIdentifier(store) : String(storeId);
     localStorage.setItem('currentStoreId', String(storeId));
-    set({ currentStoreId: storeId });
+    localStorage.setItem('tenantIdentifier', tid);
+    set({ currentStoreId: storeId, tenantIdentifier: tid });
   },
 
   refreshAuth: async () => {
@@ -136,17 +147,28 @@ const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
       const hasCurrentStore = Number.isFinite(currentStoreId) && safeStores.some((s: StoreInfo) => s.storeId === currentStoreId);
       
       let nextCurrentStoreId: number | null = null;
+      let nextTenantIdentifier: string | null = null;
       if (safeStores.length > 0) {
         nextCurrentStoreId = hasCurrentStore ? currentStoreId : safeStores[0].storeId;
         localStorage.setItem('currentStoreId', String(nextCurrentStoreId));
+        
+        const nextStore = safeStores.find((s: StoreInfo) => s.storeId === nextCurrentStoreId);
+        if (nextStore) {
+          nextTenantIdentifier = getTenantIdentifier(nextStore);
+          localStorage.setItem('tenantIdentifier', nextTenantIdentifier);
+        } else {
+          localStorage.removeItem('tenantIdentifier');
+        }
       } else {
         localStorage.removeItem('currentStoreId');
+        localStorage.removeItem('tenantIdentifier');
       }
 
       set({
         user: userData,
         stores: safeStores,
         currentStoreId: nextCurrentStoreId,
+        tenantIdentifier: nextTenantIdentifier,
         isLoading: false,
       });
     } catch {
@@ -181,15 +203,24 @@ const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
       localStorage.setItem('stores', JSON.stringify(safeStores));
 
       let nextCurrentStoreId: number | null = null;
+      let nextTenantIdentifier: string | null = null;
       if (safeStores.length > 0) {
         nextCurrentStoreId = safeStores[0].storeId;
         localStorage.setItem('currentStoreId', String(nextCurrentStoreId));
+        
+        const nextStore = safeStores[0];
+        nextTenantIdentifier = getTenantIdentifier(nextStore);
+        localStorage.setItem('tenantIdentifier', nextTenantIdentifier);
+      } else {
+        localStorage.removeItem('currentStoreId');
+        localStorage.removeItem('tenantIdentifier');
       }
 
       set({
         user: userData,
         stores: safeStores,
         currentStoreId: nextCurrentStoreId,
+        tenantIdentifier: nextTenantIdentifier,
         isLoading: false,
       });
     } catch {

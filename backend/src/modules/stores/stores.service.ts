@@ -3,6 +3,7 @@ import { PrismaService } from '../../common/prisma';
 import { AddMemberDto, UpdateMemberRoleDto, CreateStoreDto } from './dto';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+import { generateUniqueDisplayId } from '../../common/utils/display-id.util';
 
 @Injectable()
 export class StoresService {
@@ -14,7 +15,7 @@ export class StoresService {
    * Users can create multiple stores (for business expansion or multiple locations)
    */
   async createStore(userId: number, createStoreDto: CreateStoreDto) {
-    const { storeName, subdomain, phone, address } = createStoreDto;
+    const { storeName, subdomain, phone, address, slugName } = createStoreDto;
 
     // Check if subdomain already exists
     const existingStore = await this.prisma.store.findUnique({
@@ -25,6 +26,9 @@ export class StoresService {
       throw new ConflictException(`Subdomain "${subdomain}" is already taken`);
     }
 
+    // Generate DisplayId before entering transaction
+    const displayId = await generateUniqueDisplayId(this.prisma.store);
+
     // Create store with default roles and assign creator as Admin
     const store = await this.prisma.$transaction(async (tx) => {
       // 1. Create Store
@@ -32,6 +36,8 @@ export class StoresService {
         data: {
           StoreName: storeName,
           Subdomain: subdomain,
+          DisplayId: displayId,
+          SlugName: slugName ?? null,
           Phone: phone,
           Address: address,
           Status: 'Active',
@@ -93,6 +99,8 @@ export class StoresService {
         storeId: store.StoreID,
         storeName: store.StoreName,
         subdomain: store.Subdomain,
+        displayId: store.DisplayId,
+        slugName: store.SlugName,
         phone: store.Phone,
         address: store.Address,
         status: store.Status,
