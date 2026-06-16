@@ -10,6 +10,12 @@ generator client {
   moduleFormat = "cjs"
 }
 
+generator erd {
+  provider = "prisma-erd-generator"
+  output   = "../../docs/thesis/diagrams/erd.png"
+  theme     = "neutral"
+}
+
 datasource db {
   provider = "mysql"
   // Connection URL moved to prisma.config.ts; configure the connection for Migrate and PrismaClient there.

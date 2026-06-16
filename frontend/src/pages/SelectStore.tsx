@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiShoppingBag, FiMapPin, FiPlus, FiChevronRight } from 'react-icons/fi';
+import { WarehouseIcon, PlusIcon, ChevronRightIcon, LinkIcon } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import type { StoreInfo } from '@/types';
 import { getTenantIdentifier } from '../utils/tenantPath';
@@ -34,7 +34,7 @@ function SelectStore() {
       {/* Top bar */}
       <header className="bg-white border-b border-basic-border px-8 py-4 flex items-center gap-3">
         <div className="w-9 h-9 bg-bluesh-800 rounded-xl flex items-center justify-center shrink-0">
-          <FiShoppingBag className="text-white text-lg" />
+          <WarehouseIcon className="text-white text-lg" />
         </div>
         <span className="font-bold text-blacky-950 text-lg">Gnuh Buildify</span>
       </header>
@@ -64,7 +64,7 @@ function SelectStore() {
                 {/* Icon + role badge */}
                 <div className="flex items-start  justify-between">
                   <div className="w-11 h-11 bg-bluesh-100 border  rounded-lg flex items-center justify-center">
-                    <FiShoppingBag className="text-bluesh-800 text-xl" />
+                    <WarehouseIcon className="text-bluesh-800 text-xl" />
                   </div>
                   <span className="text-xs font-medium bg-bluesh-50 text-bluesh-800 border border-bluesh-200 px-2.5 py-1 rounded-full">
                     {store.roleName}
@@ -77,9 +77,9 @@ function SelectStore() {
                     {store.storeName}
                   </h3>
                   <div className="flex items-center gap-1.5 text-blacky-500 text-sm">
-                    <FiMapPin size={14} className="shrink-0" />
+                    <LinkIcon size={14} className="shrink-0" />
                     <span className="font-mono text-xs bg-blacky-100 text-blacky-700 px-2 py-0.5 rounded">
-                      {store.subdomain}
+                      /{getTenantIdentifier(store)}/
                     </span>
                   </div>
                 </div>
@@ -90,7 +90,7 @@ function SelectStore() {
                   onClick={(e) => { e.stopPropagation(); handleSelectStore(store); }}
                 >
                   Chọn cửa hàng này
-                  <FiChevronRight size={18} />
+                  <ChevronRightIcon size={18} />
                 </button>
               </div>
             ))}
@@ -102,7 +102,7 @@ function SelectStore() {
                          hover:border-accent-green hover:shadow-md transition-all min-h-55"
             >
               <div className="w-12 h-12 bg-[#E8F8F7] rounded-full flex items-center justify-center">
-                <FiPlus className="text-accent-green text-2xl" />
+                <PlusIcon className="text-accent-green text-2xl" />
               </div>
               <div className="text-center">
                 <h3 className="text-base font-semibold text-blacky-950 mb-1">
@@ -113,7 +113,7 @@ function SelectStore() {
                 </p>
               </div>
               <button className="btn btn-secondary border-accent-green text-accent-green hover:bg-[#E8F8F7]">
-                <FiPlus size={16} />
+                <PlusIcon size={16} />
                 Tạo mới
               </button>
             </div>

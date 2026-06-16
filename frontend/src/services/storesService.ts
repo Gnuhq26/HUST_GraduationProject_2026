@@ -1,5 +1,5 @@
 import apiClient from './api';
-import type { Store, StoreUser, CreateStoreDto, AddMemberDto } from '@/types';
+import type { Store, StoreUser, CreateStoreDto, AddMemberDto, UpdateStoreDto } from '@/types';
 
 const storesService = {
   /**
@@ -15,6 +15,11 @@ const storesService = {
    */
   async getStoreDetails(): Promise<Store> {
     const response = await apiClient.get<Store>('/stores/details');
+    return response.data;
+  },
+
+  async updateStore(data: UpdateStoreDto): Promise<Store> {
+    const response = await apiClient.patch<Store>('/stores/details', data);
     return response.data;
   },
 

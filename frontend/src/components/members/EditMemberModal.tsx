@@ -28,7 +28,7 @@ export interface Member {
 interface EditMemberModalProps {
   open: boolean;
   member: Member | null;
-  roles: Role[];
+  roles: Pick<Role, 'RoleID' | 'RoleName' | 'Description'>[];
   onClose: () => void;
   onSuccess: () => void;
 }

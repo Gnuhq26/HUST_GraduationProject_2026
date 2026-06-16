@@ -25,7 +25,9 @@ export class RolesService {
         },
         _count: {
           select: {
-            storeUsers: true, // Count how many users have this role
+            storeUsers: {
+              where: { StoreID: storeId },
+            },
           },
         },
       },
@@ -55,6 +57,7 @@ export class RolesService {
           },
         },
         storeUsers: {
+          where: { StoreID: storeId },
           include: {
             user: {
               select: {

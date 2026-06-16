@@ -1,7 +1,7 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Body, Param, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { StoresService } from './stores.service';
-import { AddMemberDto, UpdateMemberRoleDto, CreateStoreDto } from './dto';
+import { AddMemberDto, UpdateMemberRoleDto, CreateStoreDto, UpdateStoreDto } from './dto';
 import { CurrentStore } from '../../common/decorators/current-store.decorator';
 import { CheckPermission } from '../../common/decorators/check-permission.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -65,6 +65,17 @@ export class StoresController {
   })
   async getStoreDetails(@CurrentStore() storeId: number) {
     return await this.storesService.getStoreDetails(storeId);
+  }
+
+  @Patch('details')
+  @CheckPermission('update', 'Store')
+  @ApiOperation({ summary: 'Update current store profile (name, phone, address)' })
+  @ApiResponse({ status: 200, description: 'Store updated successfully' })
+  async updateStoreDetails(
+    @Body() updateStoreDto: UpdateStoreDto,
+    @CurrentStore() storeId: number,
+  ) {
+    return await this.storesService.updateStore(storeId, updateStoreDto);
   }
 
   @Get('members')

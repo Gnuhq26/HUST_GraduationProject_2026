@@ -3,27 +3,41 @@ name: Deploy Gnuh Buildify
 on:
   push:
     branches:
-      - hungdz # Thay 'main' bằng tên nhánh bạn muốn theo dõi
+      - hungdz
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Giao việc cho Robot SSH vào VPS
+      - name: Deploy to VPS via SSH (PM2 + Nginx static)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 30m
           script: |
-            # 1. Di chuyển vào đúng thư mục dự án
-            cd /var/www/datn/HUST_GraduationProject_2026
-            
-            # 2. Kéo code mới nhất từ GitHub về
+            set -e
+            APP_DIR=/var/www/datn/HUST_GraduationProject_2026
+            cd "$APP_DIR"
+
             git fetch origin && git reset --hard origin/hungdz
-            
-            # 3. Đập đi xây lại Frontend/Backend để nhận code mới
-            docker compose build 
-            
-            # 4. Chạy lại hệ thống
-            docker compose up -d
+
+            echo "=== Backend: install, generate, build ==="
+            cd backend
+            npm ci
+            npx prisma generate
+            npm run build
+            npx prisma migrate deploy
+
+            echo "=== Frontend: install, build ==="
+            cd ../frontend
+            npm ci
+            npm run build
+
+            echo "=== PM2: reload API ==="
+            cd ..
+            pm2 startOrReload ecosystem.config.cjs --env production
+            pm2 save
+
+            echo "=== Deploy finished ==="

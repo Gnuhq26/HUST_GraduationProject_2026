@@ -4,66 +4,17 @@ import { authService } from '../services/authService';
 import type { Permission } from '@/types';
 
 /**
- * Hook to check if current user has a specific permission
+ * @deprecated Import from '../contexts/PermissionProvider' instead.
+ * Kept as re-export for backward compatibility.
  */
-export function usePermission(action: string, subject: string): { hasPermission: boolean; loading: boolean } {
-  const { stores, currentStoreId } = useAuthStore();
-  const [hasPermission, setHasPermission] = useState(false);
-  const [loading, setLoading] = useState(true);
+export {
+  usePermission,
+  usePermissions,
+  useCanPerform,
+} from '../contexts/PermissionProvider';
 
-  useEffect(() => {
-    const checkPermission = async () => {
-      setLoading(true);
-      
-      // Find current store
-      const parsedStoreId = Number(currentStoreId);
-      const currentStore = stores.find((s) => s.storeId === parsedStoreId) || stores[0];
-      
-      if (!currentStore || !currentStore.roleId) {
-        setHasPermission(false);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        // Get effective permissions of current user in selected store
-        const permissions = await authService.getMyPermissions();
-        
-        // Check for super admin permission (manage all)
-        const isSuperAdmin = permissions.some(
-          (p: Permission) => p.Action === 'manage' && p.Subject === 'all'
-        );
-        
-        if (isSuperAdmin) {
-          setHasPermission(true);
-          setLoading(false);
-          return;
-        }
-        
-        // Check for specific permission
-        const hasSpecificPermission = permissions.some(
-          (p: Permission) => p.Action === action && p.Subject === subject
-        );
-        
-        setHasPermission(hasSpecificPermission);
-      } catch (err: unknown) {
-        console.error('Error checking permission:', err);
-        setHasPermission(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkPermission();
-  }, [action, subject, stores, currentStoreId]);
-
-  return { hasPermission, loading };
-}
-
-/**
- * Hook to get all permissions of current user
- */
-export function usePermissions(): { permissions: Permission[]; loading: boolean } {
+/** Standalone hook for pages outside PermissionProvider (login, etc.). */
+export function usePermissionsStandalone(): { permissions: Permission[]; loading: boolean } {
   const { stores, currentStoreId } = useAuthStore();
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,12 +22,10 @@ export function usePermissions(): { permissions: Permission[]; loading: boolean 
   useEffect(() => {
     const loadPermissions = async () => {
       setLoading(true);
-      
-      // Find current store
       const parsedStoreId = Number(currentStoreId);
       const currentStore = stores.find((s) => s.storeId === parsedStoreId) || stores[0];
-      
-      if (!currentStore || !currentStore.roleId) {
+
+      if (!currentStore?.roleId) {
         setPermissions([]);
         setLoading(false);
         return;
@@ -97,30 +46,4 @@ export function usePermissions(): { permissions: Permission[]; loading: boolean 
   }, [stores, currentStoreId]);
 
   return { permissions, loading };
-}
-
-/**
- * Hook to check if current user can perform an action.
- * Similar to usePermission but returns a function.
- */
-export function useCanPerform(): { canPerform: (action: string, subject: string) => boolean; loading: boolean } {
-  const { permissions, loading } = usePermissions();
-
-  const canPerform = (action: string, subject: string): boolean => {
-    if (loading) return false;
-    
-    // Check for super admin permission
-    const isSuperAdmin = permissions.some(
-      (p: Permission) => p.Action === 'manage' && p.Subject === 'all'
-    );
-    
-    if (isSuperAdmin) return true;
-    
-    // Check for specific permission
-    return permissions.some(
-      (p: Permission) => p.Action === action && p.Subject === subject
-    );
-  };
-
-  return { canPerform, loading };
 }

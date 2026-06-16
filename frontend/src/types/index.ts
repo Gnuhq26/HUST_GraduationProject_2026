@@ -62,6 +62,7 @@ export type {
   UpdateRoleDto,
   AssignPermissionsDto,
   CreateStoreDto,
+  UpdateStoreDto,
   AddMemberDto,
   ReportDateParams,
   TopProductsParams,

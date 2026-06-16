@@ -10,8 +10,7 @@ import Orders from '../pages/Orders';
 import Reports from '../pages/Reports';
 import Debts from '../pages/Debts';
 import StoreSettings from '../pages/StoreSettings';
-import StoreMembers from '../pages/StoreMembers';
-import Roles from '../pages/Roles';
+import StorePermissions from '../pages/StorePermissions';
 
 interface RoutePermission {
   action: string;
@@ -28,6 +27,8 @@ export interface RouteConfig {
   path: string;
   component: ComponentType;
   permission: RoutePermission | null;
+  /** User needs at least one of these permissions (overrides `permission` when set). */
+  permissionsAny?: RoutePermission[];
   menu: RouteMenu;
 }
 
@@ -137,22 +138,16 @@ export const protectedRoutes: RouteConfig[] = [
     },
   },
   {
-    path: '/store/members',
-    component: StoreMembers,
-    permission: { action: 'read', subject: 'User' },
+    path: '/store/permissions',
+    component: StorePermissions,
+    permission: null,
+    permissionsAny: [
+      { action: 'read', subject: 'User' },
+      { action: 'read', subject: 'Role' },
+    ],
     menu: {
       group: 'store',
-      label: 'Thành viên',
-      icon: Users,
-    },
-  },
-  {
-    path: '/store/roles',
-    component: Roles,
-    permission: { action: 'read', subject: 'Role' },
-    menu: {
-      group: 'store',
-      label: 'Vai trò',
+      label: 'Phân quyền',
       icon: Shield,
     },
   },

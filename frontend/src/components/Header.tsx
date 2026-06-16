@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, LogOut, ChevronDown, ShoppingBag, Settings } from 'lucide-react';
+import { User, LogOut, ChevronDown, WarehouseIcon, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 import type { StoreInfo } from '@/types';
@@ -67,7 +67,7 @@ export default function Header() {
         {/* Logo */}
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-bluesh-800 rounded-xl flex items-center justify-center shrink-0">
-            <ShoppingBag className="w-5 h-5 text-white" />
+            <WarehouseIcon className="w-5 h-5 text-white" />
           </div>
           <span className="text-lg font-bold text-blacky-950">Gnuh Buildify</span>
         </div>
@@ -81,7 +81,7 @@ export default function Header() {
                 onClick={() => setShowStoreMenu(!showStoreMenu)}
                 className="flex items-center gap-2 px-3 py-2 bg-blacky-50 hover:bg-blacky-100 rounded-lg transition-colors"
               >
-                <ShoppingBag className="w-4 h-4 text-blacky-600" />
+                <WarehouseIcon className="w-4 h-4 text-blacky-600" />
                 <span className="text-sm font-medium text-blacky-700">
                   {currentStore?.storeName || 'Chọn cửa hàng'}
                 </span>
