@@ -1,6 +1,8 @@
 import api from './api';
 import type { User, Permission, LoginResponse, RegisterDto, ProfileResponse } from '@/types';
 
+let permissionsInflight: Promise<Permission[]> | null = null;
+
 export const authService = {
   // Đăng nhập
   login: async (email: string, password: string): Promise<LoginResponse> => {
@@ -22,8 +24,18 @@ export const authService = {
 
   // Lấy quyền hiện tại của user theo store đang chọn
   getMyPermissions: async (): Promise<Permission[]> => {
-    const response = await api.get<Permission[]>('/auth/permissions');
-    return response.data;
+    if (permissionsInflight) {
+      return permissionsInflight;
+    }
+
+    permissionsInflight = api
+      .get<Permission[]>('/auth/permissions')
+      .then((response) => response.data)
+      .finally(() => {
+        permissionsInflight = null;
+      });
+
+    return permissionsInflight;
   },
 
   // Cập nhật thông tin cá nhân
@@ -39,6 +51,7 @@ export const authService = {
 
   // Đăng xuất (client-side)
   logout: (): void => {
+    permissionsInflight = null;
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('stores');

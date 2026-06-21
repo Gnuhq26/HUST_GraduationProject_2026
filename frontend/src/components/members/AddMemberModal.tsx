@@ -7,7 +7,7 @@ import type { Role } from '@/types';
 
 interface AddMemberModalProps {
   open: boolean;
-  roles: Role[];
+  roles: Pick<Role, 'RoleID' | 'RoleName' | 'Description'>[];
   onClose: () => void;
   onSuccess: () => void;
 }

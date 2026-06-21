@@ -184,6 +184,12 @@ export interface CreateStoreDto {
   subdomain: string;
 }
 
+export interface UpdateStoreDto {
+  storeName?: string;
+  address?: string;
+  phone?: string;
+}
+
 export interface AddMemberDto {
   email: string;
   roleId: number;

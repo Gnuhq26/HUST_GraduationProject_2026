@@ -15,8 +15,13 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { canPerform, loading } = useCanPerform();
 
   const canAccessRoute = (route: RouteConfig): boolean => {
+    if (loading) return false;
+
+    if (route.permissionsAny?.length) {
+      return route.permissionsAny.some((p) => canPerform(p.action, p.subject));
+    }
+
     if (!route.permission) return true;
-    if (loading) return false; // Avoid flashing unauthorized items while loading
 
     return canPerform(route.permission.action, route.permission.subject);
   };

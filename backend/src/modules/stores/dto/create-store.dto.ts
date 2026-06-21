@@ -7,7 +7,7 @@ const RESERVED_SLUG_WORDS = [
   'auth', 'health', 'favicon.ico', 'swagger',
 ];
 
-function IsNotReservedSlug(validationOptions?: ValidationOptions) {
+export function IsNotReservedSlug(validationOptions?: ValidationOptions) {
   return function (object: object, propertyName: string) {
     registerDecorator({
       name: 'isNotReservedSlug',

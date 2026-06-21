@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma';
-import { AddMemberDto, UpdateMemberRoleDto, CreateStoreDto } from './dto';
+import { AddMemberDto, UpdateMemberRoleDto, CreateStoreDto, UpdateStoreDto } from './dto';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { generateUniqueDisplayId } from '../../common/utils/display-id.util';
@@ -392,6 +392,36 @@ export class StoresService {
     if (!store) {
       throw new NotFoundException('Store not found');
     }
+
+    return store;
+  }
+
+  /**
+   * Update store profile fields (name, phone, address).
+   */
+  async updateStore(storeId: number, updateStoreDto: UpdateStoreDto) {
+    const { storeName, phone, address } = updateStoreDto;
+
+    if (storeName === undefined && phone === undefined && address === undefined) {
+      throw new BadRequestException('At least one field must be provided');
+    }
+
+    const store = await this.prisma.store.update({
+      where: { StoreID: storeId },
+      data: {
+        ...(storeName !== undefined && { StoreName: storeName }),
+        ...(phone !== undefined && { Phone: phone || null }),
+        ...(address !== undefined && { Address: address || null }),
+      },
+      include: {
+        _count: {
+          select: {
+            storeUsers: true,
+            roles: true,
+          },
+        },
+      },
+    });
 
     return store;
   }

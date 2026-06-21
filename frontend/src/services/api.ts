@@ -14,10 +14,12 @@ const API_BASE: string = (import.meta.env.VITE_API_BASE_URL as string | undefine
 
 /**
  * Derive the app origin (without /api suffix) for building tenant paths.
- * - Local: "http://localhost:3000/api" or "http://localhost:3000" → "http://localhost:3000"
- * - VPS:   "/api" → "" (relative, same origin)
+ * - Local: "http://localhost:3000/api" → "http://localhost:3000"
+ * - VPS relative: "/api" → window.location.origin
  */
-const APP_ORIGIN = API_BASE.replace(/\/api\/?$/, '');
+const APP_ORIGIN =
+  API_BASE.replace(/\/api\/?$/, '') ||
+  (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
 
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE,
@@ -49,7 +51,7 @@ api.interceptors.request.use(
     ) || (config.url === '/stores' && config.method?.toLowerCase() === 'post');
 
     if (tenantIdentifier && config.url && !isPublic) {
-      config.baseURL = APP_ORIGIN || 'http://localhost:3000';
+      config.baseURL = APP_ORIGIN;
       config.url = `/${tenantIdentifier}/api${config.url}`;
     }
 

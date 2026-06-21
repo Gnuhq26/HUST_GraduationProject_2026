@@ -30,6 +30,14 @@ export default function AppRoutes() {
     const Component = route.component;
     const element = <Component />;
 
+    if (route.permissionsAny?.length) {
+      return (
+        <PermissionRoute anyOf={route.permissionsAny}>
+          {element}
+        </PermissionRoute>
+      );
+    }
+
     if (!route.permission) {
       return element;
     }
@@ -62,6 +70,8 @@ export default function AppRoutes() {
       {/* Protected Routes with Tenant prefix + Layout */}
       <Route path="/:tenant" element={isAuthenticated ? <MainLayout /> : <Navigate to="/login" replace />}>
         <Route path="profile" element={<Profile />} />
+        <Route path="store/members" element={<Navigate to="store/permissions" replace />} />
+        <Route path="store/roles" element={<Navigate to="store/permissions" replace />} />
         {protectedRoutes.map((route) => (
           <Route
             key={route.path}

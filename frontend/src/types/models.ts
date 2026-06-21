@@ -60,6 +60,9 @@ export interface Store {
   StoreID: number;
   StoreName: string;
   Subdomain: string;
+  DisplayId: string | null;
+  SlugName: string | null;
+  SlugNameExpiredAt: string | null;
   Phone: string | null;
   Address: string | null;
   Status: StoreStatus;

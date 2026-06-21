@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, type FormEvent } from 'react';
-import { Save, Info, Users, Shield } from 'lucide-react';
+import { Save, Info, Users, Shield, Copy } from 'lucide-react';
 import storesService from '../services/storesService';
 import { useToast } from '../components/ToastProvider';
 import type { Store } from '@/types';
@@ -9,6 +9,11 @@ interface StoreWithCount extends Store {
     storeUsers?: number;
     roles?: number;
   };
+}
+
+function buildShareUrl(store: StoreWithCount): string {
+  const tid = store.SlugName ?? store.DisplayId ?? String(store.StoreID);
+  return `${window.location.origin}/${tid}`;
 }
 
 export default function StoreSettings() {
@@ -42,13 +47,28 @@ export default function StoreSettings() {
     loadStoreDetails();
   }, []);
 
+  const shareUrl = store ? buildShareUrl(store) : '';
+
+  const copyShareUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('Đã sao chép link cửa hàng');
+    } catch {
+      toast.error('Không thể sao chép link');
+    }
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
-      // TODO: Backend cần implement endpoint này
-      // await storesService.updateStore({ storeName, phone, address });
-      toast.info('Tính năng cập nhật thông tin store sẽ được bổ sung trong phiên bản tiếp theo');
+      const updated = await storesService.updateStore({
+        storeName,
+        phone: phone || undefined,
+        address: address || undefined,
+      });
+      setStore((prev) => (prev ? { ...prev, ...updated } : updated));
+      toast.success('Đã cập nhật thông tin cửa hàng');
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
       toast.error(e.response?.data?.message || 'Có lỗi xảy ra');
@@ -67,7 +87,6 @@ export default function StoreSettings() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-blacky-950">Cài đặt cửa hàng</h1>
         <p className="text-blacky-700 text-sm mt-1">Quản lý thông tin cửa hàng của bạn</p>
@@ -82,9 +101,63 @@ export default function StoreSettings() {
           </div>
         </div>
 
+        {/* Tenant URL */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <h3 className="text-base font-bold text-bluesh-900">Đường dẫn cửa hàng</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
+            <div>
+              <label className="block text-sm font-medium text-bluesh-900 mb-1.5">
+                Display ID
+              </label>
+              <input
+                type="text"
+                value={store?.DisplayId ?? ''}
+                disabled
+                readOnly
+                title="Display ID không thể thay đổi"
+                placeholder="abc1234"
+                className="w-full px-3 py-2.5 border border-blacky-200 rounded-lg bg-blacky-50 text-blacky-400 cursor-not-allowed"
+              />
+              <p className="mt-1 text-xs text-yellowfish-600">Display ID không thể thay đổi sau khi tạo</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-bluesh-900 mb-1.5">
+                Slug Name
+              </label>
+              <input
+                type="text"
+                value={store?.SlugName ?? ''}
+                disabled
+                readOnly
+                title="SlugName không thể thay đổi"
+                placeholder="Chưa đặt"
+                className="w-full px-3 py-2.5 border border-blacky-200 rounded-lg bg-blacky-50 text-blacky-400 cursor-not-allowed"
+              />
+              <p className="mt-1 text-xs text-yellowfish-600">Slug premium do quản trị hệ thống cấp, không thể tự chỉnh</p>
+            </div>
+          </div>
+          <div className="flex gap-2 items-center">
+            <code className="flex-1 flex items-center min-h-10 text-sm bg-white border border-blacky-200 rounded-lg px-3 py-2.5 break-all">
+              {shareUrl}
+            </code>
+            <button
+              type="button"
+              onClick={copyShareUrl}
+              title="Sao chép link"
+              className="inline-flex items-center justify-center shrink-0 size-10 rounded-lg border border-blacky-200 bg-blacky-50 text-blacky-400 hover:bg-blacky-100 transition-colors"
+            >
+              <Copy className="w-4 h-4" />
+            </button>
+          </div>
+          <p className="text-xs text-blacky-600 mt-2">
+            Nếu muốn có URL đẹp hơn, vui lòng liên hệ quản trị hệ thống để cấp Slug Name premium.
+          </p>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Store Name */}
             <div>
               <label className="block text-sm font-medium text-bluesh-900 mb-1.5">
                 Tên cửa hàng <span className="text-accent-red">*</span>
@@ -99,7 +172,6 @@ export default function StoreSettings() {
               />
             </div>
 
-            {/* Subdomain */}
             <div>
               <label className="block text-sm font-medium text-bluesh-900 mb-1.5">
                 Subdomain
@@ -108,6 +180,7 @@ export default function StoreSettings() {
                 type="text"
                 value={subdomain}
                 disabled
+                readOnly
                 title="Subdomain không thể thay đổi"
                 placeholder="abc-store"
                 className="w-full px-3 py-2.5 border border-blacky-200 rounded-lg bg-blacky-50 text-blacky-400 cursor-not-allowed"
@@ -115,7 +188,6 @@ export default function StoreSettings() {
               <p className="mt-1 text-xs text-yellowfish-600">Subdomain không thể thay đổi sau khi tạo</p>
             </div>
 
-            {/* Phone */}
             <div>
               <label className="block text-sm font-medium text-bluesh-900 mb-1.5">
                 Số điện thoại
@@ -129,7 +201,6 @@ export default function StoreSettings() {
               />
             </div>
 
-            {/* Status */}
             <div>
               <label className="block text-sm font-medium text-bluesh-900 mb-1.5">
                 Trạng thái
@@ -148,7 +219,6 @@ export default function StoreSettings() {
             </div>
           </div>
 
-          {/* Address */}
           <div>
             <label className="block text-sm font-medium text-bluesh-900 mb-1.5">Địa chỉ</label>
             <textarea
@@ -160,7 +230,6 @@ export default function StoreSettings() {
             />
           </div>
 
-          {/* Save Button */}
           <div className="flex justify-end pt-2">
             <button type="submit" disabled={saving} className="btn btn-primary w-fit! px-6! rounded-lg!">
               <Save className="w-5 h-5" />
@@ -170,9 +239,7 @@ export default function StoreSettings() {
         </form>
       </div>
 
-      {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Members Count */}
         <div className="bg-basic-white rounded-xl border border-bluesh-900 p-6">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-bluesh-800 rounded-lg">
@@ -185,7 +252,6 @@ export default function StoreSettings() {
           </div>
         </div>
 
-        {/* Roles Count */}
         <div className="bg-basic-white rounded-xl border border-bluesh-900 p-6">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-accent-green rounded-lg">
@@ -199,14 +265,14 @@ export default function StoreSettings() {
         </div>
       </div>
 
-      {/* Info Note */}
       <div className="mt-6 p-4 bg-yellowfish-50 border border-yellowfish-400 rounded-lg">
         <div className="flex gap-3">
           <Info className="w-4 h-4 text-bluesh-900 shrink-0 mt-1" />
           <div className="text-bluesh-800">
             <p className="font-medium mb-1">Lưu ý:</p>
-            <ul className="list-disc list-inside space-y-1">
+            <ul className="list-disc list-inside space-y-1 text-sm">
               <li>Subdomain không thể thay đổi sau khi tạo cửa hàng</li>
+              <li>Đường dẫn chia sẻ thực tế dùng DisplayId — không lộ ID số nội bộ</li>
               <li>Để quản lý thành viên và phân quyền, vui lòng vào menu tương ứng</li>
               <li>Mọi thay đổi sẽ được áp dụng ngay lập tức</li>
             </ul>

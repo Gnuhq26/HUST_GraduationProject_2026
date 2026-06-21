@@ -2,22 +2,27 @@ import { useState, type FormEvent } from 'react';
 import { X } from 'lucide-react';
 import rolesService from '../../services/rolesService';
 import { useToast } from '../ToastProvider';
+import type { Permission } from '@/types';
+import RolePermissionsPicker from './RolePermissionsPicker';
 
 interface Props {
   open: boolean;
+  groupedPermissions: Record<string, Permission[]>;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export default function CreateRoleModal({ open, onClose, onSuccess }: Props) {
+export default function CreateRoleModal({ open, groupedPermissions, onClose, onSuccess }: Props) {
   const toast = useToast();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedPermissions, setSelectedPermissions] = useState<number[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   const handleClose = () => {
     setName('');
     setDescription('');
+    setSelectedPermissions([]);
     onClose();
   };
 
@@ -25,10 +30,17 @@ export default function CreateRoleModal({ open, onClose, onSuccess }: Props) {
     e.preventDefault();
     try {
       setSubmitting(true);
-      await rolesService.create({ roleName: name, description });
+      const role = await rolesService.create({ roleName: name, description });
+      if (selectedPermissions.length > 0) {
+        await rolesService.assignPermissions(role.RoleID, selectedPermissions);
+      }
       handleClose();
       onSuccess();
-      toast.success('Tạo vai trò thành công!');
+      toast.success(
+        selectedPermissions.length > 0
+          ? 'Tạo vai trò và gán quyền thành công!'
+          : 'Tạo vai trò thành công!',
+      );
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
       toast.error(err.response?.data?.message || 'Có lỗi xảy ra');
@@ -41,9 +53,14 @@ export default function CreateRoleModal({ open, onClose, onSuccess }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-basic-white rounded-2xl max-w-md w-full shadow-xl">
+      <div className="bg-basic-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-yellowfish-400">
-          <h2 className="text-lg font-semibold text-blacky-950">Tạo vai trò mới</h2>
+          <div>
+            <h2 className="text-lg font-semibold text-blacky-950">Tạo vai trò mới</h2>
+            <p className="text-sm text-blacky-500 mt-0.5">
+              {selectedPermissions.length} quyền đã chọn
+            </p>
+          </div>
           <button
             onClick={handleClose}
             title="Đóng"
@@ -52,35 +69,50 @@ export default function CreateRoleModal({ open, onClose, onSuccess }: Props) {
             <X className="w-5 h-5" />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-blacky-700 mb-1.5">
-              Tên vai trò <span className="text-accent-red">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2.5 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 transition-colors"
-              placeholder="Ví dụ: Quản lý, Nhân viên, Kế toán..."
-            />
+
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-blacky-700 mb-1.5">
+                  Tên vai trò <span className="text-accent-red">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 transition-colors"
+                  placeholder="Ví dụ: Quản lý, Nhân viên, Kế toán..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-blacky-700 mb-1.5">Mô tả</label>
+                <input
+                  type="text"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 transition-colors"
+                  placeholder="Mô tả ngắn về vai trò"
+                />
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold text-blacky-800 mb-3">Phân quyền (tuỳ chọn)</h3>
+              <RolePermissionsPicker
+                groupedPermissions={groupedPermissions}
+                selectedPermissions={selectedPermissions}
+                onSelectedPermissionsChange={setSelectedPermissions}
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-blacky-700 mb-1.5">Mô tả</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              className="w-full px-3 py-2.5 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 transition-colors resize-none"
-              placeholder="Mô tả về vai trò trên"
-            />
-          </div>
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={handleClose} className="btn btn-secondary flex-1 w-fit! px-4! rounded-lg!">
+
+          <div className="px-6 py-4 border-t border-basic-border flex justify-end gap-3">
+            <button type="button" onClick={handleClose} className="btn btn-secondary px-6! rounded-lg!">
               Hủy
             </button>
-            <button type="submit" disabled={submitting} className="btn btn-primary flex-1 w-fit! px-6! rounded-lg!">
+            <button type="submit" disabled={submitting} className="btn btn-primary px-6! rounded-lg!">
               {submitting ? 'Đang tạo...' : 'Tạo vai trò'}
             </button>
           </div>
