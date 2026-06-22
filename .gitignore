@@ -1,2 +1,5 @@
 # Documentation (internal, not for version control)
 docs/
+setupVPS.txt
+nginx.txt
+backend/src/DNSCloudFlare.txt

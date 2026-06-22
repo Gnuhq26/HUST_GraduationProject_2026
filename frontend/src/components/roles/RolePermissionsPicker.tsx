@@ -12,6 +12,17 @@ export const getActionColor = (action: string | undefined) => {
   return colors[action || ''] || 'bg-blacky-100 text-blacky-600';
 };
 
+export const getActionLabel = (action: string | undefined) => {
+  const labels: Record<string, string> = {
+    create: 'Thêm',
+    read: 'Đọc',
+    update: 'Sửa',
+    delete: 'Xóa',
+    manage: 'Quản lý',
+  };
+  return labels[action || ''] || action || '';
+};
+
 interface RolePermissionsPickerProps {
   groupedPermissions: Record<string, Permission[]>;
   selectedPermissions: number[];
@@ -122,7 +133,7 @@ export default function RolePermissionsPicker({
                       <span
                         className={`text-sm px-2 py-0.5 rounded-full font-medium ${getActionColor(perm.Action)}`}
                       >
-                        {perm.Action}
+                        {getActionLabel(perm.Action)}
                       </span>
                     </label>
                   ))}

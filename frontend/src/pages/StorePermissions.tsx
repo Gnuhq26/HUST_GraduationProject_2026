@@ -13,6 +13,7 @@ import CreateRoleModal from '../components/roles/CreateRoleModal';
 import EditRoleModal from '../components/roles/EditRoleModal';
 import type { RoleWithDetails } from '../components/roles/EditRoleModal';
 import RolePermissionsModal from '../components/roles/RolePermissionsModal';
+import { getActionColor, getActionLabel } from '../components/roles/RolePermissionsPicker';
 import type { Permission } from '@/types';
 
 const formatDate = (dateString: string): string =>
@@ -152,17 +153,6 @@ export default function StorePermissions() {
     } finally {
       setRemovingMember(null);
     }
-  };
-
-  const getActionColor = (action: string | undefined) => {
-    const colors: Record<string, string> = {
-      manage: 'bg-bluesh-50 text-bluesh-800',
-      create: 'bg-accent-green/10 text-accent-green',
-      read: 'bg-bluesh-50 text-bluesh-600',
-      update: 'bg-yellowfish-50 text-yellowfish-600',
-      delete: 'bg-accent-red/10 text-accent-red',
-    };
-    return colors[action || ''] || 'bg-blacky-100 text-blacky-600';
   };
 
   const getInitials = (member: Member) =>
@@ -309,7 +299,7 @@ export default function StorePermissions() {
                             key={rp.permission?.PermissionID}
                             className={`px-2 py-0.5 text-xs rounded-full font-medium ${getActionColor(rp.permission?.Action)}`}
                           >
-                            {rp.permission?.Action}:{rp.permission?.Subject}
+                            {getActionLabel(rp.permission?.Action)}:{rp.permission?.Subject}
                           </span>
                         ))
                       )}
