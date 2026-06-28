@@ -4,10 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 import type { StoreInfo } from '@/types';
 import { getTenantIdentifier } from '../utils/tenantPath';
+import { useTenantPath } from '../hooks/useTenantPath';
+import Logo from '../assets/store.png';
 
 export default function Header() {
   const { user, stores, currentStoreId, logout } = useAuthStore();
   const navigate = useNavigate();
+  const toTenantPath = useTenantPath();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showStoreMenu, setShowStoreMenu] = useState(false);
   
@@ -62,14 +65,12 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-basic-white border-b border-basic-border px-6 py-3.5 shrink-0">
+    <header className="bg-basic-white border-b border-basic-border px-6 py-2.5 shrink-0">
       <div className="flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-bluesh-800 rounded-xl flex items-center justify-center shrink-0">
-            <WarehouseIcon className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-lg font-bold text-blacky-950">Gnuh Buildify</span>
+          <img src={Logo} alt="Logo" className="w-14 h-14" />
+          <span className="text-2xl font-bold text-bluesh-950">Gnuh Buildify</span>
         </div>
         
         {/* Right Section */}
@@ -79,36 +80,36 @@ export default function Header() {
             <div className="relative" ref={storeMenuRef}>
               <button
                 onClick={() => setShowStoreMenu(!showStoreMenu)}
-                className="flex items-center gap-2 px-3 py-2 bg-blacky-50 hover:bg-blacky-100 rounded-lg transition-colors"
+                className="flex items-center border border-basic-white hover:border-yellowfish-100 gap-2 px-3 py-2 bg-basic-white hover:bg-yellowfish-50 rounded-lg transition-colors"
               >
-                <WarehouseIcon className="w-4 h-4 text-blacky-600" />
-                <span className="text-sm font-medium text-blacky-700">
+                <WarehouseIcon className="w-4 h-4 text-bluesh-900" />
+                <span className="text-base font-medium text-bluesh-900">
                   {currentStore?.storeName || 'Chọn cửa hàng'}
                 </span>
-                <ChevronDown className="w-4 h-4 text-blacky-400" />
+                <ChevronDown className="w-4 h-4 text-bluesh-900" />
               </button>
 
               {showStoreMenu && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-basic-border py-1 z-50">
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-yellowfish-200 py-1 z-50">
                   <div className="px-4 py-2 border-b border-basic-border">
-                    <p className="text-xs font-semibold text-blacky-400 uppercase">Chọn cửa hàng</p>
+                    <p className="text-xs font-semibold text-bluesh-800 uppercase">Chọn cửa hàng</p>
                   </div>
                   {stores.map((store) => (
                     <button
                       key={store.storeId}
                       onClick={() => handleStoreChange(store)}
-                      className={`w-full text-left px-4 py-2.5 hover:bg-blacky-50 transition-colors ${
+                      className={`w-full text-left px-4 py-2.5 hover:bg-yellowfish-50 transition-colors ${
                         store.storeId === currentStoreId ? 'bg-bluesh-50' : ''
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <div>
                           <div className={`font-medium ${
-                            store.storeId === currentStoreId ? 'text-bluesh-800' : 'text-blacky-950'
+                            store.storeId === currentStoreId ? 'text-bluesh-800' : 'text-blacky-500'
                           }`}>
                             {store.storeName}
                           </div>
-                          <div className="text-xs text-blacky-500">{store.subdomain}</div>
+                          <div className="text-xs text-blacky-500">{store.displayId}</div>
                         </div>
                         {store.storeId === currentStoreId && (
                           <div className="w-2 h-2 bg-bluesh-800 rounded-full"></div>
@@ -125,23 +126,26 @@ export default function Header() {
           <div className="relative" ref={userMenuRef}>
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2.5 px-3 py-2 hover:bg-blacky-50 rounded-lg transition-colors"
+              className="flex items-center gap-2.5 px-3 py-2 border border-basic-white hover:border-yellowfish-100 hover:bg-yellowfish-50 rounded-lg transition-colors"
             >
-              <div className="w-8 h-8 bg-bluesh-100 rounded-full flex items-center justify-center">
-                <User className="w-4 h-4 text-bluesh-800" />
+              <div className="w-9 h-9 bg-bluesh-900 rounded-full flex items-center justify-center">
+                <User className="w-4 h-4 text-basic-white" />
               </div>
               <div className="text-left">
-                <div className="text-sm font-medium text-blacky-950">{user?.FullName || 'User'}</div>
-                <div className="text-xs text-blacky-500">{user?.Email}</div>
+                <div className="text-base font-medium text-bluesh-900">{user?.FullName || 'User'}</div>
+                <div className="text-sm text-yellowfish-500">{user?.Email}</div>
               </div>
-              <ChevronDown className="w-4 h-4 text-blacky-400" />
+              <ChevronDown className="w-4 h-4 text-bluesh-900" />
             </button>
 
             {showUserMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-basic-border py-1 z-50">
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-yellowfish-200 py-1 z-50">
                 <button
-                  onClick={() => { const t = useAuthStore.getState().tenantIdentifier; navigate(t ? `/${t}/profile` : '/profile'); setShowUserMenu(false); }}
-                  className="w-full text-left px-4 py-2 hover:bg-blacky-50 transition-colors flex items-center gap-2 text-blacky-700"
+                  onClick={() => {
+                    navigate(toTenantPath('/profile'));
+                    setShowUserMenu(false);
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-yellowfish-50 hover:text-bluesh-900 transition-colors flex items-center gap-2 text-bluesh-900"
                 >
                   <Settings className="w-4 h-4" />
                   <span>Tài khoản</span>
@@ -149,7 +153,7 @@ export default function Header() {
                 <div className="border-t border-basic-border my-1" />
                 <button
                   onClick={handleLogout}
-                  className="w-full text-left px-4 py-2 hover:bg-blacky-50 transition-colors flex items-center gap-2 text-accent-red"
+                  className="w-full text-left px-4 py-2 hover:bg-yellowfish-50 transition-colors flex items-center gap-2 text-accent-red"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Đăng xuất</span>

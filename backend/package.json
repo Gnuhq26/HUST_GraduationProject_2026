@@ -20,7 +20,10 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:migrate:status": "prisma migrate status",
-    "prisma:backfill-display-id": "tsx prisma/scripts/backfill-display-id.ts"
+    "prisma:backfill-display-id": "tsx prisma/scripts/backfill-display-id.ts",
+    "prisma:sync-permissions": "tsx prisma/scripts/sync-permissions.ts",
+    "prisma:seed:permissions": "tsx prisma/seeds/seed.ts --permissions-only",
+    "prisma:seed:sales-staff": "tsx prisma/seeds/seed-sales-staff.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

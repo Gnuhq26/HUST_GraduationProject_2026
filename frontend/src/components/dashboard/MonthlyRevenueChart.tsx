@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ReferenceLine, ResponsiveContainer, Tooltip } from 'recharts';
 import { Link } from 'react-router-dom';
+import { useTenantPath } from '../../hooks/useTenantPath';
 import reportsService from '../../services/reportsService';
 import type { MonthlyRevenueItem } from '../../types/models';
 
@@ -79,6 +80,7 @@ const RefLineLabel = ({
 };
 
 export default function MonthlyRevenueChart() {
+  const toTenantPath = useTenantPath();
   const [data, setData] = useState<MonthlyRevenueItem[]>([]);
   const [growthPercent, setGrowthPercent] = useState(0);
   const [currentMonthRevenue, setCurrentMonthRevenue] = useState(0);
@@ -113,7 +115,7 @@ export default function MonthlyRevenueChart() {
       <div className="flex items-center justify-between">
         <h3 className="text-xl font-bold text-blacky-950">Analytics</h3>
         <Link
-          to="/reports"
+          to={toTenantPath('/reports')}
           className="text-sm font-medium text-bluesh-800 underline underline-offset-2 hover:opacity-80 transition-opacity"
         >
           Xem báo cáo chi tiết

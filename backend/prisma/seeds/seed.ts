@@ -1,440 +1,162 @@
-import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
-import { PrismaMariaDb } from '@prisma/adapter-mariadb';
-import * as bcrypt from 'bcrypt';
-
-const adapter = new PrismaMariaDb(process.env.DATABASE_URL!);
-const prisma = new PrismaClient({ adapter } as any);
-
-// Hàm hash mật khẩu
-async function hashPassword(password: string) {
-  return bcrypt.hash(password, 10);
-}
-
-async function main() {
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'manage', Subject: 'all' } },
-    update: {},
-    create: { Action: 'manage', Subject: 'all' }, //(Super Admin)
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'read', Subject: 'Product' } },
-    update: {},
-    create: { Action: 'read', Subject: 'Product' },
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'create', Subject: 'Product' } },
-    update: {},
-    create: { Action: 'create', Subject: 'Product' },
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'update', Subject: 'Product' } },
-    update: {},
-    create: { Action: 'update', Subject: 'Product' },
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'delete', Subject: 'Product' } },
-    update: {},
-    create: { Action: 'delete', Subject: 'Product' },
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'read', Subject: 'Order' } },
-    update: {},
-    create: { Action: 'read', Subject: 'Order' },
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'create', Subject: 'Order' } },
-    update: {},
-    create: { Action: 'create', Subject: 'Order' },
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'update', Subject: 'Order' } },
-    update: {},
-    create: { Action: 'update', Subject: 'Order' },
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'read', Subject: 'CostPrice' } },
-    update: {},
-    create: { Action: 'read', Subject: 'CostPrice' }, // Xem giá vốn
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'read', Subject: 'Report' } },
-    update: {},
-    create: { Action: 'read', Subject: 'Report' }, // Xem báo cáo doanh thu, top sản phẩm
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'read', Subject: 'ProfitReport' } },
-    update: {},
-    create: { Action: 'read', Subject: 'ProfitReport' }, // Xem báo cáo lợi nhuận
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'read', Subject: 'Debt' } },
-    update: {},
-    create: { Action: 'read', Subject: 'Debt' }, // Xem công nợ
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'manage', Subject: 'Debt' } },
-    update: {},
-    create: { Action: 'manage', Subject: 'Debt' }, // Quản lý thanh toán công nợ
-  });
-
-  // AI Analyst Permission
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'read', Subject: 'AiAnalyst' } },
-    update: {},
-    create: { Action: 'read', Subject: 'AiAnalyst' }, // Xem phân tích AI
-  });
-
-  // Supplier Permissions (Giai đoạn 8)
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'read', Subject: 'Supplier' } },
-    update: {},
-    create: { Action: 'read', Subject: 'Supplier' },
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'create', Subject: 'Supplier' } },
-    update: {},
-    create: { Action: 'create', Subject: 'Supplier' },
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'update', Subject: 'Supplier' } },
-    update: {},
-    create: { Action: 'update', Subject: 'Supplier' },
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'delete', Subject: 'Supplier' } },
-    update: {},
-    create: { Action: 'delete', Subject: 'Supplier' },
-  });
-
-  // Inventory Permissions (Giai đoạn 8)
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'read', Subject: 'Inventory' } },
-    update: {},
-    create: { Action: 'read', Subject: 'Inventory' },
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'create', Subject: 'Inventory' } },
-    update: {},
-    create: { Action: 'create', Subject: 'Inventory' }, // Nhập kho
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'update', Subject: 'Inventory' } },
-    update: {},
-    create: { Action: 'update', Subject: 'Inventory' }, // Điều chỉnh tồn kho
-  });
-
-  // Category Permissions
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'read', Subject: 'Category' } },
-    update: {},
-    create: { Action: 'read', Subject: 'Category' },
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'create', Subject: 'Category' } },
-    update: {},
-    create: { Action: 'create', Subject: 'Category' },
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'update', Subject: 'Category' } },
-    update: {},
-    create: { Action: 'update', Subject: 'Category' },
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'delete', Subject: 'Category' } },
-    update: {},
-    create: { Action: 'delete', Subject: 'Category' },
-  });
-
-  // Customer Permissions (Giai đoạn 9)
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'read', Subject: 'Customer' } },
-    update: {},
-    create: { Action: 'read', Subject: 'Customer' },
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'create', Subject: 'Customer' } },
-    update: {},
-    create: { Action: 'create', Subject: 'Customer' },
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'update', Subject: 'Customer' } },
-    update: {},
-    create: { Action: 'update', Subject: 'Customer' },
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'delete', Subject: 'Customer' } },
-    update: {},
-    create: { Action: 'delete', Subject: 'Customer' },
-  });
-
-  await prisma.permission.upsert({
-    where: { Action_Subject: { Action: 'read', Subject: 'ProfitReport' } },
-    update: {},
-    create: { Action: 'read', Subject: 'ProfitReport' }, // Xem báo cáo lợi nhuận
-  });
-
-  // Tạo User Admin mẫu
-  console.log('Seeding Admin User...');
-  const adminPassword = await hashPassword('123456');
-  const adminUser = await prisma.user.upsert({
-    where: { Email: 'admin@app.com' },
-    update: {},
-    create: {
-      Email: 'admin@app.com',
-      FullName: 'Admin User',
-      PasswordHash: adminPassword,
-    },
-  });
-
-  // Tạo Cửa hàng mẫu
-  console.log('Seeding Test Store...');
-  const testStore = await prisma.store.upsert({
-    where: { Subdomain: 'test' },
-    update: {},
-    create: {
-      StoreName: 'Cửa hàng A',
-      Subdomain: 'test',
-      Address: '79 Cầu Giấy, Hà Nội',
-      Phone: '0123456789',
-    },
-  });
-
-  // Tạo 2 roles cho Cửa hàng mẫu
-  console.log('Seeding Roles...');
-  const ownerRole = await prisma.role.upsert({
-    where: {
-      StoreID_RoleName: {
-        StoreID: testStore.StoreID,
-        RoleName: 'Chủ cửa hàng',
-      },
-    },
-    update: {},
-    create: {
-      StoreID: testStore.StoreID,
-      RoleName: 'Chủ cửa hàng',
-      Description: 'Toàn quyền quản lý cửa hàng',
-      // Gán quyền "manage all" cho vai trò này
-      rolePermissions: {
-        create: {
-          permission: {
-            connect: { Action_Subject: { Action: 'manage', Subject: 'all' } },
-          },
-        },
-      },
-    },
-  });
-
-  const staffRole = await prisma.role.upsert({
-    where: {
-      StoreID_RoleName: { StoreID: testStore.StoreID, RoleName: 'Nhân viên' },
-    },
-    update: {},
-    create: {
-      StoreID: testStore.StoreID,
-      RoleName: 'Nhân viên',
-      Description: 'Vai trò nhân viên bán hàng/kho',
-      // Gán các quyền cơ bản 
-      rolePermissions: {
-        create: [
-          {
-            permission: {
-              connect: {
-                Action_Subject: { Action: 'read', Subject: 'Product' },
-              },
-            },
-          },
-          {
-            permission: {
-              connect: {
-                Action_Subject: { Action: 'create', Subject: 'Product' },
-              },
-            },
-          },
-          {
-            permission: {
-              connect: {
-                Action_Subject: { Action: 'update', Subject: 'Product' },
-              },
-            },
-          },
-          {
-            permission: {
-              connect: {
-                Action_Subject: { Action: 'delete', Subject: 'Product' },
-              },
-            },
-          },
-          {
-            permission: {
-              connect: { Action_Subject: { Action: 'read', Subject: 'Order' } },
-            },
-          },
-          {
-            permission: {
-              connect: {
-                Action_Subject: { Action: 'create', Subject: 'Order' },
-              },
-            },
-          },
-          {
-            permission: {
-              connect: {
-                Action_Subject: { Action: 'update', Subject: 'Order' },
-              },
-            },
-          },
-          // Supplier permissions (Giai đoạn 8)
-          {
-            permission: {
-              connect: {
-                Action_Subject: { Action: 'read', Subject: 'Supplier' },
-              },
-            },
-          },
-          {
-            permission: {
-              connect: {
-                Action_Subject: { Action: 'create', Subject: 'Supplier' },
-              },
-            },
-          },
-          {
-            permission: {
-              connect: {
-                Action_Subject: { Action: 'update', Subject: 'Supplier' },
-              },
-            },
-          },
-          // Inventory permissions (Giai đoạn 8)
-          {
-            permission: {
-              connect: {
-                Action_Subject: { Action: 'read', Subject: 'Inventory' },
-              },
-            },
-          },
-          {
-            permission: {
-              connect: {
-                Action_Subject: { Action: 'create', Subject: 'Inventory' },
-              },
-            },
-          },
-          // Category permissions
-          {
-            permission: {
-              connect: {
-                Action_Subject: { Action: 'read', Subject: 'Category' },
-              },
-            },
-          },
-          {
-            permission: {
-              connect: {
-                Action_Subject: { Action: 'create', Subject: 'Category' },
-              },
-            },
-          },
-          {
-            permission: {
-              connect: {
-                Action_Subject: { Action: 'update', Subject: 'Category' },
-              },
-            },
-          },
-          {
-            permission: {
-              connect: {
-                Action_Subject: { Action: 'delete', Subject: 'Category' },
-              },
-            },
-          },
-          // Customer permissions (Giai đoạn 9)
-          {
-            permission: {
-              connect: {
-                Action_Subject: { Action: 'read', Subject: 'Customer' },
-              },
-            },
-          },
-          {
-            permission: {
-              connect: {
-                Action_Subject: { Action: 'create', Subject: 'Customer' },
-              },
-            },
-          },
-          {
-            permission: {
-              connect: {
-                Action_Subject: { Action: 'update', Subject: 'Customer' },
-              },
-            },
-          },
-          {
-            permission: {
-              connect: {
-                Action_Subject: { Action: 'delete', Subject: 'Customer' },
-              },
-            },
-          },
-        ],
-      },
-    },
-  });
-
-  // Liên kết Admin User với Cửa hàng Mẫu (với vai trò Chủ cửa hàng)
-  console.log('Linking Admin User to Store...');
-  await prisma.storeUser.upsert({
-    where: {
-      StoreID_UserID: { StoreID: testStore.StoreID, UserID: adminUser.UserID },
-    },
-    update: {},
-    create: {
-      StoreID: testStore.StoreID,
-      UserID: adminUser.UserID,
-      RoleID: ownerRole.RoleID,
-    },
-  });
-
-  console.log('Seeding finished.');
-}
-
-main()
-  .then(async () => {
-    await prisma.$disconnect();
-  })
-  .catch(async (e) => {
-    if (e instanceof Error) {
-      console.error('Seeding error:', e.message);
-    } else {
-      console.error('Seeding error with unknown error:', String(e));
-    }
-
-    await prisma.$disconnect();
-    process.exit(1);
-  });
+import 'dotenv/config';
+import { PrismaClient } from '../../generated/prisma/client';
+import { PrismaMariaDb } from '@prisma/adapter-mariadb';
+import {
+  SALES_STAFF_DEMO_USER,
+  SALES_STAFF_PERMISSIONS,
+  SALES_STAFF_ROLE_DESCRIPTION,
+  SALES_STAFF_ROLE_NAME,
+} from './sales-staff.data';
+import { hashPassword, syncPermissions, syncRolePermissions } from './seed-helpers';
+
+const adapter = new PrismaMariaDb(process.env.DATABASE_URL!);
+const prisma = new PrismaClient({ adapter });
+
+async function main() {
+  const permissionsOnly = process.argv.includes('--permissions-only');
+
+  console.log('Seeding permissions...');
+  await syncPermissions(prisma);
+
+  if (permissionsOnly) {
+    console.log('Permissions synced (--permissions-only). Skipping demo users/stores/roles.');
+    return;
+  }
+
+  // Tạo User Admin mẫu
+  console.log('Seeding Admin User...');
+  const adminPassword = await hashPassword('123456');
+  const adminUser = await prisma.user.upsert({
+    where: { Email: 'admin@app.com' },
+    update: {},
+    create: {
+      Email: 'admin@app.com',
+      FullName: 'Admin User',
+      PasswordHash: adminPassword,
+    },
+  });
+
+  // Tạo Cửa hàng mẫu
+  console.log('Seeding Test Store...');
+  const testStore = await prisma.store.upsert({
+    where: { Subdomain: 'test' },
+    update: {},
+    create: {
+      StoreName: 'Cửa hàng A',
+      Subdomain: 'test',
+      Address: '79 Cầu Giấy, Hà Nội',
+      Phone: '0123456789',
+    },
+  });
+
+  // Tạo vai trò mặc định (khớp stores.service.ts khi tạo cửa hàng mới)
+  console.log('Seeding Roles...');
+  const ownerRole = await prisma.role.upsert({
+    where: {
+      StoreID_RoleName: {
+        StoreID: testStore.StoreID,
+        RoleName: 'Chủ cửa hàng',
+      },
+    },
+    update: {},
+    create: {
+      StoreID: testStore.StoreID,
+      RoleName: 'Chủ cửa hàng',
+      Description: 'Toàn quyền quản lý cửa hàng',
+    },
+  });
+  await syncRolePermissions(prisma, ownerRole.RoleID, [['manage', 'all']]);
+
+  const defaultRoleNames = [
+    { RoleName: 'Quản lý', Description: 'Quản lý cửa hàng, xem báo cáo' },
+    { RoleName: 'Thủ kho', Description: 'Quản lý kho hàng, nhập xuất' },
+  ] as const;
+
+  for (const role of defaultRoleNames) {
+    await prisma.role.upsert({
+      where: {
+        StoreID_RoleName: { StoreID: testStore.StoreID, RoleName: role.RoleName },
+      },
+      update: {},
+      create: {
+        StoreID: testStore.StoreID,
+        RoleName: role.RoleName,
+        Description: role.Description,
+      },
+    });
+  }
+
+  const salesStaffRole = await prisma.role.upsert({
+    where: {
+      StoreID_RoleName: {
+        StoreID: testStore.StoreID,
+        RoleName: SALES_STAFF_ROLE_NAME,
+      },
+    },
+    update: { Description: SALES_STAFF_ROLE_DESCRIPTION },
+    create: {
+      StoreID: testStore.StoreID,
+      RoleName: SALES_STAFF_ROLE_NAME,
+      Description: SALES_STAFF_ROLE_DESCRIPTION,
+    },
+  });
+  await syncRolePermissions(prisma, salesStaffRole.RoleID, SALES_STAFF_PERMISSIONS);
+
+  const salesPassword = await hashPassword(SALES_STAFF_DEMO_USER.Password);
+  const salesUser = await prisma.user.upsert({
+    where: { Email: SALES_STAFF_DEMO_USER.Email },
+    update: { FullName: SALES_STAFF_DEMO_USER.FullName },
+    create: {
+      Email: SALES_STAFF_DEMO_USER.Email,
+      FullName: SALES_STAFF_DEMO_USER.FullName,
+      PasswordHash: salesPassword,
+    },
+  });
+
+  // Liên kết Admin User với Cửa hàng Mẫu (với vai trò Chủ cửa hàng)
+  console.log('Linking Admin User to Store...');
+  await prisma.storeUser.upsert({
+    where: {
+      StoreID_UserID: { StoreID: testStore.StoreID, UserID: adminUser.UserID },
+    },
+    update: {},
+    create: {
+      StoreID: testStore.StoreID,
+      UserID: adminUser.UserID,
+      RoleID: ownerRole.RoleID,
+    },
+  });
+
+  console.log('Linking Sales Staff User to Store...');
+  await prisma.storeUser.upsert({
+    where: {
+      StoreID_UserID: { StoreID: testStore.StoreID, UserID: salesUser.UserID },
+    },
+    update: { RoleID: salesStaffRole.RoleID },
+    create: {
+      StoreID: testStore.StoreID,
+      UserID: salesUser.UserID,
+      RoleID: salesStaffRole.RoleID,
+    },
+  });
+
+  console.log('Seeding finished.');
+  console.log(`  Admin : admin@app.com / 123456`);
+  console.log(`  Staff : ${SALES_STAFF_DEMO_USER.Email} / ${SALES_STAFF_DEMO_USER.Password}`);
+}
+
+main()
+  .then(async () => {
+    await prisma.$disconnect();
+  })
+  .catch(async (e) => {
+    if (e instanceof Error) {
+      console.error('Seeding error:', e.message);
+    } else {
+      console.error('Seeding error with unknown error:', String(e));
+    }
+
+    await prisma.$disconnect();
+    process.exit(1);
+  });
+

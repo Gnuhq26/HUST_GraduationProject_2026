@@ -2,6 +2,8 @@
 import { Save, Info, Users, Shield, Copy } from 'lucide-react';
 import storesService from '../services/storesService';
 import { useToast } from '../components/ToastProvider';
+import ProtectedAction from '../components/ProtectedAction';
+import { usePermission } from '../hooks/usePermission';
 import type { Store } from '@/types';
 
 interface StoreWithCount extends Store {
@@ -18,6 +20,7 @@ function buildShareUrl(store: StoreWithCount): string {
 
 export default function StoreSettings() {
   const toast = useToast();
+  const { hasPermission: canUpdateStore } = usePermission('update', 'Store');
   const [store, setStore] = useState<StoreWithCount | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -167,7 +170,10 @@ export default function StoreSettings() {
                 required
                 value={storeName}
                 onChange={(e) => setStoreName(e.target.value)}
-                className="w-full px-3 py-2.5 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 transition-colors"
+                disabled={!canUpdateStore}
+                className={`w-full px-3 py-2.5 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 transition-colors ${
+                  !canUpdateStore ? 'bg-blacky-50 text-blacky-500 cursor-not-allowed' : ''
+                }`}
                 placeholder="Cửa hàng ABC"
               />
             </div>
@@ -196,7 +202,10 @@ export default function StoreSettings() {
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full px-3 py-2.5 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 transition-colors"
+                disabled={!canUpdateStore}
+                className={`w-full px-3 py-2.5 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 transition-colors ${
+                  !canUpdateStore ? 'bg-blacky-50 text-blacky-500 cursor-not-allowed' : ''
+                }`}
                 placeholder="0123456789"
               />
             </div>
@@ -224,18 +233,23 @@ export default function StoreSettings() {
             <textarea
               value={address}
               onChange={(e) => setAddress(e.target.value)}
+              disabled={!canUpdateStore}
               rows={3}
-              className="w-full px-3 py-2.5 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 transition-colors resize-none"
+              className={`w-full px-3 py-2.5 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 transition-colors resize-none ${
+                !canUpdateStore ? 'bg-blacky-50 text-blacky-500 cursor-not-allowed' : ''
+              }`}
               placeholder="Nhập địa chỉ cửa hàng"
             />
           </div>
 
-          <div className="flex justify-end pt-2">
-            <button type="submit" disabled={saving} className="btn btn-primary w-fit! px-6! rounded-lg!">
-              <Save className="w-5 h-5" />
-              {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
-            </button>
-          </div>
+          <ProtectedAction action="update" subject="Store">
+            <div className="flex justify-end pt-2">
+              <button type="submit" disabled={saving} className="btn btn-primary w-fit! px-6! rounded-lg!">
+                <Save className="w-5 h-5" />
+                {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </button>
+            </div>
+          </ProtectedAction>
         </form>
       </div>
 
