@@ -42,20 +42,25 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   };
 
   return (
-    <aside className={`${collapsed ? 'w-16' : 'w-64'} bg-white border border-basic-border rounded-2xl m-2 flex flex-col transition-all duration-300 shrink-0`}>
-      {/* Toggle Button */}
-      <div className={`flex ${collapsed ? 'justify-center' : 'justify-end'} px-3 pt-3`}>
-        <button
-          onClick={onToggle}
-          className="p-1.5 rounded-lg hover:bg-blacky-50 text-blacky-400 hover:text-bluesh-800 transition-colors"
-          title={collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'}
-        >
-          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-        </button>
-      </div>
+    <aside
+      className={`relative ${collapsed ? 'w-16' : 'w-64'} bg-white border border-basic-border rounded-2xl m-2 flex flex-col transition-all duration-300 shrink-0`}
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        className="absolute top-1/2 -translate-y-1/2 right-0 translate-x-1/2 z-10 p-1.5 rounded-full bg-basic-white border border-basic-border shadow-sm text-blacky-400 hover:text-basic-white hover:bg-bluesh-800 transition-colors"
+        title={collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'}
+      >
+        {collapsed ? (
+          <ChevronRight className="w-4 h-4" strokeWidth={2.5} />
+        ) : (
+          <ChevronLeft className="w-4 h-4" strokeWidth={2.5} />
+        )}
+   
+      </button>
 
       {/* Navigation */}
-      <nav className="flex-1 p-3 overflow-y-auto">
+      <nav className="flex-1 min-h-0 p-3 overflow-y-auto scrollbar-hide">
         {/* Main Menu */}
         <div className="mb-6">
           {!collapsed && (

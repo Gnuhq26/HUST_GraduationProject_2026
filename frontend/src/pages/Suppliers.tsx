@@ -125,10 +125,12 @@ function Suppliers() {
               <Download className="w-4 h-4" />{exporting ? 'Đang xuất...' : 'Export Excel'}
             </button>
           </ProtectedAction>
-          <ProtectedAction action="create" subject="Supplier">
+          <ProtectedAction action="manage" subject="Supplier">
             <button onClick={() => setShowImportModal(true)} className="btn btn-secondary w-fit! px-4! rounded-lg!">
               <Upload className="w-4 h-4" />Import Excel
             </button>
+          </ProtectedAction>
+          <ProtectedAction action="create" subject="Supplier">
             <button onClick={handleCreate} className="btn btn-primary w-fit! px-4! rounded-lg!">
               <Plus className="w-4 h-4" />Thêm nhà cung cấp
             </button>

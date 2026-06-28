@@ -362,23 +362,25 @@ function Orders() {
 
               {/* Actions for Pending orders */}
               {order.Status === 'Pending' && (
-                <div
-                  className="flex items-center gap-2 mt-3 pt-3 border-t border-basic-border"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    onClick={() => handleFulfillOrder(order.OrderID, order.OrderCode || `#${order.OrderID}`)}
-                    className="flex-1 text-xs font-medium text-accent-green border border-accent-green/30 bg-accent-green/5 hover:bg-accent-green/10 rounded-lg py-1.5 flex items-center justify-center gap-1 transition-colors"
+                <ProtectedAction action="update" subject="Order">
+                  <div
+                    className="flex items-center gap-2 mt-3 pt-3 border-t border-basic-border"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    Hoàn tất
-                  </button>
-                  <button
-                    onClick={() => handleCancelOrder(order.OrderID, order.OrderCode || `#${order.OrderID}`)}
-                    className="flex-1 text-xs font-medium text-accent-red border border-accent-red/30 bg-accent-red/5 hover:bg-accent-red/10 rounded-lg py-1.5 flex items-center justify-center gap-1 transition-colors"
-                  >
-                    Hủy
-                  </button>
-                </div>
+                    <button
+                      onClick={() => handleFulfillOrder(order.OrderID, order.OrderCode || `#${order.OrderID}`)}
+                      className="flex-1 text-xs font-medium text-accent-green border border-accent-green/30 bg-accent-green/5 hover:bg-accent-green/10 rounded-lg py-1.5 flex items-center justify-center gap-1 transition-colors"
+                    >
+                      Hoàn tất
+                    </button>
+                    <button
+                      onClick={() => handleCancelOrder(order.OrderID, order.OrderCode || `#${order.OrderID}`)}
+                      className="flex-1 text-xs font-medium text-accent-red border border-accent-red/30 bg-accent-red/5 hover:bg-accent-red/10 rounded-lg py-1.5 flex items-center justify-center gap-1 transition-colors"
+                    >
+                      Hủy
+                    </button>
+                  </div>
+                </ProtectedAction>
               )}
             </div>
           ))}

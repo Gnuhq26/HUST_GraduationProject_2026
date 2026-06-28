@@ -3,6 +3,7 @@ import { Users, Truck, CreditCard } from 'lucide-react';
 import debtsService from '../services/debtsService';
 import { useToast } from '../components/ToastProvider';
 import DebtPaymentModal, { PaymentModalData } from '../components/debts/DebtPaymentModal';
+import ProtectedAction from '../components/ProtectedAction';
 
 interface DebtOrder {
   orderId: number;
@@ -230,13 +231,15 @@ export default function Debts() {
                             <td className="py-2 px-3 text-right text-accent-red font-semibold">{formatCurrency(order.remainingAmount)}</td>
                             <td className="py-2 px-3 text-center">
                               {order.remainingAmount > 0 && (
-                                <button
-                                  onClick={() => openPaymentModal('customer', order.orderId, order.remainingAmount)}
-                                  className="text-bluesh-800 hover:text-bluesh-600 text-sm font-medium inline-flex items-center gap-1 transition-colors"
-                                >
-                                  <CreditCard className="w-4 h-4" />
-                                  Thanh toán
-                                </button>
+                                <ProtectedAction action="manage" subject="Debt">
+                                  <button
+                                    onClick={() => openPaymentModal('customer', order.orderId, order.remainingAmount)}
+                                    className="text-bluesh-800 hover:text-bluesh-600 text-sm font-medium inline-flex items-center gap-1 transition-colors"
+                                  >
+                                    <CreditCard className="w-4 h-4" />
+                                    Thanh toán
+                                  </button>
+                                </ProtectedAction>
                               )}
                             </td>
                           </tr>
@@ -318,13 +321,15 @@ export default function Debts() {
                             <td className="py-2 px-3 text-right text-yellowfish-600 font-semibold">{formatCurrency(receipt.remainingAmount)}</td>
                             <td className="py-2 px-3 text-center">
                               {receipt.remainingAmount > 0 && (
-                                <button
-                                  onClick={() => openPaymentModal('supplier', receipt.receiptId, receipt.remainingAmount)}
-                                  className="text-bluesh-800 hover:text-bluesh-600 text-sm font-medium inline-flex items-center gap-1 transition-colors"
-                                >
-                                  <CreditCard className="w-4 h-4" />
-                                  Thanh toán
-                                </button>
+                                <ProtectedAction action="manage" subject="Debt">
+                                  <button
+                                    onClick={() => openPaymentModal('supplier', receipt.receiptId, receipt.remainingAmount)}
+                                    className="text-bluesh-800 hover:text-bluesh-600 text-sm font-medium inline-flex items-center gap-1 transition-colors"
+                                  >
+                                    <CreditCard className="w-4 h-4" />
+                                    Thanh toán
+                                  </button>
+                                </ProtectedAction>
                               )}
                             </td>
                           </tr>

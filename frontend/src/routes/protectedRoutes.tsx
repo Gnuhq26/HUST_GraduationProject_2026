@@ -110,7 +110,11 @@ export const protectedRoutes: RouteConfig[] = [
   {
     path: '/reports',
     component: Reports,
-    permission: { action: 'read', subject: 'Report' },
+    permission: null,
+    permissionsAny: [
+      { action: 'read', subject: 'Report' },
+      { action: 'read', subject: 'ProfitReport' },
+    ],
     menu: {
       group: 'main',
       label: 'Báo cáo',

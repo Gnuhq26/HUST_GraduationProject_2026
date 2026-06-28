@@ -1,0 +1,57 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Buildify logo">
+  <defs>
+    <linearGradient id="navy" x1="70" y1="40" x2="465" y2="500" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F3A68"></stop>
+      <stop offset="1" stop-color="#0B2447"></stop>
+    </linearGradient>
+
+    <linearGradient id="brick" x1="90" y1="240" x2="300" y2="500" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF8A00"></stop>
+      <stop offset="1" stop-color="#F15A24"></stop>
+    </linearGradient>
+
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#0B2447" flood-opacity="0.16"></feDropShadow>
+    </filter>
+  </defs>
+
+  <!-- Logo được phóng to để favicon nhìn rõ hơn -->
+  <g filter="url(#softShadow)" transform="translate(-70 -40) scale(1.2)">
+    <path fill="url(#navy)" d="
+      M134 104
+      L201 56
+      H314
+      C383 56 430 96 430 154
+      C430 194 408 226 371 243
+      C416 257 446 294 446 344
+      C446 414 393 456 316 456
+      H238
+      V373
+      H311
+      C341 373 362 357 362 332
+      C362 307 341 292 310 292
+      H238
+      V214
+      H304
+      C331 214 350 199 350 176
+      C350 153 331 139 303 139
+      H194
+      V250
+      L134 283
+      Z"></path>
+
+    <path fill="#FFFFFF" d="M134 289 L238 233 L238 270 L134 326 Z"></path>
+
+    <path fill="url(#brick)" d="M134 316 L226 266 L226 320 H134 Z"></path>
+
+    <rect x="134" y="337" width="58" height="39" rx="4" fill="url(#brick)"></rect>
+    <rect x="204" y="337" width="90" height="39" rx="4" fill="url(#brick)"></rect>
+    <rect x="134" y="393" width="106" height="39" rx="4" fill="url(#brick)"></rect>
+    <rect x="252" y="393" width="50" height="39" rx="4" fill="url(#brick)"></rect>
+
+    <rect x="144" y="347" width="38" height="5" rx="2.5" fill="#FDBA74" opacity="0.55"></rect>
+    <rect x="214" y="347" width="60" height="5" rx="2.5" fill="#FDBA74" opacity="0.55"></rect>
+    <rect x="144" y="403" width="72" height="5" rx="2.5" fill="#FDBA74" opacity="0.55"></rect>
+    <rect x="262" y="403" width="28" height="5" rx="2.5" fill="#FDBA74" opacity="0.55"></rect>
+  </g>
+</svg>

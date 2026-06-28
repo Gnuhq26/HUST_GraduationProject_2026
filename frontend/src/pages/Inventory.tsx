@@ -700,13 +700,15 @@ function Inventory() {
                               Chi tiết
                             </button>
                             {receipt.Status === 'Pending' && (
-                              <button
-                                onClick={() => setConfirmReceipt({ id: receipt.ReceiptID , code: receipt.ReceiptCode || '' })}
-                                className="text-accent-green hover:text-accent-green/80 font-medium flex items-center gap-1 text-sm"
-                              >
-                                <CheckCircle className="w-4 h-4" />
-                                Xác nhận
-                              </button>
+                              <ProtectedAction action="create" subject="Inventory">
+                                <button
+                                  onClick={() => setConfirmReceipt({ id: receipt.ReceiptID , code: receipt.ReceiptCode || '' })}
+                                  className="text-accent-green hover:text-accent-green/80 font-medium flex items-center gap-1 text-sm"
+                                >
+                                  <CheckCircle className="w-4 h-4" />
+                                  Xác nhận
+                                </button>
+                              </ProtectedAction>
                             )}
                           </div>
                         </td>
