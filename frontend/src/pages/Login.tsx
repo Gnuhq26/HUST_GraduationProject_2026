@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useForm, type SubmitHandler } from 'react-hook-form';
-import { ShoppingBag, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { PackageCheck , Eye, EyeOff, Loader2 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
-import loginIllustration from '../assets/image.png';
+import loginIllustration from '../assets/image1.png';
 import { getTenantIdentifier } from '../utils/tenantPath';
 
 type LoginFormData = {
@@ -75,10 +75,10 @@ export default function Login() {
 
         {/* Brand mark */}
         <div className="absolute top-10 left-10 z-10 flex items-center gap-3">
-          <div className="w-11 h-11 bg-bluesh-800 rounded-xl flex items-center justify-center shrink-0 shadow-lg">
-            <ShoppingBag className="text-white w-5 h-5" />
+          <div className="w-16 h-16 bg-bluesh-800 rounded-xl flex items-center justify-center shrink-0 shadow-lg">
+            <PackageCheck  className="text-white w-10 h-10" />
           </div>
-          <span className="font-bold text-bluesh-800 text-2xl tracking-tight">Gnuh Buildify</span>
+          <span className="font-bold text-bluesh-800 text-4xl tracking-tight">Gnuh Buildify</span>
         </div>
 
         {/* Illustration image */}
@@ -86,7 +86,7 @@ export default function Login() {
           <img
             src={loginIllustration}
             alt="Logistics illustration"
-            className="w-full max-w-xl object-contain drop-shadow-xl"
+            className="w-full max-w-2xl object-contain drop-shadow-xl"
           />
           <p className="text-bluesh-700 text-sm text-center leading-relaxed">
             Quản lý bán hàng toàn diện<br />nhanh chóng, chính xác, hiệu quả.
@@ -100,7 +100,7 @@ export default function Login() {
           {/* Mobile brand */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
             <div className="w-9 h-9 bg-bluesh-800 rounded-xl flex items-center justify-center">
-              <ShoppingBag className="text-white w-4 h-4" />
+              <PackageCheck  className="text-white w-4 h-4" />
             </div>
             <span className="font-bold text-blacky-950 text-lg">Gnuh Buildify</span>
           </div>

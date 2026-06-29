@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { PackageCheck, Loader2 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import { getTenantIdentifier } from '../utils/tenantPath';
 
@@ -16,7 +17,6 @@ export default function AuthCallback() {
   const handledRef = useRef(false);
 
   useEffect(() => {
-    // Prevent double-run in React StrictMode
     if (handledRef.current) return;
     handledRef.current = true;
 
@@ -49,10 +49,19 @@ export default function AuthCallback() {
   }, [searchParams, navigate, loginWithToken]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-10 h-10 border-4 border-[#1B4A6B] border-t-transparent rounded-full animate-spin" />
-        <p className="text-gray-500 text-sm">Đang xử lý đăng nhập...</p>
+    <div className="min-h-screen bg-bluesh-50 flex flex-col items-center justify-center px-6">
+      <div className="flex flex-col items-center gap-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-bluesh-800 rounded-xl flex items-center justify-center shrink-0">
+            <PackageCheck className="text-basic-white w-7 h-7" />
+          </div>
+          <span className="font-bold text-bluesh-900 text-xl tracking-tight">Gnuh Buildify</span>
+        </div>
+
+        <div className="flex flex-col items-center gap-3 bg-basic-white border border-basic-border2 rounded-xl px-8 py-6 shadow-[3.12px_9.37px_21.85px_0px_rgba(0,0,0,0.06)]">
+          <Loader2 className="w-8 h-8 animate-spin text-bluesh-800" />
+          <p className="text-sm text-blacky-600">Đang xử lý đăng nhập...</p>
+        </div>
       </div>
     </div>
   );

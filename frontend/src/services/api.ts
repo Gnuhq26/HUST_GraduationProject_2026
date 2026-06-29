@@ -71,14 +71,21 @@ api.interceptors.response.use(
     if (error.response) {
       // Xử lý các lỗi HTTP
       switch (error.response.status) {
-        case 401:
-          // Unauthorized - Token hết hạn hoặc không hợp lệ
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          localStorage.removeItem('stores');
-          localStorage.removeItem('currentStoreId');
-          window.location.href = '/login';
+        case 401: {
+          // Sai mật khẩu / đăng ký lỗi — form tự hiển thị lỗi, không reload trang
+          const requestUrl = error.config?.url ?? '';
+          const isAuthFormRequest =
+            requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register');
+
+          if (!isAuthFormRequest) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('stores');
+            localStorage.removeItem('currentStoreId');
+            window.location.href = '/login';
+          }
           break;
+        }
         case 403:
           // Forbidden - Không có quyền truy cập — thông báo cho user qua toast
           window.dispatchEvent(

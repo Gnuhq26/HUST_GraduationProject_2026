@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { authService } from '../services/authService';
 import { getTenantIdentifier } from '../utils/tenantPath';
+import { toAuthUserMessage } from '../utils/authErrorMessage';
 import type { User, StoreInfo, RegisterDto } from '@/types';
 
 interface AuthActionResult<T = unknown> {
@@ -78,8 +79,11 @@ const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
       
       return { success: true, data };
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      const errorMessage = error.response?.data?.message ?? 'Đăng nhập thất bại';
+      const error = err as { response?: { data?: { message?: string | string[] } } };
+      const errorMessage = toAuthUserMessage(
+        error.response?.data?.message,
+        'Email hoặc mật khẩu không đúng. Vui lòng thử lại.',
+      );
       set({ 
         error: errorMessage, 
         isLoading: false 
@@ -95,8 +99,11 @@ const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
       set({ isLoading: false });
       return { success: true, data };
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      const errorMessage = error.response?.data?.message ?? 'Đăng ký thất bại';
+      const error = err as { response?: { data?: { message?: string | string[] } } };
+      const errorMessage = toAuthUserMessage(
+        error.response?.data?.message,
+        'Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.',
+      );
       set({ 
         error: errorMessage, 
         isLoading: false 
