@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm, type SubmitHandler } from 'react-hook-form';
-import { ShoppingBag, Eye, EyeOff } from 'lucide-react';
+import { PackageCheck, Eye, EyeOff, Loader2 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
-import loginIllustration from '../assets/image.png';
+import loginIllustration from '../assets/image1.png';
 
 type RegisterFormData = {
   fullName: string;
@@ -14,19 +14,21 @@ type RegisterFormData = {
 
 export default function Register() {
   const navigate = useNavigate();
-  const { register: registerAction, isLoading, error } = useAuthStore();
+  const { register: registerAction, isLoading, error, clearError } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
+  useEffect(() => {
+    clearError();
+  }, [clearError]);
+
   const {
     register,
     handleSubmit,
-    watch,
+    getValues,
     formState: { errors },
   } = useForm<RegisterFormData>();
-
-  const password = watch('password');
 
   const onSubmit: SubmitHandler<RegisterFormData> = async (data) => {
     const result = await registerAction({
@@ -49,40 +51,40 @@ export default function Register() {
       <div className="hidden lg:flex lg:w-[60%] flex-col items-center justify-center relative overflow-hidden">
         {/* Brand mark */}
         <div className="absolute top-10 left-10 z-10 flex items-center gap-3">
-          <div className="w-11 h-11 bg-bluesh-800 rounded-xl flex items-center justify-center shrink-0 shadow-lg">
-            <ShoppingBag className="text-white w-5 h-5" />
+          <div className="w-16 h-16 bg-bluesh-800 rounded-xl flex items-center justify-center shrink-0 shadow-lg">
+            <PackageCheck className="text-white w-10 h-10" />
           </div>
-          <span className="font-bold text-bluesh-800 text-2xl tracking-tight">Gnuh Buildify</span>
+          <span className="font-bold text-bluesh-800 text-4xl tracking-tight">Gnuh Buildify</span>
         </div>
 
         {/* Illustration image */}
-        <div className="relative z-10 flex flex-col items-center justify-center gap-4 px-8">
+        <div className="relative z-10 flex flex-col items-center justify-center gap-4 px-4">
           <img
             src={loginIllustration}
             alt="Logistics illustration"
-            className="w-full max-w-xl object-contain drop-shadow-xl"
+            className="w-full max-w-2xl object-contain drop-shadow-xl"
           />
-          <p className="text-bluesh-600 text-sm text-center leading-relaxed">
-            Quản lý bán hàng toàn diện —<br />nhanh chóng, chính xác, hiệu quả.
+          <p className="text-bluesh-700 text-sm text-center leading-relaxed">
+            Quản lý bán hàng toàn diện<br />nhanh chóng, chính xác, hiệu quả.
           </p>
         </div>
       </div>
 
-      {/* Right Panel - Form */}
-      <div className="w-full lg:w-[40%] flex items-center justify-center px-8 py-12">
-        <div className="w-full max-w-md">
+      {/* Right Panel - Form (scrollable when content exceeds viewport) */}
+      <div className="w-full lg:w-[40%] overflow-y-auto px-8 py-10 lg:py-12">
+        <div className="w-full max-w-md mx-auto">
           {/* Mobile brand */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
             <div className="w-9 h-9 bg-bluesh-800 rounded-xl flex items-center justify-center">
-              <ShoppingBag className="text-white w-4 h-4" />
+              <PackageCheck className="text-white w-4 h-4" />
             </div>
-            <span className="font-bold text-bluesh-800 text-lg">Gnuh Buildify</span>
+            <span className="font-bold text-blacky-950 text-lg">Gnuh Buildify</span>
           </div>
 
           {/* Heading */}
           <div className="mb-7">
-            <h1 className="text-3xl font-bold text-bluesh-950 mb-1.5">Đăng ký</h1>
-            <p className="text-bluesh-600 text-sm">
+            <h1 className="text-3xl font-bold text-blacky-950 mb-1.5">Đăng ký</h1>
+            <p className="text-blacky-500 text-sm">
               Tạo tài khoản mới để bắt đầu sử dụng hệ thống.
             </p>
           </div>
@@ -105,7 +107,7 @@ export default function Register() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {/* Full Name */}
             <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-bluesh-700 mb-1.5">
+              <label htmlFor="fullName" className="block text-sm font-medium text-blacky-700 mb-1.5">
                 Họ và tên
               </label>
               <input
@@ -125,7 +127,7 @@ export default function Register() {
 
             {/* Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-bluesh-700 mb-1.5">
+              <label htmlFor="email" className="block text-sm font-medium text-blacky-700 mb-1.5">
                 Email
               </label>
               <input
@@ -148,7 +150,7 @@ export default function Register() {
 
             {/* Password */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-bluesh-700 mb-1.5">
+              <label htmlFor="password" className="block text-sm font-medium text-blacky-700 mb-1.5">
                 Mật khẩu
               </label>
               <div className="relative">
@@ -178,7 +180,7 @@ export default function Register() {
 
             {/* Confirm Password */}
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-bluesh-700 mb-1.5">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-blacky-700 mb-1.5">
                 Xác nhận mật khẩu
               </label>
               <div className="relative">
@@ -188,7 +190,7 @@ export default function Register() {
                   {...register('confirmPassword', {
                     required: 'Vui lòng xác nhận mật khẩu',
                     validate: (value) =>
-                      value === password || 'Mật khẩu xác nhận không khớp',
+                      value === getValues('password') || 'Mật khẩu xác nhận không khớp',
                   })}
                   className="input-field pr-12"
                   placeholder="Nhập lại mật khẩu"
@@ -210,10 +212,17 @@ export default function Register() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !!successMessage}
               className="btn btn-primary w-full mt-2 rounded-lg"
             >
-              {isLoading ? 'Đang đăng ký...' : 'Đăng ký'}
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="animate-spin w-5 h-5" />
+                  Đang đăng ký...
+                </span>
+              ) : (
+                'Đăng ký'
+              )}
             </button>
           </form>
 

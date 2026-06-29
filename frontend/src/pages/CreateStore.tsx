@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Store, ArrowLeft } from 'lucide-react';
+import { PackageCheck, Store, ArrowLeft, Loader2 } from 'lucide-react';
 import storesService from '../services/storesService';
 import useAuthStore from '../store/authStore';
 import { useToast } from '../components/ToastProvider';
@@ -25,7 +25,7 @@ interface CreateStoreFormData {
 function CreateStore() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { refreshAuth, setCurrentStore } = useAuthStore();
+  const { refreshAuth, setCurrentStore, stores } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<CreateStoreFormData>({
     storeName: '',
@@ -68,8 +68,7 @@ function CreateStore() {
         phone: formData.phone,
         address: formData.address,
       });
-      
-      // Refresh auth to get updated stores list
+
       await refreshAuth();
       const updatedStores = useAuthStore.getState().stores;
 
@@ -82,9 +81,8 @@ function CreateStore() {
           setCurrentStore(createdStore);
         }
       }
-      
+
       toast.success('Tạo cửa hàng thành công!');
-      // Navigate to the newly created store's tenant dashboard
       const tid = useAuthStore.getState().tenantIdentifier;
       navigate(tid ? `/${tid}` : '/select-store');
     } catch (err: unknown) {
@@ -101,98 +99,126 @@ function CreateStore() {
     }
   };
 
+  const handleBack = () => {
+    navigate(stores.length === 0 ? '/no-store' : '/select-store');
+  };
+
   return (
-    <div className="min-h-screen bg-linear-to-br from-primary-50 to-primary-100 flex items-center justify-center p-6">
-      <div className="max-w-2xl w-full">
-        {/* Back Button */}
+    <div className="min-h-screen bg-bluesh-50 flex flex-col">
+      <header className="bg-basic-white border-b border-basic-border px-6 md:px-8 py-4 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-bluesh-800 rounded-xl flex items-center justify-center shrink-0">
+            <PackageCheck className="text-basic-white w-7 h-7" />
+          </div>
+          <span className="font-bold text-bluesh-900 text-2xl tracking-tight">Gnuh Buildify</span>
+        </div>
         <button
-          onClick={() => navigate('/no-store')}
-          className="text-gray-600 hover:text-gray-800 font-medium flex items-center gap-2 mb-6 transition-colors"
+          type="button"
+          onClick={handleBack}
+          className="inline-flex items-center gap-2 text-sm font-medium text-blacky-600 hover:text-bluesh-800 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Quay lại
+          <span className="hidden sm:inline">Quay lại</span>
         </button>
+      </header>
 
-        {/* Form Card */}
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="bg-primary-600 text-white p-3 rounded-lg">
-              <Store className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-800">Tạo cửa hàng mới</h1>
-              <p className="text-gray-600 text-sm">Điền thông tin cửa hàng của bạn</p>
-            </div>
+      <main className="flex-1 flex items-center justify-center px-6 py-10 md:py-14">
+        <div className="w-full max-w-lg">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl md:text-[36px] font-bold leading-tight bg-linear-to-r from-[#0179B4] to-[#6FD0FF] bg-clip-text text-transparent pb-2 mb-2">
+              Tạo cửa hàng mới
+            </h1>
+            <p className="text-blacky-600 text-sm">
+              Điền thông tin cửa hàng để bắt đầu quản lý trên Buildify
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Store Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tên cửa hàng <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="storeName"
-                value={formData.storeName}
-                onChange={handleChange}
-                placeholder="Ví dụ: Cửa hàng ABC"
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                  errors.storeName ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
-              {errors.storeName && (
-                <p className="text-red-500 text-sm mt-1">{errors.storeName}</p>
-              )}
+          <div className="bg-basic-white rounded-xl border border-basic-border2 p-6 md:p-8 shadow-[3.12px_9.37px_21.85px_0px_rgba(0,0,0,0.06)]">
+            <div className="flex items-center gap-3 mb-6 pb-6 border-b border-basic-border">
+              <div className="w-11 h-11 bg-bluesh-800 rounded-xl flex items-center justify-center shrink-0">
+                <Store className="w-7 h-7 text-basic-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-bluesh-900">Thông tin cửa hàng</h2>
+                <p className="text-sm text-blacky-500">Các trường có dấu <span className="text-accent-red">*</span> là bắt buộc</p>
+              </div>
             </div>
 
-            <p className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
-              Sau khi tạo, hệ thống tự sinh <strong>Display ID</strong> cho URL dạng{' '}
-              <code className="text-xs bg-white px-1 rounded">domain/abc1234/</code> — không cần nhập subdomain.
-            </p>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label htmlFor="storeName" className="block text-sm font-medium text-blacky-700 mb-1.5">
+                  Tên cửa hàng <span className="text-accent-red">*</span>
+                </label>
+                <input
+                  id="storeName"
+                  type="text"
+                  name="storeName"
+                  value={formData.storeName}
+                  onChange={handleChange}
+                  placeholder="Ví dụ: Cửa hàng ABC"
+                  className={`input-field ${errors.storeName ? 'input-error' : ''}`}
+                />
+                {errors.storeName && (
+                  <p className="mt-1.5 text-xs text-accent-red">{errors.storeName}</p>
+                )}
+              </div>
 
-            {/* Phone */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Số điện thoại
-              </label>
-              <input
-                type="text"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                placeholder="0123456789"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
-            </div>
+              <p className="text-sm text-blacky-600 bg-yellowfish-50 border border-yellowfish-200 rounded-xl px-4 py-3 leading-relaxed">
+                Sau khi tạo, hệ thống tự sinh <strong className="text-yellowfish-500">Display ID</strong> cho URL dạng{' '}
+                <code className="text-xs text-yellowfish-500 bg-basic-white border border-yellowfish-200 px-1.5 py-0.5 rounded">domain/abc1234/</code>
+                {' '} - không cần nhập subdomain.
+              </p>
 
-            {/* Address */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Địa chỉ
-              </label>
-              <textarea
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                placeholder="79 Cầu Giấy, Hà Nội"
-                rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
-            </div>
+              <div>
+                <label htmlFor="phone" className="block text-sm font-medium text-blacky-700 mb-1.5">
+                  Số điện thoại
+                </label>
+                <input
+                  id="phone"
+                  type="text"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="0123456789"
+                  className="input-field"
+                />
+              </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary-600 hover:bg-primary-700 text-white py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              <Store className="w-5 h-5" />
-              {loading ? 'Đang tạo...' : 'Tạo cửa hàng'}
-            </button>
-          </form>
+              <div>
+                <label htmlFor="address" className="block text-sm font-medium text-blacky-700 mb-1.5">
+                  Địa chỉ
+                </label>
+                <textarea
+                  id="address"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  placeholder="79 Cầu Giấy, Hà Nội"
+                  rows={3}
+                  className="input-field resize-none min-h-[100px]"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn btn-primary w-full rounded-lg!"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Đang tạo...
+                  </>
+                ) : (
+                  <>
+                    Tạo cửa hàng
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

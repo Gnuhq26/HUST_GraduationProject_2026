@@ -1,5 +1,5 @@
-import { Controller, Get } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AiAnalystService } from './ai-analyst.service';
 import { CurrentStore } from '../../common/decorators';
 import { CheckPermission } from '../../common/decorators/check-permission.decorator';
@@ -13,7 +13,11 @@ export class AiAnalystController {
   @Get('insights')
   @CheckPermission('read', 'AiAnalyst')
   @ApiOperation({ summary: 'Lấy phân tích & lời khuyên kinh doanh từ AI' })
-  async getInsights(@CurrentStore() storeId: number) {
-    return this.aiAnalystService.generateInsights(storeId);
+  @ApiQuery({ name: 'refresh', required: false, description: 'true = bỏ qua cache và gọi lại AI' })
+  async getInsights(
+    @CurrentStore() storeId: number,
+    @Query('refresh') refresh?: string,
+  ) {
+    return this.aiAnalystService.generateInsights(storeId, refresh === 'true');
   }
 }

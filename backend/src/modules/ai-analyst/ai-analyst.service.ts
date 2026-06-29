@@ -49,7 +49,7 @@ export class AiAnalystService {
     this.model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
       generationConfig: {
-        maxOutputTokens: 1024,
+        maxOutputTokens: 2048,
         temperature: 0.7,
       },
     });
@@ -276,13 +276,39 @@ ${inTransitSection}
 ${debtorsSection}
 
 ---
-Dựa trên dữ liệu trên, hãy đưa ra 3-5 lời khuyên ngắn gọn, cụ thể và có tính hành động cho chủ cửa hàng. Ưu tiên các vấn đề cấp bách nhất.
+Dựa trên dữ liệu trên, hãy viết báo cáo phân tích kinh doanh cho chủ cửa hàng.
 
-Yêu cầu:
+Yêu cầu bắt buộc:
 - Trả lời bằng tiếng Việt.
-- Sử dụng Markdown để format (heading, bullet points, bold).
 - Chỉ phân tích dựa trên dữ liệu được cung cấp, KHÔNG bịa thêm số liệu.
-- Nếu dữ liệu quá ít (ví dụ: 0 đơn hàng), hãy ghi nhận cửa hàng mới hoạt động và đưa ra lời khuyên phù hợp.`;
+- KHÔNG chỉ viết lời giới thiệu hoặc hứa hẹn ("dưới đây là các lời khuyên...") mà phải điền đầy đủ nội dung từng mục.
+- Nếu dữ liệu quá ít (ví dụ: 0 đơn hàng), ghi nhận cửa hàng mới hoạt động và đưa lời khuyên phù hợp.
+- Bắt buộc dùng đúng cấu trúc Markdown sau (giữ nguyên tiêu đề section):
+
+## Tóm tắt nhanh
+(Viết 2-3 câu, trích số liệu cụ thể từ dữ liệu)
+
+## Điểm cần chú ý
+- (Ít nhất 2 bullet, mỗi bullet 1-2 câu; dùng "- " làm bullet, không lồng "* **")
+- Nếu in đậm nhãn thì phải đóng đúng cặp: **Nhãn:** nội dung (có ** mở và ** đóng trước dấu hai chấm)
+
+## Lời khuyên hành động
+### 1. [Tiêu đề ngắn]
+- Vấn đề: ...
+- Hành động: ...
+- Ưu tiên: Cao / Trung bình / Thấp
+
+### 2. [Tiêu đề ngắn]
+- Vấn đề: ...
+- Hành động: ...
+- Ưu tiên: Cao / Trung bình / Thấp
+
+### 3. [Tiêu đề ngắn]
+- Vấn đề: ...
+- Hành động: ...
+- Ưu tiên: Cao / Trung bình / Thấp
+
+(Tối thiểu 3 mục lời khuyên, tối đa 5 mục nếu cần)`;
   }
 
   // ==========================================

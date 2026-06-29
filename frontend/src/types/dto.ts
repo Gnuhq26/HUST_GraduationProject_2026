@@ -212,6 +212,7 @@ export interface TopProductsParams extends ReportDateParams {
 export interface AiInsightsResponse {
   insights: string;
   generatedAt: string;
+  cached?: boolean;
 }
 
 // ===== PERMISSIONS (grouped response) =====

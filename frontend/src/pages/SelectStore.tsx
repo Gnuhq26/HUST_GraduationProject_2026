@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { WarehouseIcon, PlusIcon, ChevronRightIcon, LinkIcon } from 'lucide-react';
+import { PackageCheck, PlusIcon, ChevronRightIcon, LinkIcon, LogOut } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import type { StoreInfo } from '@/types';
 import { getTenantIdentifier } from '../utils/tenantPath';
 
 function SelectStore() {
   const navigate = useNavigate();
-  const { stores, setCurrentStore } = useAuthStore();
+  const { stores, setCurrentStore, logout } = useAuthStore();
 
   const handleSelectStore = (store: StoreInfo) => {
     setCurrentStore(store);
@@ -17,6 +17,11 @@ function SelectStore() {
 
   const handleCreateNewStore = () => {
     navigate('/create-store');
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   useEffect(() => {
@@ -30,13 +35,23 @@ function SelectStore() {
   }, [stores, navigate, setCurrentStore]);
 
   return (
-    <div className="min-h-screen bg- flex flex-col">
+    <div className="min-h-screen bg-bluesh-50 flex flex-col">
       {/* Top bar */}
-      <header className="bg-white border-b border-basic-border px-8 py-4 flex items-center gap-3">
-        <div className="w-9 h-9 bg-bluesh-800 rounded-xl flex items-center justify-center shrink-0">
-          <WarehouseIcon className="text-white text-lg" />
+      <header className="bg-basic-white border-b border-basic-border px-6 md:px-8 py-4 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-bluesh-800 rounded-xl flex items-center justify-center shrink-0">
+            <PackageCheck className="text-basic-white w-7 h-7" />
+          </div>
+          <span className="font-bold text-bluesh-900 text-2xl tracking-tight">Gnuh Buildify</span>
         </div>
-        <span className="font-bold text-blacky-950 text-lg">Gnuh Buildify</span>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="inline-flex items-center gap-2 text-base font-medium text-accent-red hover:text-accent-red/80 transition-colors"
+        >
+          <LogOut className="w-5 h-5" />
+          <span className="hidden md:inline">Đăng xuất</span>
+        </button>
       </header>
 
       {/* Main content */}
@@ -64,7 +79,7 @@ function SelectStore() {
                 {/* Icon + role badge */}
                 <div className="flex items-start  justify-between">
                   <div className="w-11 h-11 bg-bluesh-100 border  rounded-lg flex items-center justify-center">
-                    <WarehouseIcon className="text-bluesh-800 text-xl" />
+                    <PackageCheck className="text-bluesh-800 text-xl" />
                   </div>
                   <span className="text-xs font-medium bg-bluesh-50 text-bluesh-800 border border-bluesh-200 px-2.5 py-1 rounded-full">
                     {store.roleName}
