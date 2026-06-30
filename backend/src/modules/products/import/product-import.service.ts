@@ -247,18 +247,14 @@ export class ProductImportService {
       exchangeValue: 500,
     });
 
-    // Ghi chú hướng dẫn: dòng cùng SKU = thêm đơn vị quy đổi
-    const noteRow = sheet.addRow([
-      '\u2139 Hướng dẫn: Để thêm nhiều đơn vị quy đổi cho 1 sản phẩm, hãy thêm nhiều dòng với cùng mã SKU (chỉ điền SKU và ĐV quy đổi).',
+    // Ghi chú hướng dẫn trên sheet riêng — tránh bị parser đọc nhầm thành dòng sản phẩm
+    const guideSheet = workbook.addWorksheet('Hướng dẫn');
+    guideSheet.getColumn(1).width = 100;
+    const guideRow = guideSheet.addRow([
+      'Để thêm nhiều đơn vị quy đổi cho 1 sản phẩm: thêm nhiều dòng với cùng mã SKU. Dòng tiếp theo chỉ cần điền SKU, Đơn vị quy đổi và Hệ số quy đổi (các cột khác để trống).',
     ]);
-    noteRow.font = { italic: true, color: { argb: 'FF7F6000' } };
-    noteRow.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFFFF2CC' },
-    };
-    noteRow.getCell(1).alignment = { wrapText: true };
-    sheet.mergeCells(`A${noteRow.number}:H${noteRow.number}`);
+    guideRow.font = { italic: true, color: { argb: 'FF7F6000' } };
+    guideRow.getCell(1).alignment = { wrapText: true };
 
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);
