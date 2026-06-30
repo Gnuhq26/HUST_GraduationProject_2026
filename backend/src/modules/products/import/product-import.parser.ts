@@ -13,6 +13,31 @@ export interface RawProductRow {
   exchangeValue: number | null;
 }
 
+/** Bỏ qua dòng trống hoặc dòng ghi chú/hướng dẫn trong template (không phải dữ liệu SP). */
+function isSkippableRow(row: Omit<RawProductRow, 'rowNumber'>): boolean {
+  const textFields = [
+    row.sku,
+    row.productName,
+    row.categoryName,
+    row.baseUnit,
+    row.description,
+    row.unitName,
+  ];
+  const hasText = textFields.some((v) => v.length > 0);
+  const hasNumber = row.marginRate != null || row.exchangeValue != null;
+
+  if (!hasText && !hasNumber) {
+    return true;
+  }
+
+  const blob = textFields.join(' ').toLowerCase();
+  if (/hướng dẫn/.test(blob) || /lưu ý\s*:/.test(blob)) {
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * Đọc file Excel (.xlsx) từ buffer, bỏ dòng header, map thành mảng RawProductRow.
  * Cột thứ tự:
@@ -45,8 +70,7 @@ export async function parseExcel(buffer: Buffer): Promise<RawProductRow[]> {
       return isNaN(num) ? null : num;
     };
 
-    rows.push({
-      rowNumber,
+    const parsed: Omit<RawProductRow, 'rowNumber'> = {
       sku: getString(1),
       productName: getString(2),
       categoryName: getString(3),
@@ -55,6 +79,15 @@ export async function parseExcel(buffer: Buffer): Promise<RawProductRow[]> {
       marginRate: getNumber(6),
       unitName: getString(7),
       exchangeValue: getNumber(8),
+    };
+
+    if (isSkippableRow(parsed)) {
+      return;
+    }
+
+    rows.push({
+      rowNumber,
+      ...parsed,
     });
   });
 
