@@ -148,25 +148,28 @@ export default function ProductFormModal({ product, categories, onClose, onSucce
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-blacky-700 mb-1.5">Danh mục</label>
+              <label className="block text-sm font-medium text-blacky-700 mb-1.5">
+                Danh mục <span className="text-accent-red">*</span>
+              </label>
               <Controller
                 name="CategoryID"
                 control={control}
+                rules={{ required: 'Danh mục là bắt buộc' }}
                 render={({ field }) => (
                   <CustomSelect
                     value={field.value != null ? String(field.value) : ''}
                     onChange={(val) => field.onChange(val ? Number(val) : undefined)}
-                    options={[
-                      { value: '', label: 'Không có danh mục' },
-                      ...categories.map((c) => ({
-                        value: String(c.CategoryID),
-                        label: c.CategoryName,
-                      })),
-                    ]}
+                    options={categories.map((c) => ({
+                      value: String(c.CategoryID),
+                      label: c.CategoryName,
+                    }))}
                     placeholder="Chọn danh mục"
                   />
                 )}
               />
+              {errors.CategoryID && (
+                <p className="mt-1 text-sm text-accent-red">{errors.CategoryID.message}</p>
+              )}
             </div>
 
             <div>

@@ -115,6 +115,9 @@ function Reports() {
   ]);
 
   useEffect(() => {
+    // Effect tải báo cáo khi bộ lọc/quyền thay đổi. setLoading trong loadReports
+    // là chủ đích (hiển thị trạng thái tải) nên bỏ qua cảnh báo set-state-in-effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadReports();
   }, [loadReports]);
 
@@ -317,7 +320,7 @@ function Reports() {
                     </div>
                     <div className="flex justify-between items-center p-3 bg-basic-white border border-bluesh-100 rounded-lg">
                       <span className="text-blacky-700 text-base">
-                        Tiền cọc đặt trước ({revenueReport.pendingOrders})
+                        Tiền cọc đặt trước ({revenueReport.pendingOrders} đơn)
                       </span>
                       <span className="font-semibold text-yellowfish-600">
                         {formatCurrency(revenueReport.pendingDeposit)}
@@ -329,16 +332,6 @@ function Reports() {
                         {formatCurrency(revenueReport.debtIncurred)}
                       </span>
                     </div>
-                    {revenueReport.pendingDeposit > 0 && (
-                      <div className="flex justify-between items-center p-3 bg-basic-white border border-bluesh-100 rounded-lg">
-                        <span className="text-blacky-700 text-base">
-                          Tiền cọc đặt trước ({revenueReport.pendingOrders} đơn)
-                        </span>
-                        <span className="font-semibold text-yellowfish-600">
-                          {formatCurrency(revenueReport.pendingDeposit)}
-                        </span>
-                      </div>
-                    )}
                     <div className="flex justify-between items-center p-3 bg-basic-white border border-bluesh-100 rounded-lg">
                       <span className="text-blacky-700 text-base">Đơn giao thành công</span>
                       <span className="font-semibold text-bluesh-800">

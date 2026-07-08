@@ -49,6 +49,43 @@ export async function validateRows(
     existingProducts.map((p) => p.SKU!.toLowerCase()),
   );
 
+  // ── Fill-down: dòng tiếp nối (cùng SKU, chỉ có đơn vị quy đổi) sẽ kế thừa
+  // thông tin sản phẩm chính (tên/danh mục/đơn vị gốc...) từ dòng đầu tiên của SKU.
+  // Nhờ vậy người dùng không phải lặp lại các cột này ở mỗi dòng đơn vị.
+  const primaryBySku = new Map<
+    string,
+    Pick<
+      RawProductRow,
+      'productName' | 'categoryName' | 'baseUnit' | 'marginRate' | 'description'
+    >
+  >();
+  for (const row of rows) {
+    if (!row.sku) continue;
+    const skuKey = row.sku.toLowerCase();
+    if (row.productName) {
+      // Dòng chính: ghi nhận thông tin để các dòng tiếp nối kế thừa
+      if (!primaryBySku.has(skuKey)) {
+        primaryBySku.set(skuKey, {
+          productName: row.productName,
+          categoryName: row.categoryName,
+          baseUnit: row.baseUnit,
+          marginRate: row.marginRate,
+          description: row.description,
+        });
+      }
+    } else {
+      // Dòng tiếp nối: chỉ fill khi đã có dòng chính cùng SKU phía trên
+      const primary = primaryBySku.get(skuKey);
+      if (primary) {
+        row.productName = primary.productName;
+        if (!row.categoryName) row.categoryName = primary.categoryName;
+        if (!row.baseUnit) row.baseUnit = primary.baseUnit;
+        if (row.marginRate == null) row.marginRate = primary.marginRate;
+        if (!row.description) row.description = primary.description;
+      }
+    }
+  }
+
   for (const row of rows) {
     const errors: string[] = [];
 

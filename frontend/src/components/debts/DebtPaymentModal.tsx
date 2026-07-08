@@ -1,5 +1,5 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import { X, AlertCircle } from 'lucide-react';
 
 export interface PaymentModalData {
   type: 'customer' | 'supplier';
@@ -36,6 +36,19 @@ export default function DebtPaymentModal({
   onNoteChange,
   onSubmit,
 }: DebtPaymentModalProps) {
+  const amount = parseFloat(paymentAmount);
+  const hasInput = paymentAmount.trim() !== '';
+  const isPositive = !isNaN(amount) && amount > 0;
+  const withinLimit = !isNaN(amount) && amount <= paymentModal.remaining;
+  const isValid = isPositive && withinLimit;
+
+  let errorMessage: string | null = null;
+  if (hasInput && !isPositive) {
+    errorMessage = 'Số tiền phải lớn hơn 0';
+  } else if (hasInput && !withinLimit) {
+    errorMessage = `Số tiền vượt quá số còn nợ (${formatCurrency(paymentModal.remaining)})`;
+  }
+
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-basic-white rounded-2xl overflow-hidden w-full max-w-md shadow-xl" onClick={(e) => e.stopPropagation()}>
@@ -51,7 +64,7 @@ export default function DebtPaymentModal({
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="p-6 space-y-4">
+        <form onSubmit={onSubmit} noValidate className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-blacky-700 mb-1">
               Số tiền thanh toán <span className="text-accent-red">*</span>
@@ -64,14 +77,21 @@ export default function DebtPaymentModal({
             </p>
             <input
               type="number"
-              required
-              min="1"
-              max={paymentModal.remaining}
               value={paymentAmount}
               onChange={(e) => onAmountChange(e.target.value)}
-              className="w-full px-3 py-2 border border-blacky-200 rounded-lg focus:outline-none focus:border-bluesh-800 focus:bg-bluesh-50 transition-colors"
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none transition-colors ${
+                errorMessage
+                  ? 'border-accent-red bg-accent-red/5 focus:border-accent-red'
+                  : 'border-blacky-200 focus:border-bluesh-800 focus:bg-bluesh-50'
+              }`}
               placeholder="Nhập số tiền..."
             />
+            {errorMessage && (
+              <p className="mt-1.5 text-xs font-medium text-accent-red flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                {errorMessage}
+              </p>
+            )}
           </div>
 
           <div>
@@ -97,8 +117,8 @@ export default function DebtPaymentModal({
             </button>
             <button
               type="submit"
-              disabled={submitting}
-              className="btn btn-primary flex-1 rounded-lg!"
+              disabled={submitting || !isValid}
+              className="btn btn-primary flex-1 rounded-lg! disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? 'Đang xử lý...' : 'Xác nhận'}
             </button>

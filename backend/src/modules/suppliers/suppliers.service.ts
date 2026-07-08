@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Prisma } from '../../../generated/prisma/client';
 import { PrismaService } from '../../common/prisma';
 import { CreateSupplierDto, UpdateSupplierDto } from './dto';
 import { PaginatedResult, PaginationParams, paginateResult } from '../../common/pagination';
@@ -27,14 +28,28 @@ export class SuppliersService {
       );
     }
 
-    return await this.prisma.supplier.create({
-      data: {
-        StoreID: storeId,
-        SupplierName: dto.supplierName,
-        Phone: dto.phone,
-        Address: dto.address,
-      },
-    });
+    try {
+      return await this.prisma.supplier.create({
+        data: {
+          StoreID: storeId,
+          SupplierName: dto.supplierName,
+          Phone: dto.phone,
+          Address: dto.address,
+        },
+      });
+    } catch (error) {
+      // Chặn race condition: 2 request cùng tên vượt qua check findUnique ở trên
+      // rồi cùng insert → unique index (StoreID, SupplierName) ném P2002.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'Supplier name already exists in this store',
+        );
+      }
+      throw error;
+    }
   }
 
   /**
@@ -130,14 +145,26 @@ export class SuppliersService {
       }
     }
 
-    return await this.prisma.supplier.update({
-      where: { SupplierID: supplierId },
-      data: {
-        SupplierName: dto.supplierName,
-        Phone: dto.phone,
-        Address: dto.address,
-      },
-    });
+    try {
+      return await this.prisma.supplier.update({
+        where: { SupplierID: supplierId },
+        data: {
+          SupplierName: dto.supplierName,
+          Phone: dto.phone,
+          Address: dto.address,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'Supplier name already exists in this store',
+        );
+      }
+      throw error;
+    }
   }
 
   /**

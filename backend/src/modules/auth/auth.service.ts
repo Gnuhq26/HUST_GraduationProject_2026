@@ -197,7 +197,7 @@ export class AuthService {
    * Get user by ID with store information
    */
   async getUserById(userId: number) {
-    return await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { UserID: userId },
       select: {
         UserID: true,
@@ -209,6 +209,13 @@ export class AuthService {
         CreatedAt: true,
       },
     });
+
+    if (!user) {
+      return null;
+    }
+
+    const stores = await this.getUserStores(userId);
+    return { ...user, stores };
   }
 
   async updateProfile(userId: number, dto: UpdateProfileDto) {

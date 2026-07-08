@@ -113,7 +113,7 @@ export default function MonthlyRevenueChart() {
     <div className="bg-basic-white rounded-xl border border-basic-border2 p-6 flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-xl font-bold text-blacky-950">Analytics</h3>
+        <h3 className="text-xl font-bold text-blacky-950">Doanh thu theo tháng</h3>
         <Link
           to={toTenantPath('/reports')}
           className="text-sm font-medium text-bluesh-800 underline underline-offset-2 hover:opacity-80 transition-opacity"

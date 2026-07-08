@@ -254,6 +254,7 @@ model StockReceiptDetail {
   UnitPrice    Decimal  @db.Decimal(18, 2) // Giá nhập niêm yết của đơn vị này
   DiscountRate Decimal  @db.Decimal(5, 2) @default(0.00) // Chiết khấu từ NCC (0.10 = 10%)
   CostPrice    Decimal  @db.Decimal(18, 2) @default(0) // Giá vốn thực = UnitPrice × (1 - DiscountRate)
+  ExchangeValue Decimal @db.Decimal(18, 3) @default(1) // Hệ số quy đổi về BaseUnit chốt tại thời điểm nhập
 
   // Relations
   receipt      StockReceipt @relation(fields: [ReceiptID], references: [ReceiptID], onDelete: Cascade)
@@ -322,6 +323,7 @@ model OrderDetail {
   Quantity     Decimal  @db.Decimal(18, 2) // Số lượng bán theo UnitName
   UnitPrice    Decimal  @db.Decimal(18, 2) // Giá thực tế lúc chốt đơn
   CostPrice    Decimal  @db.Decimal(18, 2) @default(0) // Giá vốn tại thời điểm bán (để tính lợi nhuận)
+  ExchangeValue Decimal @db.Decimal(18, 3) @default(1) // Hệ số quy đổi về BaseUnit chốt tại thời điểm bán
   
   // Relations
   order        Order    @relation(fields: [OrderID], references: [OrderID], onDelete: Cascade)

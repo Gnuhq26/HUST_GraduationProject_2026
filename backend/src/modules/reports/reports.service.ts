@@ -229,7 +229,7 @@ export class ReportsService {
       JOIN Product p ON od.ProductID = p.ProductID
       JOIN Category c ON p.CategoryID = c.CategoryID
       WHERE o.StoreID = ${storeId}
-        AND o.Status != 'Cancelled'
+        AND o.Status = 'Completed'
         AND DATE(o.OrderDate) BETWEEN ${startDate} AND ${endDate}
       GROUP BY p.CategoryID, c.CategoryName
       ORDER BY totalRevenue DESC

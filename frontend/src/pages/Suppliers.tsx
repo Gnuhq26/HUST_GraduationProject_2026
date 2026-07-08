@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Truck, Phone, MapPin, Search, Package, Upload, Download, Plus, Edit2, Trash2 } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Truck, Phone, MapPin, Search, Package, Upload, Download, Plus, Edit2, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import suppliersService from '../services/suppliersService';
 import ImportSupplierModal from '../components/supplier/ImportSupplierModal';
 import SupplierFormModal from '../components/supplier/SupplierFormModal';
@@ -13,6 +13,8 @@ interface SupplierWithCount extends Supplier {
   _count?: { receipts: number };
 }
 
+const PAGE_SIZE = 10;
+
 function Suppliers() {
   const [suppliers, setSuppliers] = useState<SupplierWithCount[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,24 +23,45 @@ function Suppliers() {
   const [selectedSupplier, setSelectedSupplier] = useState<SupplierWithCount | null>(null);
   const [detailSupplierId, setDetailSupplierId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [showImportModal, setShowImportModal] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<SupplierWithCount | null>(null);
   const toast = useToast();
 
-  // Stats
+  // Stats: tổng số lấy từ meta (chính xác toàn bộ), 2 chỉ số phụ tính trên trang hiện tại
   const stats = {
-    total: suppliers.length,
+    total,
     withReceipts: suppliers.filter((s) => (s._count?.receipts ?? 0) > 0).length,
     withPhone: suppliers.filter((s) => s.Phone).length,
   };
+
+  // Debounce ô tìm kiếm để tránh gọi API liên tục
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 350);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Khi từ khóa thay đổi, quay về trang 1
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
 
   const loadSuppliers = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await suppliersService.getAll();
-      setSuppliers(res as SupplierWithCount[]);
+      const res = await suppliersService.getPaginated({
+        search: debouncedSearch || undefined,
+        page,
+        limit: PAGE_SIZE,
+      });
+      setSuppliers(res.data as SupplierWithCount[]);
+      setTotal(res.meta.total);
+      setTotalPages(res.meta.totalPages);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
       setError(e.response?.data?.message || 'Không thể tải danh sách nhà cung cấp');
@@ -46,21 +69,11 @@ function Suppliers() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [debouncedSearch, page]);
 
   useEffect(() => {
     loadSuppliers();
   }, [loadSuppliers]);
-
-  const displayedSuppliers = useMemo(() => {
-    if (!searchQuery.trim()) return suppliers;
-    const q = searchQuery.toLowerCase();
-    return suppliers.filter(
-      (s) =>
-        s.SupplierName.toLowerCase().includes(q) ||
-        (s.Phone ?? '').toLowerCase().includes(q),
-    );
-  }, [suppliers, searchQuery]);
 
   const handleCreate = () => {
     setSelectedSupplier(null);
@@ -226,17 +239,11 @@ function Suppliers() {
             {suppliers.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-6 py-8 text-center text-blacky-500">
-                  Không có nhà cung cấp nào
-                </td>
-              </tr>
-            ) : displayedSuppliers.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-blacky-500">
-                  Không tìm thấy nhà cung cấp phù hợp
+                  {debouncedSearch ? 'Không tìm thấy nhà cung cấp phù hợp' : 'Không có nhà cung cấp nào'}
                 </td>
               </tr>
             ) : (
-              displayedSuppliers.map((supplier, idx) => (
+              suppliers.map((supplier, idx) => (
                 <tr
                   key={supplier.SupplierID}
                   className="hover:bg-blacky-50 transition-colors cursor-pointer"
@@ -246,7 +253,7 @@ function Suppliers() {
                     }
                   }}
                 >
-                  <td className="px-6 py-4 text-left text-blacky-700">{idx + 1}</td>
+                  <td className="px-6 py-4 text-left text-blacky-700">{(page - 1) * PAGE_SIZE + idx + 1}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-bluesh-800">{supplier.SupplierName}</span>
@@ -297,6 +304,33 @@ function Suppliers() {
         </table>
         </div>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-sm text-blacky-500">
+            Trang {page} / {totalPages} · Tổng {total} nhà cung cấp
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1 || loading}
+              className="btn btn-secondary w-fit! px-3! rounded-lg! disabled:opacity-40"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Trước
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages || loading}
+              className="btn btn-secondary w-fit! px-3! rounded-lg! disabled:opacity-40"
+            >
+              Sau
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Supplier Detail Modal */}
       {detailSupplierId && (
