@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Prisma } from '../../../generated/prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { RecordPaymentDto } from './dto/payment.dto';
 
@@ -321,6 +322,6 @@ export class DebtsService {
         note,
       };
     }
-    }); // end transaction
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }); // end transaction
   }
 }

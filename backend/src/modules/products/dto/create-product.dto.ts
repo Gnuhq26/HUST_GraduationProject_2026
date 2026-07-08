@@ -23,7 +23,7 @@ export class ProductUnitDto {
     description: 'Tỷ lệ quy đổi (1 Pallet = 500 Viên)',
   })
   @IsNumber()
-  @Min(0)
+  @Min(0.01)
   exchangeValue!: number;
 
   @ApiPropertyOptional({

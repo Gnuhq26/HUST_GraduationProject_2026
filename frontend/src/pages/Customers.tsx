@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Plus, Edit2, Trash2, User, Phone, MapPin, Upload, Download, Search } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Edit2, Trash2, User, Phone, MapPin, Upload, Download, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { customersService } from '../services/customersService';
 import CustomerDetailModal from '../components/customer/CustomerDetailModal';
 import CustomerFormModal from '../components/customer/CustomerFormModal';
@@ -14,6 +14,8 @@ interface CustomerWithCount extends Customer {
   _count?: { orders: number };
 }
 
+const PAGE_SIZE = 10;
+
 export default function Customers() {
   const [customers, setCustomers] = useState<CustomerWithCount[]>([]);
   const [loading, setLoading] = useState(false);
@@ -24,25 +26,46 @@ export default function Customers() {
   const [exporting, setExporting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ id: number; name: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   const toast = useToast();
 
-  // Load customers
-  const loadCustomers = async () => {
+  // Debounce ô tìm kiếm để tránh gọi API liên tục
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 350);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Khi từ khóa thay đổi, quay về trang 1
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
+  // Load customers (search + phân trang phía server)
+  const loadCustomers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await customersService.getAll();
-      setCustomers(Array.isArray(res) ? (res as CustomerWithCount[]) : ((res as { data?: CustomerWithCount[] })?.data ?? []));
+      const res = await customersService.getAll({
+        search: debouncedSearch || undefined,
+        page,
+        limit: PAGE_SIZE,
+      });
+      setCustomers(res.data as CustomerWithCount[]);
+      setTotal(res.meta.total);
+      setTotalPages(res.meta.totalPages);
     } catch (error) {
       console.error('Lỗi tải khách hàng:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [debouncedSearch, page]);
 
   useEffect(() => {
     loadCustomers();
-  }, []);
+  }, [loadCustomers]);
 
   // Open modal for create
   const handleCreate = () => {
@@ -74,16 +97,6 @@ export default function Customers() {
       toast.error(e.response?.data?.message || 'Không thể xóa khách hàng (có thể đã có đơn hàng)');
     }
   };
-
-  const displayedCustomers = useMemo(() => {
-    if (!searchQuery.trim()) return customers;
-    const q = searchQuery.toLowerCase();
-    return customers.filter(
-      (c) =>
-        c.CustomerName.toLowerCase().includes(q) ||
-        (c.Phone ?? '').toLowerCase().includes(q),
-    );
-  }, [customers, searchQuery]);
 
   // Export Excel
   const handleExport = async () => {
@@ -145,7 +158,7 @@ export default function Customers() {
             </div>
             <div>
               <p className="text-sm text-blacky-700">Tổng khách hàng</p>
-              <p className="text-2xl font-bold text-blacky-950">{customers.length}</p>
+              <p className="text-2xl font-bold text-blacky-950">{total}</p>
             </div>
           </div>
         </div>
@@ -190,17 +203,11 @@ export default function Customers() {
               ) : customers.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-8 text-center text-blacky-500">
-                    Chưa có khách hàng nào
-                  </td>
-                </tr>
-              ) : displayedCustomers.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-blacky-500">
-                    Không tìm thấy khách hàng phù hợp
+                    {debouncedSearch ? 'Không tìm thấy khách hàng phù hợp' : 'Chưa có khách hàng nào'}
                   </td>
                 </tr>
               ) : (
-                displayedCustomers.map((customer, idx) => (
+                customers.map((customer, idx) => (
                   <tr
                     key={customer.CustomerID}
                     className="hover:bg-blacky-50 cursor-pointer"
@@ -211,7 +218,7 @@ export default function Customers() {
                       }
                     }}
                   >
-                    <td className="px-6 py-4 text-sm text-left text-blacky-700">{idx + 1}</td>
+                    <td className="px-6 py-4 text-sm text-left text-blacky-700">{(page - 1) * PAGE_SIZE + idx + 1}</td>
                     <td className="px-6 py-4 text-sm text-center">
                       <span className="text-sm font-medium text-bluesh-800 px-2 py-1 rounded">
                         {customer.CustomerCode || '-'}
@@ -285,6 +292,33 @@ export default function Customers() {
           </table>
         </div>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-sm text-blacky-500">
+            Trang {page} / {totalPages} · Tổng {total} khách hàng
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1 || loading}
+              className="btn btn-secondary w-fit! px-3! rounded-lg! disabled:opacity-40"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Trước
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages || loading}
+              className="btn btn-secondary w-fit! px-3! rounded-lg! disabled:opacity-40"
+            >
+              Sau
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Customer Form Modal */}
       {showModal && (

@@ -142,6 +142,7 @@ export class InventoryService {
             UnitPrice: validated.item.unitPrice,
             DiscountRate: validated.item.discountRate ?? 0,
             CostPrice: costPrice,
+            ExchangeValue: validated.exchangeValue,
           },
           include: {
             product: {
@@ -513,6 +514,7 @@ export class InventoryService {
               UnitPrice: dto.importUnitPrice,
               DiscountRate: Number(dto.importDiscountRate ?? 0),
               CostPrice: dto.importUnitPrice * (1 - Number(dto.importDiscountRate ?? 0)),
+              ExchangeValue: exchangeValue,
             },
           },
         },
@@ -547,6 +549,7 @@ export class InventoryService {
               Quantity: dto.deliverQty,
               UnitPrice: dto.saleUnitPrice,
               CostPrice: dto.importUnitPrice * (1 - (dto.importDiscountRate ?? 0)),
+              ExchangeValue: exchangeValue,
             },
           },
         },
@@ -581,7 +584,7 @@ export class InventoryService {
       });
 
       return { receipt, order, stockAdded: stockInBase };
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 
   /**
@@ -610,28 +613,11 @@ export class InventoryService {
         );
       }
 
-      // 2. Batch load products để tránh N+1
-      const detailProductIds = receipt.details.map((d) => d.ProductID);
-      const products = await tx.product.findMany({
-        where: { ProductID: { in: detailProductIds } },
-        select: {
-          ProductID: true,
-          BaseUnit: true,
-          units: { select: { UnitName: true, ExchangeValue: true } },
-        },
-      });
-      const productMap = new Map(products.map((p) => [p.ProductID, p]));
-
-      // 3. Xử lý từng item: chuyển InTransit → Physical
+      // 2. Xử lý từng item: chuyển InTransit → Physical
+      // Dùng hệ số quy đổi đã chốt tại thời điểm tạo phiếu (snapshot) để khớp
+      // đúng lượng InTransit đã cộng lúc tạo phiếu, tránh sai lệch nếu đơn vị bị sửa.
       for (const detail of receipt.details) {
-        const product = productMap.get(detail.ProductID);
-
-        let exchangeValue = 1;
-        if (product && detail.UnitName !== product.BaseUnit) {
-          const unit = product.units.find((u) => u.UnitName === detail.UnitName);
-          if (unit) exchangeValue = Number(unit.ExchangeValue);
-        }
-
+        const exchangeValue = Number(detail.ExchangeValue);
         const quantityInBase = Number(detail.Quantity) * exchangeValue;
 
         const inventory = await tx.inventory.findUnique({

@@ -8,11 +8,35 @@ export class ProductsService {
   constructor(private prisma: PrismaService) {}
 
   /**
+   * Chặn trùng UnitName trong cùng một request tạo/sửa sản phẩm.
+   * So sánh không phân biệt hoa/thường và khoảng trắng thừa để tránh
+   * việc các truy vấn sau dùng .find() theo UnitName chọn nhầm bản ghi.
+   */
+  private assertUniqueUnitNames(
+    units?: Array<{ unitName: string }>,
+  ): void {
+    if (!units || units.length === 0) return;
+    const seen = new Set<string>();
+    for (const unit of units) {
+      const key = unit.unitName.trim().toLowerCase();
+      if (seen.has(key)) {
+        throw new ConflictException(
+          `Đơn vị "${unit.unitName}" bị trùng trong danh sách đơn vị quy đổi`,
+        );
+      }
+      seen.add(key);
+    }
+  }
+
+  /**
    * Tạo sản phẩm mới với các đơn vị quy đổi và bảng giá
    * @param storeId ID cửa hàng (từ CurrentStore decorator)
    * @param dto Dữ liệu sản phẩm
    */
   async create(storeId: number, dto: CreateProductDto) {
+    // Chặn trùng UnitName ngay trong danh sách units của request
+    this.assertUniqueUnitNames(dto.units);
+
     // Kiểm tra category có tồn tại và thuộc về store này không
     const category = await this.prisma.category.findFirst({
       where: {
@@ -155,6 +179,9 @@ export class ProductsService {
    * Strategy: Replace All - Xóa toàn bộ units/prices cũ và tạo mới
    */
   async update(storeId: number, productId: number, dto: UpdateProductDto) {
+    // Chặn trùng UnitName ngay trong danh sách units của request
+    this.assertUniqueUnitNames(dto.units);
+
     // Kiểm tra sản phẩm có tồn tại và thuộc về store này không
     const existingProduct = await this.findOne(storeId, productId);
 

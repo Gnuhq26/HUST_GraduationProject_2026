@@ -9,11 +9,19 @@ import type {
 } from '@/types';
 
 const suppliersService = {
-  // Lấy danh sách nhà cung cấp (có thể tìm kiếm)
+  // Lấy danh sách nhà cung cấp (có thể tìm kiếm) — trả về mảng đầy đủ cho dropdown
   async getAll(search = ''): Promise<Supplier[]> {
     const params = search ? { search } : {};
     const response = await apiClient.get<PaginatedResult<Supplier>>('/suppliers', { params });
     return response.data.data;
+  },
+
+  // Lấy danh sách nhà cung cấp có phân trang (search + page phía server)
+  async getPaginated(
+    params?: { search?: string; page?: number; limit?: number },
+  ): Promise<PaginatedResult<Supplier>> {
+    const response = await apiClient.get<PaginatedResult<Supplier>>('/suppliers', { params });
+    return response.data;
   },
 
   // Lấy chi tiết nhà cung cấp

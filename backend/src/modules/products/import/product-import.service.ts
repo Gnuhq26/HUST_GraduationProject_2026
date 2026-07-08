@@ -106,8 +106,11 @@ export class ProductImportService {
       async (tx) => {
         const upserted: Array<{ sku: string; action: string; productName: string }> = [];
 
-        for (const [sku, group] of productMap.entries()) {
+        for (const group of productMap.values()) {
           const primary = group[0]; // Dòng đầu tiên chứa thông tin chính
+          // Dùng SKU gốc của dòng chính để lưu (giữ nguyên hoa/thường người dùng nhập),
+          // còn việc gom nhóm đã chuẩn hóa lowercase ở groupBySku.
+          const sku = primary.sku;
 
           // Gom units (bỏ trùng, bỏ dòng không có unitName)
           const units = this.collectUnits(group);
@@ -167,10 +170,14 @@ export class ProductImportService {
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
 
+    const created = results.filter((r) => r.action === 'CREATED').length;
+    const updated = results.filter((r) => r.action === 'UPDATED').length;
+
     return {
       success: true,
-      importedCount: results.length,
-      skippedCount: invalidRows.length,
+      created,
+      updated,
+      skipped: invalidRows.length,
       results,
     };
   }
@@ -265,7 +272,9 @@ export class ProductImportService {
   private groupBySku(rows: ValidatedRow[]): Map<string, ValidatedRow[]> {
     const map = new Map<string, ValidatedRow[]>();
     for (const row of rows) {
-      const key = row.sku;
+      // Chuẩn hóa key về lowercase để SKU viết hoa/thường lẫn lộn trong cùng file
+      // vẫn được gom vào 1 nhóm (khớp với unique index không phân biệt hoa/thường của MySQL).
+      const key = row.sku.toLowerCase();
       const group = map.get(key) || [];
       group.push(row);
       map.set(key, group);

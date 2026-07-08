@@ -83,7 +83,7 @@ export class CustomerImportService {
           });
           updated++;
         } else {
-          await tx.customer.create({
+          const newCustomer = await tx.customer.create({
             data: {
               StoreID: storeId,
               CustomerName: row.customerName,
@@ -91,6 +91,9 @@ export class CustomerImportService {
               Address: row.address || null,
             },
           });
+          // Cập nhật map ngay để 2 dòng cùng tên trong file không tạo trùng:
+          // dòng sau sẽ rơi vào nhánh update thay vì create lần nữa.
+          existingMap.set(row.customerName.toLowerCase(), newCustomer.CustomerID);
           created++;
         }
       }

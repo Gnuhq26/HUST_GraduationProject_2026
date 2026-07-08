@@ -64,6 +64,7 @@ export class OrdersService {
         Quantity: Prisma.Decimal;
         UnitPrice: Prisma.Decimal;
         CostPrice: Prisma.Decimal;
+        ExchangeValue: Prisma.Decimal;
       }> = [];
 
       // Lưu thông tin log để ghi sau khi có OrderID
@@ -167,9 +168,9 @@ export class OrdersService {
           costPrice = costPerBase.mul(exchangeValue);
         }
 
-        // Đơn giá: từ client nếu có, ngược lại tính từ MarginRate
+        // Đơn giá: từ client nếu có (kể cả giá 0 gửi tường minh), ngược lại tính từ MarginRate
         let unitPrice: Prisma.Decimal;
-        if (item.UnitPrice != null && item.UnitPrice > 0) {
+        if (item.UnitPrice != null && item.UnitPrice >= 0) {
           unitPrice = new Prisma.Decimal(item.UnitPrice);
         } else {
           unitPrice = costPrice.mul(
@@ -188,6 +189,7 @@ export class OrdersService {
           Quantity: new Prisma.Decimal(item.Quantity),
           UnitPrice: unitPrice,
           CostPrice: costPrice,
+          ExchangeValue: exchangeValue,
         });
 
         // 2.9. Cập nhật tồn kho theo DeliveryMethod
@@ -422,14 +424,9 @@ export class OrdersService {
 
       // Xử lý từng item: giảm Reserved, trừ kho thực
       for (const detail of order.details) {
-        // Tính lại quantity in base unit
-        let exchangeValue = new Prisma.Decimal(1);
-        if (detail.UnitName !== detail.product.BaseUnit) {
-          const unit = detail.product.units.find(
-            (u) => u.UnitName === detail.UnitName,
-          );
-          if (unit) exchangeValue = unit.ExchangeValue;
-        }
+        // Dùng hệ số quy đổi đã chốt tại thời điểm tạo đơn (snapshot)
+        // để tránh sai lệch nếu ExchangeValue của đơn vị bị chỉnh sửa sau đó.
+        const exchangeValue = new Prisma.Decimal(detail.ExchangeValue);
         const quantityInBaseUnit = detail.Quantity.mul(exchangeValue);
 
         const inventory = await tx.inventory.findFirst({
@@ -553,13 +550,8 @@ export class OrdersService {
 
       // Hoàn trả tồn kho cho từng item
       for (const detail of order.details) {
-        let exchangeValue = new Prisma.Decimal(1);
-        if (detail.UnitName !== detail.product.BaseUnit) {
-          const unit = detail.product.units.find(
-            (u) => u.UnitName === detail.UnitName,
-          );
-          if (unit) exchangeValue = unit.ExchangeValue;
-        }
+        // Dùng hệ số quy đổi đã chốt tại thời điểm tạo đơn (snapshot)
+        const exchangeValue = new Prisma.Decimal(detail.ExchangeValue);
         const quantityInBaseUnit = detail.Quantity.mul(exchangeValue);
 
         const inventory = await tx.inventory.findFirst({

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsInt, IsNumber, IsOptional, IsString, Min, Max } from 'class-validator';
 
 export class DirectShipDto {
   @ApiProperty({ example: 1, description: 'ID nhà cung cấp' })
@@ -33,6 +33,7 @@ export class DirectShipDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(1)
   importDiscountRate?: number;
 
   @ApiProperty({ example: 140000, description: 'Giá bán theo đơn vị' })
