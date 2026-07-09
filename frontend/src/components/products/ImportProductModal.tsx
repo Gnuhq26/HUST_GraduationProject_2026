@@ -14,6 +14,9 @@ type PreviewData = ImportPreviewResponse & { rows: ImportPreviewRow[] };
 
 const STEPS: Step[] = ['template', 'preview', 'result'];
 
+// Biên lợi nhuận mặc định khi để trống — khớp với backend (`?? 0.10`) và schema (@default(0.10)).
+const DEFAULT_MARGIN_RATE = 0.1;
+
 export default function ImportProductModal({ onClose, onSuccess }: Props) {
   const [step, setStep] = useState<Step>('template');
   const [file, setFile] = useState<File | null>(null);
@@ -241,7 +244,11 @@ export default function ImportProductModal({ onClose, onSuccess }: Props) {
                             <td className="px-3 py-2 text-blacky-800">{isCont ? '' : row.baseUnit}</td>
                             <td className="px-3 py-2 text-blacky-800">{row.unitName || '—'}</td>
                             <td className="px-3 py-2 text-blacky-800">
-                              {isCont ? '' : (row.marginRate != null ? (Number(row.marginRate) * 100).toFixed(2) + '%' : '—')}
+                              {isCont ? '' : row.marginRate != null ? (
+                                (Number(row.marginRate) * 100).toFixed(2) + '%'
+                              ) : (
+                                <span className="text-blacky-400">{DEFAULT_MARGIN_RATE * 100}% (mặc định)</span>
+                              )}
                             </td>
                             <td className="px-3 py-2 text-center">
                               {hasError ? (

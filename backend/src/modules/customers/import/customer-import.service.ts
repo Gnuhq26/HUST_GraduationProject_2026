@@ -1,12 +1,16 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import { PrismaService } from '../../../common/prisma';
+import { CustomersService } from '../customers.service';
 import { parseCustomerExcel } from './customer-import.parser';
 import { validateCustomerRows } from './customer-import.validator';
 
 @Injectable()
 export class CustomerImportService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private customersService: CustomersService,
+  ) {}
 
   async previewImport(buffer: Buffer, storeId: number) {
     const rows = await parseCustomerExcel(buffer);
@@ -83,9 +87,11 @@ export class CustomerImportService {
           });
           updated++;
         } else {
+          const customerCode = await this.customersService.generateCustomerCode(tx);
           const newCustomer = await tx.customer.create({
             data: {
               StoreID: storeId,
+              CustomerCode: customerCode,
               CustomerName: row.customerName,
               Phone: row.phone || null,
               Address: row.address || null,

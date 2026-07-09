@@ -35,8 +35,9 @@ export class CustomersService {
 
   /**
    * Tạo mã khách hàng tự động: KH-YYYYMMDD-NNN
+   * Public để luồng import khách hàng dùng lại cùng logic sinh mã.
    */
-  private async generateCustomerCode(tx: Pick<PrismaService, 'customer'>): Promise<string> {
+  async generateCustomerCode(tx: Pick<PrismaService, 'customer'>): Promise<string> {
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const prefix = `KH-${dateStr}-`;
     const last = await tx.customer.findFirst({

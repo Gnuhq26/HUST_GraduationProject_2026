@@ -90,7 +90,14 @@ async function main() {
   }
 }
 
-main().catch((e) => {
-  console.error('❌ seed-categories error:', e instanceof Error ? e.message : String(e));
-  process.exit(1);
-});
+// Chỉ chạy standalone khi gọi trực tiếp file này — tránh side-effect khi import từ seed khác.
+const isDirectRun =
+  typeof process.argv[1] === 'string' &&
+  process.argv[1].replace(/\\/g, '/').endsWith('prisma/seeds/seed-categories.ts');
+
+if (isDirectRun) {
+  main().catch((e) => {
+    console.error('❌ seed-categories error:', e instanceof Error ? e.message : String(e));
+    process.exit(1);
+  });
+}
