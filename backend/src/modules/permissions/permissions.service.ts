@@ -47,4 +47,29 @@ export class PermissionsService {
       where: { PermissionID: id },
     });
   }
+
+  /**
+   * Kiểm tra vai trò có quyền cụ thể (bao gồm manage:all).
+   */
+  async roleHasPermission(
+    roleId: number,
+    action: string,
+    subject: string,
+  ): Promise<boolean> {
+    const superAdmin = await this.prisma.rolePermission.findFirst({
+      where: {
+        RoleID: roleId,
+        permission: { Action: 'manage', Subject: 'all' },
+      },
+    });
+    if (superAdmin) return true;
+
+    const specific = await this.prisma.rolePermission.findFirst({
+      where: {
+        RoleID: roleId,
+        permission: { Action: action, Subject: subject },
+      },
+    });
+    return !!specific;
+  }
 }

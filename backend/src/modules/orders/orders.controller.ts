@@ -3,6 +3,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam } from '@ne
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto';
 import { CurrentStore, CurrentUser } from '../../common/decorators';
+import type { StoreInfo } from '../../common/decorators';
 import { CheckPermission } from '../../common/decorators';
 import { parsePagination } from '../../common/pagination';
 
@@ -29,11 +30,16 @@ export class OrdersController {
   })
   @ApiResponse({ status: 404, description: 'Sản phẩm hoặc khách hàng không tồn tại' })
   create(
-    @CurrentStore() storeId: number,
+    @CurrentStore('full') store: StoreInfo,
     @CurrentUser() userId: number,
     @Body() createOrderDto: CreateOrderDto,
   ) {
-    return this.ordersService.createOrder(storeId, userId, createOrderDto);
+    return this.ordersService.createOrder(
+      store.storeId,
+      userId,
+      store.roleId,
+      createOrderDto,
+    );
   }
 
   @Get()

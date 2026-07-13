@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, X, Loader2, AlertTriangle } from 'lucide-react';
+import { Plus, X, Loader2, AlertTriangle, Lock } from 'lucide-react';
 import ordersService from '../../services/ordersService';
 import { customersService } from '../../services/customersService';
 import { productsService } from '../../services/productsService';
 import { useToast } from '../ToastProvider';
+import { usePermission } from '../../hooks/usePermission';
 import CustomerPhoneInput from './CustomerPhoneInput';
 import CustomSelect from '../CustomSelect';
 import type { Product, DeliveryMethod } from '@/types';
@@ -27,6 +28,7 @@ interface Props {
 
 function CreateOrderModal({ open, onClose, onSuccess }: Props) {
   const toast = useToast();
+  const { hasPermission: canOverridePrice, loading: permissionLoading } = usePermission('update', 'Product');
   const [products, setProducts] = useState<Product[]>([]);
   const [customerId, setCustomerId] = useState<number | null>(null);
   const [customerName, setCustomerName] = useState('');
@@ -320,7 +322,12 @@ function CreateOrderModal({ open, onClose, onSuccess }: Props) {
                           <Loader2 className="w-4 h-4 animate-spin text-blacky-400" />
                         ) : item.productId && item.unitName ? (
                           <>
-                            <span className="text-xs text-blacky-500 shrink-0">Đơn giá bán:</span>
+                            <span className="text-xs text-blacky-500 shrink-0 flex items-center gap-1">
+                              Đơn giá bán:
+                              {!canOverridePrice && !permissionLoading && (
+                                <Lock className="w-3 h-3 text-blacky-400" title="Giá niêm yết — không được sửa" />
+                              )}
+                            </span>
                             <input
                               type="number"
                               min="0"
@@ -328,7 +335,15 @@ function CreateOrderModal({ open, onClose, onSuccess }: Props) {
                               placeholder="Nhập giá bán..."
                               value={item.unitPrice}
                               onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
-                              className="input-field text-sm py-1 w-36"
+                              readOnly={!canOverridePrice}
+                              title={
+                                canOverridePrice
+                                  ? 'Có thể điều chỉnh giá bán'
+                                  : 'Giá niêm yết theo biên lợi nhuận — chỉ chủ cửa hàng được sửa'
+                              }
+                              className={`input-field text-sm py-1 w-36 ${
+                                !canOverridePrice ? 'bg-blacky-50 cursor-not-allowed' : ''
+                              }`}
                             />
                             {item.costPrice && (
                               <span className="text-xs text-blacky-500 shrink-0">
@@ -374,7 +389,9 @@ function CreateOrderModal({ open, onClose, onSuccess }: Props) {
               <span className="text-lg font-bold text-bluesh-800">{formatCurrency(calculateTotal())}</span>
             </div>
             <p className="text-xs text-blacky-400 mt-1">
-              * Giá tự động tính theo biên lợi nhuận sản phẩm; bạn có thể điều chỉnh.
+              {canOverridePrice
+                ? '* Giá tự động tính theo biên lợi nhuận; bạn có thể điều chỉnh.'
+                : '* Giá niêm yết theo biên lợi nhuận — nhân viên không được thay đổi.'}
             </p>
           </div>
 

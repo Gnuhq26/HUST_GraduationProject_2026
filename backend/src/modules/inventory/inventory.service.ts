@@ -713,6 +713,131 @@ export class InventoryService {
   }
 
   /**
+   * Sổ cái biến động kho (InventoryLog) — truy vết mọi thay đổi tồn kho.
+   */
+  async getInventoryLogs(
+    storeId: number,
+    options: {
+      productId?: number;
+      changeType?: string;
+      pagination: PaginationParams;
+    },
+  ) {
+    const { productId, changeType, pagination } = options;
+    const where: Prisma.InventoryLogWhereInput = { StoreID: storeId };
+    if (productId) where.ProductID = productId;
+    if (changeType) where.ChangeType = changeType;
+
+    const [logs, total] = await Promise.all([
+      this.prisma.inventoryLog.findMany({
+        where,
+        include: {
+          product: {
+            select: {
+              ProductID: true,
+              ProductName: true,
+              SKU: true,
+              BaseUnit: true,
+            },
+          },
+        },
+        orderBy: { CreatedAt: 'desc' },
+        skip: (pagination.page - 1) * pagination.limit,
+        take: pagination.limit,
+      }),
+      this.prisma.inventoryLog.count({ where }),
+    ]);
+
+    const orderIds = [
+      ...new Set(
+        logs
+          .filter((l) => l.ReferenceType === 'Order' && l.ReferenceID != null)
+          .map((l) => l.ReferenceID as number),
+      ),
+    ];
+    // DirectShip cũng trỏ ReferenceID = StockReceipt.ReceiptID
+    const receiptIds = [
+      ...new Set(
+        logs
+          .filter(
+            (l) =>
+              (l.ReferenceType === 'StockReceipt' || l.ReferenceType === 'DirectShip') &&
+              l.ReferenceID != null,
+          )
+          .map((l) => l.ReferenceID as number),
+      ),
+    ];
+
+    const [orders, receipts, linkedOrders] = await Promise.all([
+      orderIds.length
+        ? this.prisma.order.findMany({
+            where: { OrderID: { in: orderIds }, StoreID: storeId },
+            select: { OrderID: true, OrderCode: true },
+          })
+        : [],
+      receiptIds.length
+        ? this.prisma.stockReceipt.findMany({
+            where: { ReceiptID: { in: receiptIds }, StoreID: storeId },
+            select: { ReceiptID: true, ReceiptCode: true },
+          })
+        : [],
+      // Đơn giao thẳng gắn với phiếu nhập (LinkedReceiptID)
+      receiptIds.length
+        ? this.prisma.order.findMany({
+            where: {
+              StoreID: storeId,
+              DeliveryMethod: 'DirectShip',
+              LinkedReceiptID: { in: receiptIds },
+            },
+            select: { LinkedReceiptID: true, OrderCode: true },
+          })
+        : [],
+    ]);
+
+    const orderCodeMap = new Map<number, string | null>(
+      orders.map((o) => [o.OrderID, o.OrderCode] as [number, string | null]),
+    );
+    const receiptCodeMap = new Map<number, string | null>(
+      receipts.map((r) => [r.ReceiptID, r.ReceiptCode] as [number, string | null]),
+    );
+    const directShipOrderCodeMap = new Map<number, string | null>();
+    for (const o of linkedOrders) {
+      if (o.LinkedReceiptID != null) {
+        directShipOrderCodeMap.set(o.LinkedReceiptID, o.OrderCode);
+      }
+    }
+
+    const data = logs.map((log) => ({
+      LogID: log.LogID,
+      ProductID: log.ProductID,
+      ChangeType: log.ChangeType,
+      QuantityType: log.QuantityType,
+      ReferenceType: log.ReferenceType,
+      ReferenceID: log.ReferenceID,
+      ReferenceCode:
+        log.ReferenceType === 'Order' && log.ReferenceID != null
+          ? (orderCodeMap.get(log.ReferenceID) ?? null)
+          : log.ReferenceType === 'StockReceipt' && log.ReferenceID != null
+            ? (receiptCodeMap.get(log.ReferenceID) ?? null)
+            : log.ReferenceType === 'DirectShip' && log.ReferenceID != null
+              ? (() => {
+                  const pn = receiptCodeMap.get(log.ReferenceID) ?? `#${log.ReferenceID}`;
+                  const hd = directShipOrderCodeMap.get(log.ReferenceID);
+                  return hd ? `${pn} · ${hd}` : pn;
+                })()
+              : null,
+      OldQuantity: log.OldQuantity,
+      ChangeQuantity: log.ChangeQuantity,
+      NewQuantity: log.NewQuantity,
+      Note: log.Note,
+      CreatedAt: log.CreatedAt,
+      product: log.product,
+    }));
+
+    return paginateResult(data, total, pagination);
+  }
+
+  /**
    * Tạo mã phiếu nhập kho tự động: PN-YYYYMMDD-NNN
    * Nhận tham số tx để hoạt động trong transaction hoặc dùng this.prisma bình thường
    */

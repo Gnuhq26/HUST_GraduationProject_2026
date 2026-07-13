@@ -25,7 +25,7 @@ export type InventoryChangeType = 'IN' | 'OUT' | 'ADJUST' | 'RETURN';
 export type InventoryQuantityType = 'Reserved' | 'InTransit' | 'Physical';
 
 /** Source of the inventory change */
-export type InventoryReferenceType = 'Order' | 'StockReceipt' | 'Manual';
+export type InventoryReferenceType = 'Order' | 'StockReceipt' | 'DirectShip' | 'Manual';
 
 export type StoreStatus = 'Active' | 'Inactive';
 

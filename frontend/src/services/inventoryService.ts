@@ -44,6 +44,20 @@ const inventoryService = {
     return response.data;
   },
 
+  // Sổ cái biến động kho (InventoryLog)
+  async getInventoryLogs(params: {
+    productId?: number;
+    changeType?: string;
+    page?: number;
+    limit?: number;
+  } = {}) {
+    const response = await apiClient.get('/inventory/logs', { params });
+    return response.data as {
+      data: unknown[];
+      meta: { total: number; page: number; limit: number; totalPages: number };
+    };
+  },
+
   // Lấy danh sách phiếu nhập kho
   async getStockReceipts(supplierId: number | null = null): Promise<StockReceipt[]> {
     const params: Record<string, unknown> = {};

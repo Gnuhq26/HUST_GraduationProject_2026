@@ -4,9 +4,10 @@ import { OrdersController } from './orders.controller';
 import { OrderExportController } from './export/order-export.controller';
 import { OrderExportService } from './export/order-export.service';
 import { PrismaModule } from '../../common/prisma';
+import { PermissionsModule } from '../permissions/permissions.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, PermissionsModule],
   controllers: [OrderExportController, OrdersController],
   providers: [OrdersService, OrderExportService],
   exports: [OrdersService],
