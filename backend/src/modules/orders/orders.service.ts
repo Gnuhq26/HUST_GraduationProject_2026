@@ -1,12 +1,16 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma';
+import { PermissionsService } from '../permissions/permissions.service';
 import { CreateOrderDto } from './dto';
 import { Prisma } from '../../../generated/prisma/client';
 import { PaginatedResult, PaginationParams, paginateResult } from '../../common/pagination';
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly permissionsService: PermissionsService,
+  ) {}
 
   /**
    * Tạo đơn hàng mới với transaction
@@ -19,8 +23,15 @@ export class OrdersService {
   async createOrder(
     storeId: number,
     userId: number,
+    roleId: number,
     createOrderDto: CreateOrderDto,
   ) {
+    const canOverridePrice = await this.permissionsService.roleHasPermission(
+      roleId,
+      'update',
+      'Product',
+    );
+
     return this.prisma.$transaction(async (tx) => {
       // Lock: đọc tồn kho trước, tránh race condition giữa các đơn đồng thời
       // (Serializable isolation đảm bảo không có phantom read)
@@ -168,14 +179,29 @@ export class OrdersService {
           costPrice = costPerBase.mul(exchangeValue);
         }
 
-        // Đơn giá: từ client nếu có (kể cả giá 0 gửi tường minh), ngược lại tính từ MarginRate
+        // Đơn giá: chủ cửa hàng (update:Product) có thể override; nhân viên chỉ bán theo giá gợi ý
+        const suggestedPrice = costPrice
+          .mul(new Prisma.Decimal(1).add(product.MarginRate))
+          .toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
+
         let unitPrice: Prisma.Decimal;
-        if (item.UnitPrice != null && item.UnitPrice >= 0) {
+        if (!canOverridePrice) {
+          if (item.UnitPrice != null) {
+            const clientPrice = new Prisma.Decimal(item.UnitPrice).toDecimalPlaces(
+              0,
+              Prisma.Decimal.ROUND_HALF_UP,
+            );
+            if (!clientPrice.equals(suggestedPrice)) {
+              throw new BadRequestException(
+                `Không được phép thay đổi giá niêm yết của sản phẩm "${product.ProductName}". Giá bán: ${suggestedPrice.toString()} VND/${item.UnitName}.`,
+              );
+            }
+          }
+          unitPrice = suggestedPrice;
+        } else if (item.UnitPrice != null && item.UnitPrice >= 0) {
           unitPrice = new Prisma.Decimal(item.UnitPrice);
         } else {
-          unitPrice = costPrice.mul(
-            new Prisma.Decimal(1).add(product.MarginRate),
-          );
+          unitPrice = suggestedPrice;
         }
 
         // 2.7. Tính thành tiền

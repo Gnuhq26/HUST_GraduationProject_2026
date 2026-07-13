@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo, useRef, type FormEvent } from 'react';
-import { Plus, Package, Truck, ShoppingBag, AlertTriangle, FileText, Eye, CheckCircle, Download, Search, SlidersHorizontal } from 'lucide-react';
+import { Plus, Package, Truck, ShoppingBag, AlertTriangle, FileText, Eye, CheckCircle, Download, Search, SlidersHorizontal, History } from 'lucide-react';
 import inventoryService from '../services/inventoryService';
 import suppliersService from '../services/suppliersService';
 import { productsService } from '../services/productsService';
 import { customersService } from '../services/customersService';
 import ProductStockHistoryModal from '../components/inventory/ProductStockHistoryModal';
+import InventoryMovementTab from '../components/inventory/InventoryMovementTab';
 import StockReceiptDetailModal from '../components/inventory/StockReceiptDetailModal';
 import StockInModal, { type StockInFormItem } from '../components/inventory/StockInModal';
 import DirectShipModal, { type DirectShipState } from '../components/inventory/DirectShipModal';
@@ -39,7 +40,7 @@ interface StockReceiptWithCount {
 
 function Inventory() {
   const toast = useToast();
-  const [activeTab, setActiveTab] = useState<'inventory' | 'receipts'>('inventory');
+  const [activeTab, setActiveTab] = useState<'inventory' | 'receipts' | 'movements'>('inventory');
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [receipts, setReceipts] = useState<StockReceiptWithCount[]>([]);
   const [loading, setLoading] = useState(true);
@@ -389,6 +390,16 @@ function Inventory() {
         >
           <FileText className="w-4 h-4" />Phiếu nhập kho
         </button>
+        <button
+          onClick={() => setActiveTab('movements')}
+          className={`px-6 py-2.5 rounded-md font-medium transition-all flex items-center gap-2 ${
+            activeTab === 'movements'
+              ? 'bg-basic-white text-bluesh-800 shadow-sm'
+              : 'text-blacky-500 hover:text-bluesh-800'
+          }`}
+        >
+          <History className="w-4 h-4" />Biến động kho
+        </button>
       </div>
 
       {/* Content based on active tab */}
@@ -582,7 +593,7 @@ function Inventory() {
             )}
           </div>
         </>
-      ) : (
+      ) : activeTab === 'receipts' ? (
         <>
           {/* Receipts Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -720,6 +731,14 @@ function Inventory() {
             )}
           </div>
         </>
+      ) : (
+        <InventoryMovementTab
+          products={inventory.map((item) => ({
+            ProductID: item.ProductID,
+            ProductName: item.ProductName,
+            SKU: item.SKU,
+          }))}
+        />
       )}
 
       {/* Stock-In Modal */}

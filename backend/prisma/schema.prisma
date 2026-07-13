@@ -344,7 +344,7 @@ model InventoryLog {
   ProductID      Int
   ChangeType     String   @db.VarChar(50) // IN (nhập), OUT (xuất/bán), ADJUST (điều chỉnh), RETURN (trả hàng)
   QuantityType   String   @db.VarChar(50) // Reserved, InTransit, Physical
-  ReferenceType  String?  @db.VarChar(50) // Order, StockReceipt, Manual
+  ReferenceType  String?  @db.VarChar(50) // Order, StockReceipt, DirectShip, Manual
   ReferenceID    Int?     // ID của Order hoặc StockReceipt
   OldQuantity    Decimal  @db.Decimal(18, 2)
   ChangeQuantity Decimal  @db.Decimal(18, 2) // Số dương = tăng, số âm = giảm

@@ -107,6 +107,27 @@ export class InventoryController {
     );
   }
 
+  @Get('logs')
+  @CheckPermission('read', 'Inventory')
+  @ApiOperation({
+    summary: 'Sổ cái biến động kho (InventoryLog)',
+    description: 'Xem lịch sử mọi thay đổi tồn kho: nhập, xuất, đặt trước, hủy đơn...',
+  })
+  @ApiResponse({ status: 200, description: 'Danh sách biến động kho có phân trang' })
+  async getInventoryLogs(
+    @CurrentStore() storeId: number,
+    @Query('productId', new ParseIntPipe({ optional: true })) productId?: number,
+    @Query('changeType') changeType?: string,
+    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+  ) {
+    return await this.inventoryService.getInventoryLogs(storeId, {
+      productId,
+      changeType,
+      pagination: parsePagination(page, limit, 100),
+    });
+  }
+
   @Get('products/:productId/history')
   @CheckPermission('read', 'Inventory')
   @ApiOperation({
